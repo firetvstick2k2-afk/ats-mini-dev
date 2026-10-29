@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        lang: [de, en]
+        lang: [de, en, it]
         board:
           - profile: esp32s3-ospi
             fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none
@@ -48,6 +48,8 @@ jobs:
         run: |
           if [ "${{ matrix.lang }}" = "de" ]; then
             cp ats-mini/Menu_german.cpp.src ats-mini/Menu.cpp
+          elif [ "${{ matrix.lang }}" = "it" ]; then
+            cp ats-mini/Menu_italian.cpp.src ats-mini/Menu.cpp
           else
             cp ats-mini/Menu_english.cpp.src ats-mini/Menu.cpp
           fi

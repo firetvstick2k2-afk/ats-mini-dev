@@ -1,7 +1,7 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-10-29 (ALL Band Spectrum source implementation committed; build pending)
-Repository: https://github.com/13HN2709/ats-mini
+Last updated: 2026-10-30 (V1.31 release preparation; Web ALL Band scanner range validation and click-to-tune behavior documented)
+Repository: https://github.com/13HN2709/ats-mini-dev (private development workspace); public release repository: https://github.com/13HN2709/ats-mini
 Active work branch: `development` (never modify `main` unless explicitly requested)
 
 ## Working agreement
@@ -269,3 +269,41 @@ Active work branch: `development` (never modify `main` unless explicitly request
 - Added an ALL BAND SCANNER panel directly below the existing FM/VHF Spectrum Scan in `PageStatus.h`, matching the existing dark-blue/cyan style and offering clickable signal peaks.
 - **Not yet built or hardware-tested.** Next: inspect compile diagnostics, run the manual build workflow on `development`, then hardware-test AM/USB/LSB, radio-state restoration, invalid ranges, clickable peaks, and regressions for VHF scanner/Web Control/Dual RX.
 - A temporary branch was created accidentally during setup; user explicitly requested no additional branches. Work was copied onto `development`; remove the temporary branch `all-band-web-scanner` if repository permissions/actions allow. Do not create any further branches and do not touch `main`.
+
+
+## Current status and release workflow (2026-10-30)
+
+### Repository roles
+- **Private development workspace:** https://github.com/13HN2709/ats-mini-dev
+- **Public releases:** https://github.com/13HN2709/ats-mini
+- Continue development in the private repository's `development` branch. Keep `main` for approved public release snapshots; do not copy changes to public `main` unless the user explicitly approves.
+- The private repository currently contains the `development` branch at source snapshot `ace95a45979dfe0b88fd002029aa86c727487d4c`. This is the development snapshot that was synced to public `main` for V1.31 preparation. The public `main` has additional release-only commits: version bump to 1.31 and README feature/release documentation. Do not blindly replace private `development` with public `main`; keep the branch roles clear.
+- Preserve existing branches and backups. Do not delete branches or create temporary branches without asking the user first.
+
+### V1.31 release preparation
+- Public `main` has `VER_APP 131` in `ats-mini/Common.h`.
+- Public README documents the custom extensions in English, Italian and German, including the native VHF/UKW Spectrum Scanner, Web VHF/FM and ALL Band scanners, Waterfall Layout, TEF6686 Layout, Clean Layout, Dual RX, Keypad, VFO A/B, BFO, memory handling and UI/RDS improvements.
+- On 2026-10-30, the user started the manual release/build workflow on public `main`. **Result is pending at the time of this handoff update.** Do not claim a successful build or published release until the user confirms the workflow result.
+- After a green build, verify the generated artifact, then publish GitHub Release/tag `v1.31`. If the build fails, inspect the exact Actions log and fix only the responsible code before rerunning.
+- Keep the public release source and private development work separate. Existing public commits and published assets cannot be made private retroactively.
+
+### Web ALL Band Spectrum scanner — current intended behavior
+- The Web ALL Band scanner is a separate module and must remain isolated from the native VHF scanner and Dual RX.
+- Frequency range: 150–30000 kHz; maximum scan span: 1000 kHz; maximum 201 sample points. Supported modes: AM, USB and LSB; FM is intentionally not offered in this ALL Band panel.
+- Supported step choices include 5, 10, 25, 50, 100, 250, 500 and 1000 kHz. Reject too-small ranges that provide fewer than 5 measurement steps (6 points minimum) and show a clear validation message instead of starting a scan.
+- Scan uses its own buffer, blocks conflicting radio controls during the sweep, mutes audio while scanning, and restores radio state afterward. Clickable peaks tune the receiver while the plotted graph remains visible.
+- The browser shows a running-scan status and elapsed time while polling for up to 100 seconds; scan work can take roughly 70 seconds for 201 points.
+- Start/end fields should be blank by default and cleared after a scan. Range/mode/step changes schedule receiver tuning after a short delay; before scan submission, synchronize the receiver to the selected start frequency/mode. If tuning fails, do not start the scan.
+- These behaviors are the latest intended/implemented state from development. Continue to use the user's manual Actions build and hardware confirmation as the source of truth for release readiness.
+
+### Latest user-confirmed test notes
+- The user reported that the firmware's overall operation and ATS hardware tests looked very good.
+- Native Dual RX short-click stop is confirmed working during switching and receiving states; preserve the fix in `ats-mini/ats-mini.ino`.
+- Native VHF Spectrum, Web VHF/FM Spectrum and Web ALL Band Spectrum are intended to remain separate. Avoid modifying shared scanner state or changing `Layout-TEF6686.cpp` unnecessarily.
+- When the user reports a new issue, first reproduce the exact state from the relevant source/logs and make a narrowly scoped fix. Never claim a new build or test passed unless the workflow/hardware result is actually available.
+
+### Immediate next actions
+1. Wait for the user's public `main` release workflow result.
+2. If green, check the artifact and publish `v1.31` only when the user is ready.
+3. Continue future feature work in private `ats-mini-dev` → `development`.
+4. Keep this handoff current after every meaningful code change, test result or release decision.

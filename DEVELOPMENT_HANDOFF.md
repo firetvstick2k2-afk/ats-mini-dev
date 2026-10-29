@@ -307,3 +307,12 @@ Active work branch: `development` (never modify `main` unless explicitly request
 2. If green, check the artifact and publish `v1.31` only when the user is ready.
 3. Continue future feature work in private `ats-mini-dev` → `development`.
 4. Keep this handoff current after every meaningful code change, test result or release decision.
+
+
+## Italian menu language added (2026-10-30)
+
+- Added `ats-mini/Menu_italian.cpp.src` on the private `development` branch.
+- Updated `.github/workflows/build.yml` so the build matrix now includes `it` alongside `de` and `en`; the workflow copies the Italian source to `ats-mini/Menu.cpp` for Italian builds.
+- Main menu and settings strings are translated to Italian. The small menu-entry limit was checked: main menu max 9 characters, settings max 10 characters, spectrum submenu max 9 characters.
+- Only the menu-language source and build workflow were changed for this task. No firmware build has been run or verified yet; the Italian build still needs to be tested in GitHub Actions before considering it ready.
+- File: https://github.com/13HN2709/ats-mini-dev/blob/development/ats-mini/Menu_italian.cpp.src

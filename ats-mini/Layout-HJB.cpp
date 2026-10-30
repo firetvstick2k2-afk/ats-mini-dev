@@ -70,7 +70,7 @@ static void hjbDrawScale()
   if(span == 0) return;
   for(int i=0; i<=40; ++i)
   {
-    int x = left + i * 7;
+    int x = left + (i * (right - left)) / 40;
     bool major = (i % 4) == 0;
     spr.drawFastVLine(x, major ? y : y+12, major ? 22 : 10, 0x7BEF);
     if(major)
@@ -82,7 +82,7 @@ static void hjbDrawScale()
       else spr.drawNumber(f, x, 139, FONT_DEFAULT);
     }
   }
-  float pos = (float)(currentFrequency - band->minimumFreq) / (float)span;
+  float pos = ((float)currentFrequency - (float)band->minimumFreq) / (float)span;
   pos = constrain(pos, 0.0f, 1.0f);
   int markerX = left + (int)(pos * (right-left));
   spr.fillTriangle(markerX-4, y-1, markerX+4, y-1, markerX, y+5, HJB_RED);

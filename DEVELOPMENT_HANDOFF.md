@@ -388,3 +388,27 @@ Approved English feature summary for the release notes:
 3. Only then update or publish the official V1.31 release assets and release notes, when the user is ready.
 4. Keep this protocol and future handoff updates exclusively in private `ats-mini-dev` → `development`.
 
+
+
+## User update and build-failure fix (2026-10-30)
+
+### Confirmed by user
+- Web ALL Band Spectrum scanner is working well. Remove it from the active TODO list; do not spend further work on it unless a new issue is reported.
+- Native VHF Spectrum work is complete. Remove it from the active TODO list; do not reopen it unless a new issue is reported.
+- After the next public Main build succeeds, continue with the planned new layouts: GNBD miniradio-inspired layout and the lsongdev/tinyradio-inspired layout. Keep these separate from existing TEF6686 and Clean Layout code.
+
+### Public Main workflow failure diagnosed and fixed
+- Failed workflow run: https://github.com/13HN2709/ats-mini/actions/runs/40991869262
+- Failed job: `build qspi-it`; other matrix jobs were cancelled because `fail-fast: true`.
+- Exact error: `cp: cannot stat 'ats-mini/Menu_italian.cpp.src': No such file or directory`.
+- Cause: public `main` workflow already selected Italian builds and attempted to copy `ats-mini/Menu_italian.cpp.src`, but that source file had only been added to the private development repository and was missing from public `main`.
+- Fix committed directly to public `main`: added `ats-mini/Menu_italian.cpp.src` copied from the tested private development source, without changing the workflow or scanner/layout code.
+- Fix commit: `7ddcc5d524abdefc352d20a225c54bd0a21d571a`.
+- Verified after commit: the Italian source exists on public `main` (66,272 characters), and the workflow's `cp ats-mini/Menu_italian.cpp.src ats-mini/Menu.cpp` path matches it.
+- This fixes the diagnosed missing-file failure, but **a new successful build has not yet been run**. Wait for the user to run the public Main workflow and confirm all six matrix jobs before marking V1.31 ready or publishing assets.
+
+### Active immediate plan
+1. User runs the public `main` manual build again after the Italian source fix.
+2. If green, inspect artifacts and OTA metadata/URL, then finish V1.31 release when the user is ready.
+3. After the build/release checks, work on the two planned new layouts in private `ats-mini-dev` → `development`.
+4. Keep this handoff private. Do not add it to public `main`; do not create or delete branches without asking.

@@ -5,6 +5,7 @@
 #include "Draw.h"
 #include <time.h>
 #include <string.h>
+#include <stdio.h>
 
 // HJB is an independent layout. Keep all drawing local so existing layouts
 // and their shared RDS/rendering behavior remain untouched.
@@ -120,7 +121,9 @@ void drawLayoutHJB()
 
   // Main display: use the received RDS clock on FM only when valid;
   // otherwise retain the tuned frequency as the primary value.
-  const char *rdsTime = currentMode == FM ? getRdsTime() : "";
+  // clockGet() is the existing clock API. RDS Clock Time can set this clock
+  // when NTP is unavailable; use it only when the firmware clock is valid.
+  const char *rdsTime = currentMode == FM ? clockGet() : nullptr;
   bool hasRdsTime = rdsTime && rdsTime[0] && strchr(rdsTime, ':');
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(HJB_YELLOW);

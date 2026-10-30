@@ -37,17 +37,49 @@ void drawLayoutTinyRadio()
   spr.drawNumber(volume * 100 / 63, 306, 5, FONT_SMALL);
   spr.drawString("%", 319, 7, FONT_DEFAULT);
 
-  // Frequency: yellow, high contrast, MHz shown as a smaller suffix.
-  char freq[20];
-  if(currentFrequency >= 1000)
-    snprintf(freq, sizeof(freq), "%lu.%lu", (unsigned long)(currentFrequency/1000), (unsigned long)((currentFrequency%1000)/10));
+  // Frequency formatting is deliberately local to TinyRadio.
+  // FM uses 10-kHz units (e.g. 10800 = 108.00 MHz); AM/SSB use kHz.
+  char freq[24];
+  bool showMHz = false;
+  if(currentMode == FM)
+  {
+    snprintf(freq, sizeof(freq), "%lu.%02lu",
+      (unsigned long)(currentFrequency / 100),
+      (unsigned long)(currentFrequency % 100));
+    showMHz = true;
+  }
+  else if(currentFrequency >= 1000)
+  {
+    // Shortwave / HF display in MHz. Include SSB fine tuning in the
+    // displayed fractional kHz without changing the receiver frequency.
+    int64_t hz = (int64_t)currentFrequency * 1000;
+    if(isSSB()) hz += currentBFO;
+    if(hz < 0) hz = 0;
+    snprintf(freq, sizeof(freq), "%lld.%03lld",
+      (long long)(hz / 1000000),
+      (long long)((hz % 1000000) / 1000));
+    showMHz = true;
+  }
+  else if(isSSB())
+  {
+    int32_t hz = (int32_t)currentFrequency * 1000 + currentBFO;
+    if(hz < 0) hz = 0;
+    snprintf(freq, sizeof(freq), "%lu.%03lu kHz",
+      (unsigned long)(hz / 1000), (unsigned long)(hz % 1000));
+  }
   else
+  {
     snprintf(freq, sizeof(freq), "%lu kHz", (unsigned long)currentFrequency);
+  }
   spr.setTextColor(YELLOW);
   spr.setTextDatum(TL_DATUM);
-  spr.drawString(freq, 8, 29, FONT_DIGITS);
-  spr.setTextColor(YELLOW);
-  spr.drawString(currentFrequency >= 1000 ? "MHz" : "", 204, 55, FONT_LARGE);
+  // Smaller font avoids clipping and leaves room for the unit.
+  spr.drawString(freq, 8, 31, FONT_LARGE);
+  if(showMHz)
+  {
+    spr.setTextColor(YELLOW);
+    spr.drawString("MHz", 226, 49, FONT_SMALL);
+  }
 
   // Mode and receiver controls. Enabled choices use the same cyan outline as the reference.
   const char *modes[] = {"FM","AM","LSB","USB"};
@@ -120,4 +152,9 @@ void drawLayoutTinyRadio()
   // Red pointer at the tuned frequency.
   spr.fillTriangle(153, 135, 167, 135, 160, 143, RED);
   spr.drawFastVLine(160, 143, 9, RED);
+
+  // Keep the normal menu/sidebar visible in TinyRadio, as in the other layouts.
+  // Keypad and scanner screens are handled earlier by Draw.cpp.
+  if(currentCmd != CMD_NONE && currentCmd != CMD_SCAN && currentCmd != CMD_FREQ)
+    drawSideBar(currentCmd, MENU_OFFSET_X, MENU_OFFSET_Y, MENU_DELTA_X);
 }

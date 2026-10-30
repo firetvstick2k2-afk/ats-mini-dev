@@ -9,7 +9,7 @@
 void drawLayoutTinyRadio()
 {
   constexpr uint16_t BLACK = 0x0000, WHITE = 0xFFFF, GREY = 0x8410;
-  constexpr uint16_t CYAN = 0x07FF, BLUE = 0x001F, YELLOW = 0xFFE0, GREEN = 0x07E0, RED = 0xF800;
+  constexpr uint16_t CYAN = 0x07FF, YELLOW = 0xFFE0, GREEN = 0x07E0, RED = 0xF800;
   spr.fillSprite(BLACK);
 
   // Compact top row: five selectors on the left; status values on the right.
@@ -23,7 +23,7 @@ void drawLayoutTinyRadio()
     const bool btActive = (i==4 && getBleStatus()!=0);
     const uint16_t color = (selected || webActive || btActive) ? CYAN : GREY;
     spr.drawRect(bx[i], 3, 32, 17, color);
-    spr.setTextColor(btActive ? BLUE : ((selected || webActive) ? CYAN : GREY));
+    spr.setTextColor((selected || webActive || btActive) ? CYAN : GREY);
     spr.setTextDatum(MC_DATUM);
     spr.drawString(bandsTop[i], bx[i]+16, 11, FONT_DEFAULT);
   }

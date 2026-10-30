@@ -4,6 +4,7 @@
 #include "Menu.h"
 #include "Draw.h"
 #include <time.h>
+#include <string.h>
 
 // HJB is an independent layout. Keep all drawing local so existing layouts
 // and their shared RDS/rendering behavior remain untouched.

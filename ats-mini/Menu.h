@@ -61,6 +61,7 @@
 // UI Layouts
 #define UI_DEFAULT  0
 #define UI_SMETER   1
+#define UI_TINYRADIO 6
 
 // Seek modes
 #define SEEK_DEFAULT  0

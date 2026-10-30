@@ -3,12 +3,13 @@
 #include "Utils.h"
 #include "Menu.h"
 #include "Draw.h"
+#include "BleMode.h"
 
 // TinyRadio-inspired ATS Mini layout. Kept isolated from all existing layouts.
 void drawLayoutTinyRadio()
 {
   constexpr uint16_t BLACK = 0x0000, WHITE = 0xFFFF, GREY = 0x8410;
-  constexpr uint16_t CYAN = 0x07FF, YELLOW = 0xFFE0, GREEN = 0x07E0, RED = 0xF800;
+  constexpr uint16_t CYAN = 0x07FF, BLUE = 0x001F, YELLOW = 0xFFE0, GREEN = 0x07E0, RED = 0xF800;
   spr.fillSprite(BLACK);
 
   // Compact top row: five selectors on the left; status values on the right.
@@ -26,58 +27,46 @@ void drawLayoutTinyRadio()
     spr.drawString(bandsTop[i], bx[i]+16, 11, FONT_DEFAULT);
   }
 
-  // Tiny status readouts stay to the right of the band selectors.
+  // Compact status row: brightness and volume are labelled clearly.
+  // WEB is shown only once, in the band-selector row above.
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(WHITE);
-  char topStatus[12];
-  snprintf(topStatus, sizeof(topStatus), "B%u%%", (unsigned)(currentBrt * 100 / 255));
-  spr.drawString(topStatus, 215, 5, FONT_DEFAULT);
-  snprintf(topStatus, sizeof(topStatus), "V%u%%", (unsigned)(volume * 100 / 63));
-  spr.drawString(topStatus, 268, 5, FONT_DEFAULT);
-  spr.drawRect(280, 4, 36, 14, (wifiModeIdx==NET_AP_ONLY || wifiModeIdx==NET_AP_CONNECT) ? CYAN : GREY);
-  spr.setTextDatum(MC_DATUM);
-  spr.setTextColor((wifiModeIdx==NET_AP_ONLY || wifiModeIdx==NET_AP_CONNECT) ? CYAN : GREY);
-  spr.drawString((wifiModeIdx==NET_AP_ONLY || wifiModeIdx==NET_AP_CONNECT) ? "WEB" : "OFF", 298, 11, FONT_DEFAULT);
+  char topStatus[16];
+  snprintf(topStatus, sizeof(topStatus), "BR:%u%%", (unsigned)(currentBrt * 100 / 255));
+  spr.drawString(topStatus, 213, 5, FONT_DEFAULT);
+  snprintf(topStatus, sizeof(topStatus), "VOL:%u%%", (unsigned)(volume * 100 / 63));
+  spr.drawString(topStatus, 270, 5, FONT_DEFAULT);
+  if(getBleStatus() > 0)
+  {
+    spr.setTextColor(BLUE);
+    spr.setTextDatum(MC_DATUM);
+    spr.drawString("BT", 300, 5, FONT_DEFAULT);
+  }
 
-  // Frequency: size and unit are constrained to the upper display region.
-  char freq[24];
-  bool showMHz = false;
+  // Frequency and unit are formatted as one centered string.
+  // FM frequencies are stored in 10-kHz units; AM/SSB values are in kHz.
+  char freq[32];
   if(currentMode == FM)
   {
-    snprintf(freq, sizeof(freq), "%lu.%02lu",
+    snprintf(freq, sizeof(freq), "%lu.%02lu MHz",
       (unsigned long)(currentFrequency / 100),
       (unsigned long)(currentFrequency % 100));
-    showMHz = true;
-  }
-  else if(currentFrequency >= 1000)
-  {
-    int64_t hz = (int64_t)currentFrequency * 1000;
-    if(isSSB()) hz += currentBFO;
-    if(hz < 0) hz = 0;
-    snprintf(freq, sizeof(freq), "%lu.%03lu",
-      (unsigned long)(hz / 1000000),
-      (unsigned long)((hz % 1000000) / 1000));
-    showMHz = true;
   }
   else if(isSSB())
   {
     int32_t hz = (int32_t)currentFrequency * 1000 + currentBFO;
     if(hz < 0) hz = 0;
     snprintf(freq, sizeof(freq), "%lu.%03lu kHz",
-      (unsigned long)(hz / 1000), (unsigned long)(hz % 1000));
+      (unsigned long)(hz / 1000),
+      (unsigned long)(hz % 1000));
   }
   else
-    snprintf(freq, sizeof(freq), "%lu kHz", (unsigned long)currentFrequency);
-
-  spr.setTextColor(YELLOW);
-  spr.setTextDatum(TL_DATUM);
-  spr.drawString(freq, 8, 25, FONT_LARGE);
-  if(showMHz)
   {
-    spr.setTextColor(YELLOW);
-    spr.setTextDatum(TR_DATUM);
-    spr.drawString("MHz", 310, 49, FONT_SMALL);
+    snprintf(freq, sizeof(freq), "%lu kHz", (unsigned long)currentFrequency);
   }
+  spr.setTextColor(YELLOW);
+  spr.setTextDatum(MC_DATUM);
+  spr.drawString(freq, 160, 43, FONT_LARGE);
 
   // Mode row and controls: fixed non-overlapping columns.
   const char *modes[] = {"FM","AM","LSB","USB"};

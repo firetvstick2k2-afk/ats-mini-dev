@@ -27,20 +27,18 @@ void drawLayoutTinyRadio()
     spr.drawString(bandsTop[i], bx[i]+16, 11, FONT_DEFAULT);
   }
 
-  // Compact status row: brightness and volume are labelled clearly.
-  // WEB is shown only once, in the band-selector row above.
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(WHITE);
-  char topStatus[16];
-  snprintf(topStatus, sizeof(topStatus), "BR:%u%%", (unsigned)(currentBrt * 100 / 255));
-  spr.drawString(topStatus, 213, 5, FONT_DEFAULT);
-  snprintf(topStatus, sizeof(topStatus), "VOL:%u%%", (unsigned)(volume * 100 / 63));
-  spr.drawString(topStatus, 270, 5, FONT_DEFAULT);
-  if(getBleStatus() > 0)
+  // Restore the real battery indicator; brightness and volume are not useful here.
+  // Use the same battery drawing routine as the rest of the firmware.
+  drawBattery(220, 3);
+
+  // Show Bluetooth whenever its status is non-zero. A positive status means connected/active.
+  // Keep the indicator bright blue when active.
+  const int8_t bleStatus = getBleStatus();
+  if(bleStatus != 0)
   {
-    spr.setTextColor(BLUE);
+    spr.setTextColor(bleStatus > 0 ? BLUE : GREY);
     spr.setTextDatum(MC_DATUM);
-    spr.drawString("BT", 300, 5, FONT_DEFAULT);
+    spr.drawString("BT", 300, 11, FONT_DEFAULT);
   }
 
   // Frequency and unit are formatted as one centered string.

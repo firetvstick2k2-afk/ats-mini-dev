@@ -463,3 +463,15 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - No exact source repository for the waterfall shown in the user's video has been confirmed yet.
 - Continue searching forks, branches and older commits when the HJB task resumes or when the user asks to continue the source hunt.
 - Do not let this research delay the agreed HJB-first priority.
+
+
+## HJB layout — first isolated implementation pass (2026-10-30)
+
+- Started the HJB layout in the private development repository only, on `development`.
+- Added a separate renderer: `ats-mini/Layout-HJB.cpp`.
+- Registered `drawLayoutHJB()` as layout index 7 in `Draw.cpp` and added `HJB` to the UI layout selection in English, German and Italian menu source templates.
+- Initial renderer includes a large seven-segment primary readout; FM RDS clock takes precedence when `getRdsTime()` returns a non-empty time containing a colon, otherwise it shows the tuned frequency. It also draws station name, FM radio text, a left-side red/blue signal graph, right-side RSSI/SNR bars and stereo/mono indicator, and a bottom frequency ruler with a red tuned marker.
+- The AF indicator from the reference has deliberately not been wired yet: the available SI4735 API has not been verified to expose the alternative-frequency value. Do not guess an API or introduce a compile error for it.
+- This is an initial source implementation, not yet a verified visual match. Exact positions, RDS time format, signal scaling, band-scale labels, PTY availability, and the target screenshot resemblance still need source review and device tuning.
+- No build was run and no hardware test is confirmed. Before asking the user to build, review the new source against the exact library APIs and current layout/menu dispatch, and inspect the resulting diff. Then run the manual Actions workflow on private `development` and test FM with/without RDS clock, PS/RT/PTY, AM/SW frequency display, scale movement, and stereo/signal indicators.
+- HJB remains private and must not be copied to public `13HN2709/ats-mini` unless the user explicitly approves a future public release.

@@ -17,20 +17,38 @@ static const uint16_t HJB_MUTED = 0x7BEF;
 
 static void hjbDrawSignalGraph()
 {
-  const int x0 = 7, y0 = 67, w = 62, h = 42;
+  // A short rolling trace: SNR is the mostly calm reference line, while RSSI
+  // follows real receiver measurements and can rise/fall like the original HJB.
+  const int x0 = 7, y0 = 70, w = 62, h = 40;
+  const int graphLeft = x0 + 3, graphRight = x0 + w - 3;
+  const int graphWidth = graphRight - graphLeft;
+  const int graphBottom = y0 + h - 4;
+  const int graphTop = y0 + 4;
+  static uint8_t rssiHistory[56] = {};
+  static int snrLevel = 0;
+  static uint32_t lastSample = 0;
+  const uint32_t now = millis();
+  const int rssi = constrain((int)rx.getCurrentRSSI(), 0, 100);
+  const int snr = constrain((int)rx.getCurrentSNR(), 0, 40);
+  if (now - lastSample >= 100 || lastSample == 0)
+  {
+    for (int i = 0; i < 55; ++i) rssiHistory[i] = rssiHistory[i + 1];
+    rssiHistory[55] = (uint8_t)rssi;
+    snrLevel = snr;
+    lastSample = now;
+  }
+
   spr.drawRect(x0, y0, w, h, 0x4208);
-  spr.drawFastHLine(x0 + 2, y0 + h/2, w - 4, 0x2104);
-  int rssi = constrain((int)rx.getCurrentRSSI(), 0, 100);
-  int snr = constrain((int)rx.getCurrentSNR(), 0, 40);
-  // Draw actual current levels, not an invented/jittered history trace.
-  const int graphLeft = x0 + 3;
-  const int graphRight = x0 + w - 3;
-  const int rssiY = y0 + h - 3 - map(rssi, 0, 100, 0, h - 7);
-  const int snrY = y0 + h - 3 - map(snr, 0, 40, 0, h - 7);
-  spr.drawFastHLine(graphLeft, rssiY, graphRight - graphLeft, HJB_RED);
-  spr.drawFastHLine(graphLeft, snrY, graphRight - graphLeft, HJB_BLUE);
-  spr.drawFastVLine(graphLeft, rssiY - 2, 5, HJB_RED);
-  spr.drawFastVLine(graphRight - 1, snrY - 2, 5, HJB_BLUE);
+  const int snrY = graphBottom - map(snrLevel, 0, 40, 0, graphBottom - graphTop);
+  spr.drawFastHLine(graphLeft, snrY, graphWidth, HJB_BLUE);
+  for (int i = 1; i < 56; ++i)
+  {
+    const int x1 = graphLeft + ((i - 1) * graphWidth) / 55;
+    const int x2 = graphLeft + (i * graphWidth) / 55;
+    const int y1 = graphBottom - map((int)rssiHistory[i - 1], 0, 100, 0, graphBottom - graphTop);
+    const int y2 = graphBottom - map((int)rssiHistory[i], 0, 100, 0, graphBottom - graphTop);
+    spr.drawLine(x1, y1, x2, y2, HJB_RED);
+  }
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(HJB_RED);
   spr.drawString("RSSI", x0 + 2, y0 - 10, FONT_DEFAULT);
@@ -40,23 +58,29 @@ static void hjbDrawSignalGraph()
 
 static void hjbDrawSignalBars()
 {
-  const int x = 251, y = 75;
+  const int x = 247;
   const int rssi = constrain((int)rx.getCurrentRSSI(), 0, 100);
   const int snr = constrain((int)rx.getCurrentSNR(), 0, 40);
+  const bool stereo = currentMode == FM && fmStereoIdx != FM_STEREO_MONO && rx.getCurrentPilot();
+
+  // Stereo sits at the top of the right-hand column; two compact meters below.
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(stereo ? HJB_GREEN : HJB_MUTED);
+  spr.drawString(stereo ? "STEREO" : "MONO", 316, 36, FONT_SMALL);
+
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(HJB_MUTED);
-  spr.drawString("RSSI", x, y - 13, FONT_DEFAULT);
-  spr.drawString("SNR", x, y + 23, FONT_DEFAULT);
-  for(int i=0; i<8; ++i)
+  spr.drawString("RSSI", x, 48, FONT_DEFAULT);
+  spr.drawString("SNR", x, 70, FONT_DEFAULT);
+  const int rssiBars = constrain(map(rssi, 0, 100, 0, 8), 0, 8);
+  const int snrBars = constrain(map(snr, 0, 40, 0, 8), 0, 8);
+  for (int i = 0; i < 8; ++i)
   {
-    uint16_t c1 = i < map(rssi, 0, 100, 0, 8) ? (i < 5 ? HJB_GREEN : HJB_YELLOW) : 0x2104;
-    uint16_t c2 = i < map(snr, 0, 40, 0, 8) ? (i < 5 ? HJB_BLUE : HJB_YELLOW) : 0x2104;
-    spr.fillRect(x + i*7, y, 5, 8, c1);
-    spr.fillRect(x + i*7, y + 36, 5, 8, c2);
+    uint16_t c1 = i < rssiBars ? (i < 5 ? HJB_GREEN : HJB_YELLOW) : 0x2104;
+    uint16_t c2 = i < snrBars ? (i < 5 ? HJB_BLUE : HJB_YELLOW) : 0x2104;
+    spr.fillRect(x + i * 8, 60, 6, 6, c1);
+    spr.fillRect(x + i * 8, 82, 6, 6, c2);
   }
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor((currentMode == FM && fmStereoIdx != FM_STEREO_MONO && rx.getCurrentPilot()) ? HJB_GREEN : HJB_MUTED);
-  spr.drawString((currentMode == FM && fmStereoIdx != FM_STEREO_MONO && rx.getCurrentPilot()) ? "STEREO" : "MONO", 313, 58, FONT_SMALL);
 }
 
 static void hjbDrawScale()
@@ -93,16 +117,18 @@ void drawLayoutHJB()
 {
   spr.fillSprite(HJB_BG);
 
-  // Compact top row: band/PTY on the left, AF and status icons on the right.
+  // Compact top row; FM and PTY are centered above the frequency.
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(HJB_GREEN);
-  spr.drawString(currentMode == FM ? "FM" : (currentMode == AM ? "AM" : (currentMode == USB ? "USB" : "LSB")), 7, 4, FONT_SMALL);
+  spr.setTextDatum(MC_DATUM);
+  spr.drawString(currentMode == FM ? "FM" : (currentMode == AM ? "AM" : (currentMode == USB ? "USB" : "LSB")), 160, 3, FONT_SMALL);
 
   const char *pty = currentMode == FM ? getProgramInfo() : "";
   if(pty && *pty)
   {
+    spr.setTextDatum(MC_DATUM);
     spr.setTextColor(HJB_MUTED);
-    spr.drawString(pty, 7, 21, FONT_DEFAULT);
+    spr.drawString(pty, 160, 19, FONT_DEFAULT);
   }
 
   // AF is intentionally omitted until the SI4735 library exposes a verified
@@ -110,7 +136,7 @@ void drawLayoutHJB()
 
   bool hasVoltage = drawBattery(BATT_OFFSET_X, BATT_OFFSET_Y);
   drawWiFiIndicator(hasVoltage ? WIFI_OFFSET_X : BATT_OFFSET_X - 13, WIFI_OFFSET_Y);
-  drawBleIndicator(BLE_OFFSET_X, BLE_OFFSET_Y);
+  drawBleIndicator(WIFI_OFFSET_X - 18, WIFI_OFFSET_Y);
   drawSaveIndicator(SAVE_OFFSET_X, SAVE_OFFSET_Y);
 
   // Small date readout when the firmware clock has a valid date.
@@ -122,7 +148,7 @@ void drawLayoutHJB()
     snprintf(dateText, sizeof(dateText), "%02u.%02u", (unsigned)day, (unsigned)month);
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(HJB_MUTED);
-    spr.drawString(dateText, 174, 7, FONT_DEFAULT);
+    spr.drawString(dateText, 182, 7, FONT_DEFAULT);
   }
 
   // Main display: keep the tuned frequency as the primary value for now.
@@ -137,18 +163,6 @@ void drawLayoutHJB()
   else
     spr.drawNumber(currentFrequency, 160, 53);
 
-  if(currentMode == FM)
-  {
-    spr.setTextDatum(ML_DATUM);
-    spr.setTextColor(HJB_MUTED);
-    spr.drawString("MHz", 259, 62, &lgfx::fonts::FreeSansBold9pt7b);
-  }
-  else
-  {
-    spr.setTextDatum(ML_DATUM);
-    spr.setTextColor(HJB_MUTED);
-    spr.drawString("kHz", 259, 62, &lgfx::fonts::FreeSansBold9pt7b);
-  }
 
   const char *station = getStationName();
   if(station && *station)
@@ -182,5 +196,9 @@ void drawLayoutHJB()
 
   hjbDrawSignalGraph();
   hjbDrawSignalBars();
-  hjbDrawScale();
+  // Reuse the standard original-style frequency ruler: moving scale, fixed tuned marker.
+  drawScale(isSSB() ? (currentFrequency + currentBFO / 1000) : currentFrequency);
+
+  // Preserve the compact layout menu/command overlay in this independent layout.
+  drawSideBar(currentCmd, MENU_OFFSET_X, MENU_OFFSET_Y, MENU_DELTA_X);
 }

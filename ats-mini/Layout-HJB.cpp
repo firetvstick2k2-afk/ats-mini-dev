@@ -3,7 +3,6 @@
 #include "Utils.h"
 #include "Menu.h"
 #include "Draw.h"
-#include <time.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -126,27 +125,17 @@ void drawLayoutHJB()
     spr.drawString(dateText, 174, 7, FONT_DEFAULT);
   }
 
-  // Main display: use the received RDS clock on FM only when valid;
-  // otherwise retain the tuned frequency as the primary value.
-  // clockGet() is the existing clock API. RDS Clock Time can set this clock
-  // when NTP is unavailable; use it only when the firmware clock is valid.
-  const char *rdsTime = currentMode == FM ? clockGet() : nullptr;
-  bool hasRdsTime = rdsTime && rdsTime[0] && strchr(rdsTime, ':');
+  // Main display: keep the tuned frequency as the primary value for now.
+  // The shared clock may be set by NTP, so it must not be mistaken for
+  // an RDS clock. RDS CT can be added here once a dedicated validity flag
+  // is exposed by the firmware.
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(HJB_YELLOW);
   spr.setFont(FONT_DIGITS);
-  if(hasRdsTime)
-  {
-    spr.drawString(rdsTime, 160, 53);
-  }
-  else if(currentMode == FM)
-  {
+  if(currentMode == FM)
     spr.drawFloat(currentFrequency / 100.0f, 2, 160, 53);
-  }
   else
-  {
     spr.drawNumber(currentFrequency, 160, 53);
-  }
 
   if(currentMode == FM)
   {

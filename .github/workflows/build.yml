@@ -12,7 +12,8 @@ jobs:
   build:
     name: build ${{ matrix.board.artifact-suffix }}-${{ matrix.lang }}
     runs-on: ubuntu-24.04
-    permissions: {}
+    permissions:
+      contents: read
     strategy:
       fail-fast: true
       matrix:

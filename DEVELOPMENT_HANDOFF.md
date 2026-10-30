@@ -351,3 +351,40 @@ Approved English feature summary for the release notes:
 - After the build, verify all generated artifacts and confirm the OTA URL fix is included in those binaries. Then prepare/update the GitHub Release only when the user is ready.
 - CW and RTTY are paused and inactive; exclude them from README, changelog, and release assets descriptions.
 - Keep development in private ats-mini-dev → development. Only copy approved release source/text to public ats-mini when explicitly requested.
+
+## Public Main status — checked 2026-10-30 (private handoff only)
+
+### Repository separation — user instruction
+- This `DEVELOPMENT_HANDOFF.md` belongs **only** in the private repository `13HN2709/ats-mini-dev`, branch `development`.
+- Never copy this handoff/protocol into the official public repository `13HN2709/ats-mini`. The public repository must not contain `DEVELOPMENT_HANDOFF.md` or another internal development handoff document.
+- Public `main` is for official firmware source, public-facing README/changelog, workflows, and release assets only. Keep internal test notes, pending work, and handoff details private.
+
+### Official public repository snapshot
+- Repository: https://github.com/13HN2709/ats-mini
+- Branch: `main`
+- Latest public HEAD observed in this session: `97650103e92a9a6bee2a6038a278f768e33f6b97` — “Show compact EiBi download status in TEF6686 layout”.
+- The public source contains the V1.31 preparation changes discussed with the user, including:
+  - `Draw.cpp` layout-selection correction: **Original** selects the former Default layout; **TEF6686** is the fresh-install/reset default.
+  - `Layout-TEF6686.cpp` compact `Downloading...` indicator while EiBi data is loading.
+  - `Menu_italian.cpp.src` and workflow language matrix for German, English, and Italian.
+  - `Common.h` OTA firmware URL pointing to the official public repository `https://github.com/13HN2709/ats-mini`.
+  - Build workflow matrix for OSPI and QSPI variants across `de`, `en`, and `it`, plus runner disk-space cleanup.
+- The user has confirmed the layout selection/reset behavior, EiBi status indicator, and Italian menu appearance on device.
+- The public source-code sync is **not proof that the current public-main workflow passed**. At the time of this update, the user was preparing/running the manual V1.31 build; its result and final release artifacts still need to be confirmed. Do not mark V1.31 release-ready until the actual Actions result and artifacts are checked.
+- The existing V1.31 release assets mentioned earlier may predate the OTA URL correction; verify the binaries actually generated from current public `main` before publishing/replacing assets.
+- CW and RTTY decoders remain paused/inactive and must not be advertised as available features.
+- The approved public release changelog may include Waterfall Layout, but only features confirmed present in the exact release binaries should be described as available.
+
+### Public Main links
+- Source branch: https://github.com/13HN2709/ats-mini/tree/main
+- Commit history: https://github.com/13HN2709/ats-mini/commits/main
+- Build workflow: https://github.com/13HN2709/ats-mini/blob/main/.github/workflows/build.yml
+- TEF6686 layout: https://github.com/13HN2709/ats-mini/blob/main/ats-mini/Layout-TEF6686.cpp
+- Release v1.31: https://github.com/13HN2709/ats-mini/releases/tag/v1.31
+
+### Next release checks
+1. Confirm the public `main` manual workflow completes successfully for all six matrix combinations (OSPI/QSPI × German/English/Italian).
+2. Inspect the produced artifacts and verify they include the OTA URL fix and the intended layout/EiBi/Italian changes.
+3. Only then update or publish the official V1.31 release assets and release notes, when the user is ready.
+4. Keep this protocol and future handoff updates exclusively in private `ats-mini-dev` → `development`.
+

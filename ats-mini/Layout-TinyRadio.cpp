@@ -133,9 +133,9 @@ void drawLayoutTinyRadio()
       spr.drawString(label, px, 155, FONT_DEFAULT);
     }
   }
-  // Red pointer at the tuned frequency.
-  spr.fillTriangle(153, 135, 167, 135, 160, 143, RED);
-  spr.drawFastVLine(160, 143, 9, RED);
+  // Red tuning marker: a solid dot centered directly on the horizontal ruler.
+  // Replaces the triangle and vertical tail to leave more room above for RadioText.
+  spr.fillCircle(160, 142, 6, RED);
 
   // Keep the normal menu/sidebar visible in TinyRadio, as in the other layouts.
   // Keypad and scanner screens are handled earlier by Draw.cpp.

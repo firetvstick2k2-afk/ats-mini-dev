@@ -109,16 +109,8 @@ void drawLayoutHJB()
     spr.drawString(pty, 7, 21, FONT_DEFAULT);
   }
 
-  if(currentMode == FM)
-  {
-    const char *af = rx.getRdsAF();
-    if(af && *af)
-    {
-      spr.setTextDatum(TR_DATUM);
-      spr.setTextColor(HJB_MUTED);
-      spr.drawString(af, 260, 4, FONT_SMALL);
-    }
-  }
+  // AF is intentionally omitted until the SI4735 library exposes a verified
+  // alternative-frequency getter in this firmware version.
 
   bool hasVoltage = drawBattery(BATT_OFFSET_X, BATT_OFFSET_Y);
   drawWiFiIndicator(hasVoltage ? WIFI_OFFSET_X : BATT_OFFSET_X - 13, WIFI_OFFSET_Y);

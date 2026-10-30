@@ -17,6 +17,7 @@ void drawLayoutDefault();
 void drawLayoutClean();
 void drawLayoutTEF6686();
 void drawLayoutTinyRadio();
+void drawLayoutHJB();
 
 uint32_t lastTuneTime = 0;
 
@@ -661,6 +662,9 @@ void drawScreen()
       break;
     case 6:
       drawLayoutTinyRadio();
+      break;
+    case 7:
+      drawLayoutHJB();
       break;
     default:
       // UI_DEFAULT (index 0) is the original Layout-Default.

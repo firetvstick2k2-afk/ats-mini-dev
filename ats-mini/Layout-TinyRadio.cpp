@@ -62,9 +62,11 @@ void drawLayoutTinyRadio()
   {
     snprintf(freq, sizeof(freq), "%lu kHz", (unsigned long)currentFrequency);
   }
+  // Left-align frequency and unit at a fixed position so the right side stays free.
+  // Move the baseline slightly down (about 1 mm on the 320x170 display).
   spr.setTextColor(YELLOW);
-  spr.setTextDatum(MC_DATUM);
-  spr.drawString(freq, 160, 43, FONT_LARGE);
+  spr.setTextDatum(TL_DATUM);
+  spr.drawString(freq, 8, 46, FONT_LARGE);
 
   // Mode row and controls: fixed non-overlapping columns.
   const char *modes[] = {"FM","AM","LSB","USB"};

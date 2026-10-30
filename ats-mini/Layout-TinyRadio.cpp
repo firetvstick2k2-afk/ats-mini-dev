@@ -110,15 +110,15 @@ void drawLayoutTinyRadio()
   spr.drawString("OK", 230, 91, FONT_DEFAULT);
   spr.drawString("RF0", 256, 91, FONT_DEFAULT);
 
-  // RDS station name and RadioText use separate rows above the ruler.
-  // Station name sits higher; RadioText below it remains clear of the scale.
+  // Station name (e.g. DLF) slightly higher, RadioText directly underneath.
+  // Both rows are centered and kept clear of the frequency ruler.
   const char *rt = getRadioText();
   const char *station = getStationName();
-  spr.setTextColor(CYAN);
   spr.setTextDatum(TC_DATUM);
-  if(station && *station) spr.drawString(station, 160, 108, FONT_SMALL);
+  spr.setTextColor(CYAN);
+  if(station && *station) spr.drawString(station, 160, 104, FONT_SMALL);
   spr.setTextColor(WHITE);
-  if(rt && *rt) spr.drawString(rt, 160, 124, FONT_SMALL);
+  if(rt && *rt) spr.drawString(rt, 160, 119, FONT_SMALL);
 
   // Frequency ruler, centered on the tuned frequency.
   const uint32_t f = currentFrequency + (isSSB() ? currentBFO/1000 : 0);

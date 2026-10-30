@@ -64,6 +64,23 @@ jobs:
           fi
           echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
 
+      - name: Free disk space for ESP32 toolchain
+        run: |
+          echo "Disk space before cleanup:"
+          df -h /
+          echo "Largest top-level directories:"
+          sudo du -xhd1 /usr/local /opt /usr/share 2>/dev/null | sort -h | tail -n 25 || true
+
+          # These preinstalled toolchains are unrelated to the Arduino ESP32 build.
+          # Keep Python, Node.js, Git, and the GitHub Actions runner intact.
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/dotnet /usr/local/share/powershell /usr/local/.ghcup /usr/share/swift
+
+          # Remove package-manager caches only; do not remove installed build tools.
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          echo "Disk space after cleanup:"
+          df -h /
+
       - name: Compile firmware
         uses: arduino/compile-sketches@v1
         with:

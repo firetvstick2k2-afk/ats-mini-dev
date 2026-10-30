@@ -23,20 +23,15 @@ static void hjbDrawSignalGraph()
   spr.drawFastHLine(x0 + 2, y0 + h/2, w - 4, 0x2104);
   int rssi = constrain((int)rx.getCurrentRSSI(), 0, 100);
   int snr = constrain((int)rx.getCurrentSNR(), 0, 40);
-  int lastX = x0 + 3;
-  int lastYR = y0 + h - 3 - map(rssi, 0, 100, 0, h - 7);
-  int lastYB = y0 + h - 3 - map(snr, 0, 40, 0, h - 7);
-  for(int i = 1; i < 14; ++i)
-  {
-    int x = x0 + 3 + i * 4;
-    int jitterR = ((millis() / 140 + i * 7) % 9) - 4;
-    int jitterB = ((millis() / 180 + i * 5) % 11) - 5;
-    int yr = constrain(lastYR + jitterR, y0 + 3, y0 + h - 3);
-    int yb = constrain(lastYB + jitterB, y0 + 3, y0 + h - 3);
-    spr.drawLine(lastX, lastYR, x, yr, HJB_RED);
-    spr.drawLine(lastX, lastYB, x, yb, HJB_BLUE);
-    lastX = x; lastYR = yr; lastYB = yb;
-  }
+  // Draw actual current levels, not an invented/jittered history trace.
+  const int graphLeft = x0 + 3;
+  const int graphRight = x0 + w - 3;
+  const int rssiY = y0 + h - 3 - map(rssi, 0, 100, 0, h - 7);
+  const int snrY = y0 + h - 3 - map(snr, 0, 40, 0, h - 7);
+  spr.drawFastHLine(graphLeft, rssiY, graphRight - graphLeft, HJB_RED);
+  spr.drawFastHLine(graphLeft, snrY, graphRight - graphLeft, HJB_BLUE);
+  spr.drawFastVLine(graphLeft, rssiY - 2, 5, HJB_RED);
+  spr.drawFastVLine(graphRight - 1, snrY - 2, 5, HJB_BLUE);
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(HJB_RED);
   spr.drawString("RSSI", x0 + 2, y0 - 10, FONT_DEFAULT);
@@ -119,6 +114,18 @@ void drawLayoutHJB()
   drawBleIndicator(BLE_OFFSET_X, BLE_OFFSET_Y);
   drawSaveIndicator(SAVE_OFFSET_X, SAVE_OFFSET_Y);
 
+  // Small date readout when the firmware clock has a valid date.
+  uint16_t year;
+  uint8_t month, day, weekday;
+  if(clockGetDate(&year, &month, &day, &weekday))
+  {
+    char dateText[12];
+    snprintf(dateText, sizeof(dateText), "%02u.%02u", day, month);
+    spr.setTextDatum(TR_DATUM);
+    spr.setTextColor(HJB_MUTED);
+    spr.drawString(dateText, 229, 4, FONT_DEFAULT);
+  }
+
   // Main display: use the received RDS clock on FM only when valid;
   // otherwise retain the tuned frequency as the primary value.
   // clockGet() is the existing clock API. RDS Clock Time can set this clock
@@ -155,17 +162,17 @@ void drawLayoutHJB()
   }
 
   const char *station = getStationName();
-  if(station && *station && (uint8_t)station[0] != 0xFF)
+  if(station && *station)
   {
-    spr.setTextDatum(MC_DATUM);
     spr.setTextColor(HJB_GREEN);
-    spr.drawString(station, 160, 96, FONT_LARGE);
-  }
-  else if(station && (uint8_t)station[0] == 0xFF && station[1])
-  {
-    spr.setTextDatum(MC_DATUM);
-    spr.setTextColor(HJB_GREEN);
-    spr.drawString(station + 1, 160, 96, FONT_SMALL);
+    // The shared station API marks long EiBi names with a leading 0xFF.
+    if((uint8_t)station[0] == 0xFF)
+      drawLongStationName(station + 1, 8, 96);
+    else
+    {
+      spr.setTextDatum(MC_DATUM);
+      spr.drawString(station, 160, 96, FONT_LARGE);
+    }
   }
 
   const char *rt = currentMode == FM ? getRadioText() : "";

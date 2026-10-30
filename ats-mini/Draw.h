@@ -57,6 +57,7 @@ void drawLayoutNewUI();
 void drawLayoutClean();
 void drawLayoutTEF6686();
 void drawLayoutTinyRadio();
+void drawLayoutHJB();
 
 void drawAbout();
 void drawAboutHelp(uint8_t arrow);

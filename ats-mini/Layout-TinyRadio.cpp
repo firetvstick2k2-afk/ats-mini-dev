@@ -30,7 +30,7 @@ void drawLayoutTinyRadio()
 
   // Restore the real battery indicator; brightness and volume are not useful here.
   // Use the same battery drawing routine as the rest of the firmware.
-  drawBattery(220, 3);
+  drawBattery(265, 3);
 
 
 
@@ -109,9 +109,9 @@ void drawLayoutTinyRadio()
   const char *station = getStationName();
   spr.setTextDatum(TC_DATUM);
   spr.setTextColor(CYAN);
-  if(station && *station) spr.drawString(station, 160, 100, FONT_SMALL);
+  if(station && *station) spr.drawString(station, 160, 104, FONT_SMALL);
   spr.setTextColor(WHITE);
-  if(rt && *rt) spr.drawString(rt, 160, 114, FONT_SMALL);
+  if(rt && *rt) spr.drawString(rt, 160, 119, FONT_SMALL);
 
   // Frequency ruler, centered on the tuned frequency.
   const uint32_t f = currentFrequency + (isSSB() ? currentBFO/1000 : 0);

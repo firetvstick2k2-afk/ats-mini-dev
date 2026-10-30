@@ -11,34 +11,35 @@ void drawLayoutTinyRadio()
   constexpr uint16_t CYAN = 0x07FF, YELLOW = 0xFFE0, GREEN = 0x07E0, RED = 0xF800;
   spr.fillSprite(BLACK);
 
-  // Top band selectors: the AIR slot becomes a live WEB status indicator.
+  // Compact top row: five selectors on the left; status values on the right.
+  // All coordinates are designed for the physical 320x170 display.
   const char *bandsTop[] = {"LW", "MW", "SW", "VHF", "WEB"};
-  const int bx[] = {14, 148, 282, 416, 550}; // positions are clamped to the 320px display below
-  (void)bx;
-  const int x[] = {3, 69, 135, 201, 267};
+  const int bx[] = {2, 37, 72, 107, 142};
   for(int i=0;i<5;i++)
   {
     const bool selected = (i==3 && getCurrentBand()->bandType==FM_BAND_TYPE);
     const bool webActive = (i==4 && (wifiModeIdx==NET_AP_ONLY || wifiModeIdx==NET_AP_CONNECT));
     const uint16_t color = (selected || webActive) ? CYAN : GREY;
-    spr.drawRect(x[i], 3, 50, 19, color);
+    spr.drawRect(bx[i], 3, 32, 17, color);
     spr.setTextColor((selected || webActive) ? CYAN : GREY);
     spr.setTextDatum(MC_DATUM);
-    spr.drawString(bandsTop[i], x[i]+25, 12, FONT_SMALL);
+    spr.drawString(bandsTop[i], bx[i]+16, 11, FONT_DEFAULT);
   }
 
-  // Brightness and volume status; compact text keeps the frequency dominant.
+  // Tiny status readouts stay to the right of the band selectors.
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(WHITE);
-  spr.drawString("BR", 206, 7, FONT_DEFAULT);
-  spr.drawNumber(currentBrt * 100 / 255, 230, 5, FONT_SMALL);
-  spr.drawString("%", 245, 7, FONT_DEFAULT);
-  spr.drawString("VOL", 275, 7, FONT_DEFAULT);
-  spr.drawNumber(volume * 100 / 63, 306, 5, FONT_SMALL);
-  spr.drawString("%", 319, 7, FONT_DEFAULT);
+  char topStatus[12];
+  snprintf(topStatus, sizeof(topStatus), "B%u%%", (unsigned)(currentBrt * 100 / 255));
+  spr.drawString(topStatus, 215, 5, FONT_DEFAULT);
+  snprintf(topStatus, sizeof(topStatus), "V%u%%", (unsigned)(volume * 100 / 63));
+  spr.drawString(topStatus, 268, 5, FONT_DEFAULT);
+  spr.drawRect(280, 4, 36, 14, (wifiModeIdx==NET_AP_ONLY || wifiModeIdx==NET_AP_CONNECT) ? CYAN : GREY);
+  spr.setTextDatum(MC_DATUM);
+  spr.setTextColor((wifiModeIdx==NET_AP_ONLY || wifiModeIdx==NET_AP_CONNECT) ? CYAN : GREY);
+  spr.drawString((wifiModeIdx==NET_AP_ONLY || wifiModeIdx==NET_AP_CONNECT) ? "WEB" : "OFF", 298, 11, FONT_DEFAULT);
 
-  // Frequency formatting is deliberately local to TinyRadio.
-  // FM uses 10-kHz units (e.g. 10800 = 108.00 MHz); AM/SSB use kHz.
+  // Frequency: size and unit are constrained to the upper display region.
   char freq[24];
   bool showMHz = false;
   if(currentMode == FM)
@@ -50,14 +51,12 @@ void drawLayoutTinyRadio()
   }
   else if(currentFrequency >= 1000)
   {
-    // Shortwave / HF display in MHz. Include SSB fine tuning in the
-    // displayed fractional kHz without changing the receiver frequency.
     int64_t hz = (int64_t)currentFrequency * 1000;
     if(isSSB()) hz += currentBFO;
     if(hz < 0) hz = 0;
-    snprintf(freq, sizeof(freq), "%lld.%03lld",
-      (long long)(hz / 1000000),
-      (long long)((hz % 1000000) / 1000));
+    snprintf(freq, sizeof(freq), "%lu.%03lu",
+      (unsigned long)(hz / 1000000),
+      (unsigned long)((hz % 1000000) / 1000));
     showMHz = true;
   }
   else if(isSSB())
@@ -68,58 +67,59 @@ void drawLayoutTinyRadio()
       (unsigned long)(hz / 1000), (unsigned long)(hz % 1000));
   }
   else
-  {
     snprintf(freq, sizeof(freq), "%lu kHz", (unsigned long)currentFrequency);
-  }
+
   spr.setTextColor(YELLOW);
   spr.setTextDatum(TL_DATUM);
-  // Smaller font avoids clipping and leaves room for the unit.
-  spr.drawString(freq, 8, 31, FONT_LARGE);
+  spr.drawString(freq, 8, 25, FONT_LARGE);
   if(showMHz)
   {
     spr.setTextColor(YELLOW);
-    spr.drawString("MHz", 226, 49, FONT_SMALL);
+    spr.setTextDatum(TR_DATUM);
+    spr.drawString("MHz", 310, 49, FONT_SMALL);
   }
 
-  // Mode and receiver controls. Enabled choices use the same cyan outline as the reference.
+  // Mode row and controls: fixed non-overlapping columns.
   const char *modes[] = {"FM","AM","LSB","USB"};
   const uint8_t modeValues[] = {FM, AM, LSB, USB};
-  const int mx[] = {3, 53, 103, 153};
+  const int mx[] = {3, 43, 83, 123};
   for(int i=0;i<4;i++)
   {
     const bool active = currentMode==modeValues[i];
-    spr.drawRect(mx[i], 75, 44, 22, active ? CYAN : GREY);
+    spr.drawRect(mx[i], 66, 36, 21, active ? CYAN : GREY);
     spr.setTextColor(active ? CYAN : GREY);
     spr.setTextDatum(MC_DATUM);
-    spr.drawString(modes[i], mx[i]+22, 86, FONT_SMALL);
+    spr.drawString(modes[i], mx[i]+18, 76, FONT_DEFAULT);
   }
-  const char *controls[] = {"BW", "AGC", "SM"};
-  const int cx[] = {203, 243, 283};
-  const char *values[] = {"AUTO", "AUTO", "16dB"};
+  const int cx[] = {164, 215, 270};
+  const int cw[] = {47, 51, 46};
+  const char *labels[] = {"BW AUTO", "AGC AUTO", "SM 16dB"};
   for(int i=0;i<3;i++)
   {
-    spr.drawRect(cx[i], 75, i==2 ? 34 : 36, 22, CYAN);
+    spr.drawRect(cx[i], 66, cw[i], 21, CYAN);
     spr.setTextColor(CYAN);
     spr.setTextDatum(MC_DATUM);
-    char label[16]; snprintf(label, sizeof(label), "%s %s", controls[i], values[i]);
-    spr.drawString(label, cx[i]+(i==2?17:18), 86, FONT_DEFAULT);
+    spr.drawString(labels[i], cx[i]+cw[i]/2, 76, FONT_DEFAULT);
   }
 
-  // Signal/status row.
+  // Signal/status row: labels remain separated and inside the screen.
   int rssi = rx.getCurrentRSSI();
   int snr = rx.getCurrentSNR();
-  for(int i=0;i<10;i++)
-    spr.fillRect(8+i*7, 101, 5, 9, i < (rssi>0 ? (rssi>100?10:rssi/10) : 0) ? GREEN : GREY);
+  for(int i=0;i<8;i++)
+    spr.fillRect(5+i*6, 93, 4, 8, i < (rssi>0 ? (rssi>80?8:rssi/10) : 0) ? GREEN : GREY);
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(WHITE);
-  char stats[24]; snprintf(stats, sizeof(stats), "%ddBuV", rssi);
-  spr.drawString(stats, 82, 99, FONT_SMALL);
-  snprintf(stats, sizeof(stats), "SN%ddB", snr);
-  spr.drawString(stats, 143, 99, FONT_SMALL);
+  char stats[20];
+  snprintf(stats, sizeof(stats), "%ddBuV", rssi);
+  spr.drawString(stats, 56, 91, FONT_DEFAULT);
+  snprintf(stats, sizeof(stats), "SN%d", snr);
+  spr.drawString(stats, 105, 91, FONT_DEFAULT);
   spr.setTextColor(GREEN);
-  spr.drawString("VALID", 206, 99, FONT_SMALL);
+  spr.drawString("VALID", 145, 91, FONT_DEFAULT);
   spr.setTextColor(WHITE);
-  spr.drawString("AFC OK", 258, 99, FONT_DEFAULT);
+  spr.drawString(isSSB() ? "BFO" : "AFC", 198, 91, FONT_DEFAULT);
+  spr.drawString("OK", 230, 91, FONT_DEFAULT);
+  spr.drawString("RF0", 256, 91, FONT_DEFAULT);
 
   // Radio text is shown above the ruler when available.
   const char *rt = getRadioText();

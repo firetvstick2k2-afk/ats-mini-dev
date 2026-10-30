@@ -465,13 +465,15 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Do not let this research delay the agreed HJB-first priority.
 
 
-## HJB layout — first isolated implementation pass (2026-10-30)
+## HJB layout — isolated implementation pass (2026-10-31)
 
-- Started the HJB layout in the private development repository only, on `development`.
-- Added a separate renderer: `ats-mini/Layout-HJB.cpp`.
-- Registered `drawLayoutHJB()` as layout index 7 in `Draw.cpp` and added `HJB` to the UI layout selection in English, German and Italian menu source templates.
-- Initial renderer includes a large seven-segment primary readout; FM RDS clock takes precedence when `getRdsTime()` returns a non-empty time containing a colon, otherwise it shows the tuned frequency. It also draws station name, FM radio text, a left-side red/blue signal graph, right-side RSSI/SNR bars and stereo/mono indicator, and a bottom frequency ruler with a red tuned marker.
-- The AF indicator from the reference has deliberately not been wired yet: the available SI4735 API has not been verified to expose the alternative-frequency value. Do not guess an API or introduce a compile error for it.
-- This is an initial source implementation, not yet a verified visual match. Exact positions, RDS time format, signal scaling, band-scale labels, PTY availability, and the target screenshot resemblance still need source review and device tuning.
-- No build was run and no hardware test is confirmed. Before asking the user to build, review the new source against the exact library APIs and current layout/menu dispatch, and inspect the resulting diff. Then run the manual Actions workflow on private `development` and test FM with/without RDS clock, PS/RT/PTY, AM/SW frequency display, scale movement, and stereo/signal indicators.
+- HJB is being implemented only in the private development repository, branch `development`.
+- Separate renderer: `ats-mini/Layout-HJB.cpp`; declared in `Draw.h`, registered as layout index 7 in `Draw.cpp`, and listed in English, German and Italian menu source templates.
+- The renderer currently draws a large seven-segment tuned-frequency readout, station name, FM RadioText and PTY, a left-side red/blue current RSSI/SNR level display, right-side RSSI/SNR bars and stereo/mono status, date when the firmware clock provides a valid date, and a bottom frequency ruler with a red tuned marker.
+- Important correction: the firmware clock may be set by NTP, so it must not be mistaken for a received RDS clock. The main readout therefore remains the tuned frequency in this first build candidate. Do not add clock-as-RDS behavior unless a dedicated RDS-CT validity/source can be verified.
+- AF remains omitted until the exact alternative-frequency API/data is verified. Do not guess a library method.
+- Web Control's RDS JSON endpoint confirms the intended data sources: `getStationName()` for PS, `getRadioText()` for RT and `getProgramInfo()` for PTY. The shared RDS pipeline has not been modified for HJB.
+- Recent isolated layout commits include: `415d74a`, `43ba269`, `6b4913f`, `fc879f0`, `da6a794`, `61f3f7c`, `f67abfc`, and `80d0cdd`.
+- Before the first build, the source still needs compilation against the exact installed SI4735/LovyanGFX APIs. No build has run and no device test has been performed. Once the source review is complete, the user will run the manual GitHub Actions workflow on private `development`; do not trigger it without explicit confirmation.
+- First device checks after a successful build: FM with and without PS/RT/PTY, FM frequency/unit alignment, SW/AM frequency and ruler, marker movement, date placement, RSSI/SNR indicators, and stereo/mono behavior.
 - HJB remains private and must not be copied to public `13HN2709/ats-mini` unless the user explicitly approves a future public release.

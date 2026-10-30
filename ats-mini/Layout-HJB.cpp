@@ -166,8 +166,12 @@ void drawLayoutHJB()
   {
     spr.setTextColor(HJB_GREEN);
     // The shared station API marks long EiBi names with a leading 0xFF.
+    // Keep the HJB color and fit the long name inside the display.
     if((uint8_t)station[0] == 0xFF)
-      drawLongStationName(station + 1, 8, 96);
+    {
+      spr.setTextDatum(MC_DATUM);
+      spr.drawString(station + 1, 160, 96, FONT_SMALL);
+    }
     else
     {
       spr.setTextDatum(MC_DATUM);

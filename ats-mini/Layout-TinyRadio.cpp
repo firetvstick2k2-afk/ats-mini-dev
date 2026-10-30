@@ -151,6 +151,5 @@ void drawLayoutTinyRadio()
 
   // Keep the normal menu/sidebar visible in TinyRadio, as in the other layouts.
   // Keypad and scanner screens are handled earlier by Draw.cpp.
-  if(currentCmd != CMD_NONE && currentCmd != CMD_SCAN && currentCmd != CMD_FREQ)
-    drawSideBar(currentCmd, MENU_OFFSET_X, MENU_OFFSET_Y, MENU_DELTA_X);
+  drawSideBar(currentCmd, MENU_OFFSET_X, MENU_OFFSET_Y, MENU_DELTA_X);
 }

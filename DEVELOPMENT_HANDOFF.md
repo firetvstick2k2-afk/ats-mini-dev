@@ -433,3 +433,33 @@ The user explicitly requires that the two new custom layouts remain private and 
 - The intended active WEB selector styling should follow the user's reference image (cyan, not neon green); WEB should indicate active WEB CTRL or WEB+Conn. Do not claim this WEB color behavior has been changed unless the source is inspected and a commit confirms it.
 - Do not modify shared RDS processing (including Station.cpp) to fix missing umlauts; any future fix must first be shown to be safely local to TinyRadio, otherwise leave it alone.
 - The BT color change has not been independently confirmed by a successful build/device test in this handoff. The user will run the manual build and test it.
+
+
+## Waterfall research and future NewWater layout (2026-10-30)
+
+### User's explicit plan
+- Preserve the existing Waterfall layout exactly as it is. Do not redesign, replace, or modify its rendering just to experiment with smoother animation.
+- After the HJB layout has been implemented and tested, investigate a separate second waterfall layout, provisionally named **NewWater**.
+- Keep NewWater in its own layout file and isolate its registration/drawing code as much as practical. Existing layouts, especially Waterfall, TEF6686, Clean, Original and TinyRadio, must continue to work unchanged.
+- The user's desired inspiration is the very fluid waterfall demonstration they shared. Investigate whether its smoothness can be reproduced through efficient row updates, partial redraws, optimized color mapping, or other source-supported techniques; do not assume the cause before inspecting code.
+- Agreed order: **HJB first; NewWater/waterfall experiments afterwards**.
+- No implementation or build/device test for NewWater has been performed as part of this note.
+
+### GitHub projects to inspect for NewWater
+1. **sirruf/ats-mini-pro** — https://github.com/sirruf/ats-mini-pro  
+   Interesting for its LVGL-based interface and spectrum/waterfall bandscope. Check hardware/display assumptions and porting compatibility before reusing ideas.
+2. **gorucommit/ats-mini_custom** — https://github.com/gorucommit/ats-mini_custom  
+   Inspect the `waterfall-experiment` branch as well as the main branch; it may contain an experimental waterfall implementation.
+3. **Ho52198/ats-mini-monster** — https://github.com/Ho52198/ats-mini-monster  
+   Review spectrum-analyzer and UI changes for ideas that could apply to a separate waterfall layout.
+4. **G8PTN/ATS_MINI** — https://github.com/G8PTN/ATS_MINI  
+   Older/original firmware reference. Existing notes indicate its frequency scale was removed, so it is not currently a confirmed match for the target layout.
+5. **esp32-si4732/ats-mini** — https://github.com/esp32-si4732/ats-mini  
+   Upstream/reference implementation to compare with the current firmware architecture.
+
+These are inspiration/research candidates, not confirmed source matches for the user's fluid-waterfall video. Inspect relevant branches, history, and actual implementation before selecting any code or claiming a match. Prefer adapting concepts over copying code wholesale, and check licenses/compatibility.
+
+### Current search status
+- No exact source repository for the waterfall shown in the user's video has been confirmed yet.
+- Continue searching forks, branches and older commits when the HJB task resumes or when the user asks to continue the source hunt.
+- Do not let this research delay the agreed HJB-first priority.

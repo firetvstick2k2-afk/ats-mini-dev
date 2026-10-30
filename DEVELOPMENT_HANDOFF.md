@@ -412,3 +412,24 @@ Approved English feature summary for the release notes:
 2. If green, inspect artifacts and OTA metadata/URL, then finish V1.31 release when the user is ready.
 3. After the build/release checks, work on the two planned new layouts in private `ats-mini-dev` → `development`.
 4. Keep this handoff private. Do not add it to public `main`; do not create or delete branches without asking.
+
+
+## Private-only layout rule — confirmed 2026-10-30
+
+The user explicitly requires that the two new custom layouts remain private and must never be transferred into the official/public firmware repository.
+
+- **Layout 1:** current TinyRadio-inspired layout (ats-mini/Layout-TinyRadio.cpp).
+- **Layout 2:** the next new layout to be created (the other planned layout in this current layout project).
+- Both layouts and their layout-specific code must remain in the private repository 13HN2709/ats-mini-dev.
+- The user permits these two layouts to be included in the private development/mainline build (“Dev Main”), but **they must never be copied, cherry-picked, merged, synced, or otherwise transferred into the official/public repository 13HN2709/ats-mini or its main branch**.
+- This exclusion also applies during every future upstream integration, release sync, new-feature transfer, merge, cherry-pick, or bulk file copy. Do not assume that a general feature transfer permits either layout to move across the private/public boundary.
+- When transferring unrelated improvements to the official repository, explicitly exclude both layout files and any layout-specific registration/menu/build changes that would expose or compile them. Inspect the resulting diff before committing.
+- Keep this rule in this private DEVELOPMENT_HANDOFF.md so new chats inherit it. Never copy this handoff document to the public repository.
+- Do not change branch strategy or copy either layout anywhere without following this rule. If a future transfer is ambiguous, stop and ask the user first.
+
+### TinyRadio current state
+- The active TinyRadio layout is based on the lsongdev/tinyradio reference.
+- Commit b474ebef061d16ce5161e072362d41e7bd74ed92 on private development changed the active BT selector styling to cyan.
+- The intended active WEB selector styling should follow the user's reference image (cyan, not neon green); WEB should indicate active WEB CTRL or WEB+Conn. Do not claim this WEB color behavior has been changed unless the source is inspected and a commit confirms it.
+- Do not modify shared RDS processing (including Station.cpp) to fix missing umlauts; any future fix must first be shown to be safely local to TinyRadio, otherwise leave it alone.
+- The BT color change has not been independently confirmed by a successful build/device test in this handoff. The user will run the manual build and test it.

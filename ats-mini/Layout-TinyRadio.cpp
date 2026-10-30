@@ -14,15 +14,16 @@ void drawLayoutTinyRadio()
 
   // Compact top row: five selectors on the left; status values on the right.
   // All coordinates are designed for the physical 320x170 display.
-  const char *bandsTop[] = {"LW", "MW", "SW", "VHF", "WEB"};
-  const int bx[] = {2, 37, 72, 107, 142};
-  for(int i=0;i<5;i++)
+  const char *bandsTop[] = {"LW", "MW", "SW", "VHF", "BT", "WEB"};
+  const int bx[] = {2, 37, 72, 107, 142, 177};
+  for(int i=0;i<6;i++)
   {
     const bool selected = (i==3 && getCurrentBand()->bandType==FM_BAND_TYPE);
-    const bool webActive = (i==4 && (wifiModeIdx==NET_AP_ONLY || wifiModeIdx==NET_AP_CONNECT));
-    const uint16_t color = (selected || webActive) ? CYAN : GREY;
+    const bool webActive = (i==5 && (wifiModeIdx==NET_AP_ONLY || wifiModeIdx==NET_AP_CONNECT));
+    const bool btActive = (i==4 && getBleStatus()!=0);
+    const uint16_t color = (selected || webActive || btActive) ? CYAN : GREY;
     spr.drawRect(bx[i], 3, 32, 17, color);
-    spr.setTextColor((selected || webActive) ? CYAN : GREY);
+    spr.setTextColor(btActive ? BLUE : ((selected || webActive) ? CYAN : GREY));
     spr.setTextDatum(MC_DATUM);
     spr.drawString(bandsTop[i], bx[i]+16, 11, FONT_DEFAULT);
   }
@@ -31,15 +32,7 @@ void drawLayoutTinyRadio()
   // Use the same battery drawing routine as the rest of the firmware.
   drawBattery(220, 3);
 
-  // Show Bluetooth whenever its status is non-zero. A positive status means connected/active.
-  // Keep the indicator bright blue when active.
-  const int8_t bleStatus = getBleStatus();
-  if(bleStatus != 0)
-  {
-    spr.setTextColor(bleStatus > 0 ? BLUE : GREY);
-    spr.setTextDatum(MC_DATUM);
-    spr.drawString("BT", 300, 11, FONT_DEFAULT);
-  }
+
 
   // Frequency and unit are formatted as one centered string.
   // FM frequencies are stored in 10-kHz units; AM/SSB values are in kHz.
@@ -116,9 +109,9 @@ void drawLayoutTinyRadio()
   const char *station = getStationName();
   spr.setTextDatum(TC_DATUM);
   spr.setTextColor(CYAN);
-  if(station && *station) spr.drawString(station, 160, 104, FONT_SMALL);
+  if(station && *station) spr.drawString(station, 160, 100, FONT_SMALL);
   spr.setTextColor(WHITE);
-  if(rt && *rt) spr.drawString(rt, 160, 119, FONT_SMALL);
+  if(rt && *rt) spr.drawString(rt, 160, 114, FONT_SMALL);
 
   // Frequency ruler, centered on the tuned frequency.
   const uint32_t f = currentFrequency + (isSSB() ? currentBFO/1000 : 0);

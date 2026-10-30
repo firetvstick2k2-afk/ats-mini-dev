@@ -121,9 +121,9 @@ void drawLayoutHJB()
   {
     char dateText[12];
     snprintf(dateText, sizeof(dateText), "%02u.%02u", day, month);
-    spr.setTextDatum(TR_DATUM);
+    spr.setTextDatum(MC_DATUM);
     spr.setTextColor(HJB_MUTED);
-    spr.drawString(dateText, 229, 4, FONT_DEFAULT);
+    spr.drawString(dateText, 174, 7, FONT_DEFAULT);
   }
 
   // Main display: use the received RDS clock on FM only when valid;

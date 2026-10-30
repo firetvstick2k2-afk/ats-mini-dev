@@ -51,10 +51,11 @@ void drawLayoutTinyRadio()
 
   // Mode and receiver controls. Enabled choices use the same cyan outline as the reference.
   const char *modes[] = {"FM","AM","LSB","USB"};
+  const uint8_t modeValues[] = {FM, AM, LSB, USB};
   const int mx[] = {3, 53, 103, 153};
   for(int i=0;i<4;i++)
   {
-    const bool active = currentMode==i;
+    const bool active = currentMode==modeValues[i];
     spr.drawRect(mx[i], 75, 44, 22, active ? CYAN : GREY);
     spr.setTextColor(active ? CYAN : GREY);
     spr.setTextDatum(MC_DATUM);

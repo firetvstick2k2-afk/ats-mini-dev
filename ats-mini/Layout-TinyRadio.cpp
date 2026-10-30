@@ -30,7 +30,7 @@ void drawLayoutTinyRadio()
 
   // Restore the real battery indicator; brightness and volume are not useful here.
   // Use the same battery drawing routine as the rest of the firmware.
-  drawBattery(265, 3);
+  drawBattery(BATT_OFFSET_X, BATT_OFFSET_Y);
 
 
 
@@ -59,7 +59,7 @@ void drawLayoutTinyRadio()
   // Move the baseline slightly down (about 1 mm on the 320x170 display).
   spr.setTextColor(YELLOW);
   spr.setTextDatum(TL_DATUM);
-  spr.drawString(freq, 8, 46, FONT_LARGE);
+  spr.drawString(freq, 8, 40, FONT_LARGE);
 
   // Mode row and controls: fixed non-overlapping columns.
   const char *modes[] = {"FM","AM","LSB","USB"};

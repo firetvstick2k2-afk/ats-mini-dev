@@ -124,12 +124,23 @@ static int visibleBandIndexAtOffset(int offset)
 int8_t menuIdx = MENU_KEYPAD;
 int8_t spectrumMenuIdx = 0;
 static const char *spectrumMenu[] = { "Spet. VHF", "Spet. ALL" };
+static const char *spectrumMenuXXL[] = { "SPETTRO VHF", "SPETTRO COMPLETO" };
 
 static const char *menu[] =
 {
-  "Modalità", "Bande", "Volume", "Tastiera", "DUAL RX", "VFO A/B",
+  "Modalita", "Bande", "Volume", "Tastiera", "DUAL RX", "VFO A/B",
   "Freq.", "BFO", "Passo", "Ricerca", "Scans.", "Memorie", "Squelch",
   "Banda", "AGC/ATT", "AVC", "SoftMute", "Impostaz.", "Spet. VHF", "Spet. ALL",
+};
+
+// Full labels are used only by the XXL full-screen menu.
+// Keep the compact menu[] labels at 10 characters or fewer.
+static const char *menuXXL[] =
+{
+  "MODALITA", "BANDE", "VOLUME", "TASTIERA", "DUAL RX", "VFO A/B",
+  "FREQUENZA", "BFO", "PASSO", "RICERCA", "SCANSIONE", "MEMORIE", "SQUELCH",
+  "LARGHEZZA DI BANDA", "AGC/ATTENUAZIONE", "AVC", "RIDUZIONE RUMORE",
+  "IMPOSTAZIONI", "SPETTRO VHF", "SPETTRO COMPLETO"
 };
 
 #define MENU_BRIGHTNESS   0
@@ -163,11 +174,21 @@ int8_t settingsIdx = MENU_BRIGHTNESS;
 
 static const char *settings[] =
 {
-  "Luminosità", "Data/Ora", "Offset UTC", "Riposo", "Mod. sonno",
+  "Luminosita", "Data/Ora", "Offset UTC", "Riposo", "Mod. sonno",
   "Tema", "Layout UI", "Zoom menu", "Direzione", "RDS",
   "Stereo FM", "Regione FM", "Calibraz.", "DSP Patch",
   "CaricaEiBi", "AggiornaFW", "Porta USB", "Porta TCP",
   "Bluetooth", "Wi-Fi", "Info", "Log diag.",
+};
+
+static const char *settingsXXL[] =
+{
+  "LUMINOSITA", "DATA E ORA", "FUSO ORARIO UTC", "SOSPENSIONE",
+  "MODALITA SOSPENSIONE", "TEMA", "LAYOUT INTERFACCIA", "ZOOM MENU",
+  "DIREZIONE SCORRIMENTO", "RDS", "STEREO FM", "REGIONE FM",
+  "CALIBRAZIONE", "PATCH DSP", "CARICA DATI EIBI", "AGGIORNA FIRMWARE",
+  "PORTA USB", "PORTA TCP", "BLUETOOTH", "WI-FI", "INFORMAZIONI",
+  "REGISTRO DIAGNOSTICO"
 };
 
 const FMRegion fmRegions[] = { { 0x1, "EU/JP/AU" }, { 0x2, "US" } };
@@ -1743,7 +1764,7 @@ void drawFullScreenMenu(uint16_t cmd)
   const int idx = (settingsPage && rawIdx > MENU_ZOOM) ? rawIdx - 1 : rawIdx;
   const int count = settingsPage ? ITEM_COUNT(settings) - 1 : (spectrumPage ? ITEM_COUNT(spectrumMenu) : ITEM_COUNT(menu));
   const char *title = settingsPage ? "IMPOSTAZ." : (spectrumPage ? "SPETTRO" : "MENU PRINC.");
-  const char *selected = settingsPage ? settingLabel(rawIdx) : (spectrumPage ? spectrumMenu[idx] : menu[idx]);
+  const char *selected = settingsPage ? ((rawIdx == MENU_WEBLOG && !webDiagEnabled) ? "REGISTRO DIAGNOSTICO: OFF" : (rawIdx == MENU_WEBLOG ? "REGISTRO DIAGNOSTICO: ON" : settingsXXL[rawIdx])) : (spectrumPage ? spectrumMenuXXL[idx] : menuXXL[idx]);
   const char *displaySelected = selected;
   // Render menu labels in uppercase without corrupting UTF-8 umlauts.
   char uppercaseLabel[96];

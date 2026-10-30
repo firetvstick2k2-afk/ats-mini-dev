@@ -126,8 +126,20 @@ void drawLayoutTinyRadio()
       int32_t delta=(i-10)*((getCurrentBand()->bandType==FM_BAND_TYPE)?100:50);
       int32_t tick=(int32_t)f+delta;
       char label[16];
-      if(tick>=1000) snprintf(label,sizeof(label),"%ld.%ldM",(long)(tick/1000),(long)((tick%1000)/100));
-      else snprintf(label,sizeof(label),"%ldk",(long)tick);
+      if(getCurrentBand()->bandType==FM_BAND_TYPE)
+      {
+        // FM frequency is stored in 10-kHz units: 10790 means 107.90 MHz.
+        snprintf(label,sizeof(label),"%ld.%02ld",(long)(tick/100),(long)(tick%100));
+      }
+      else if(tick>=1000)
+      {
+        // Shortwave scale values are in kHz; show MHz with one decimal.
+        snprintf(label,sizeof(label),"%ld.%ldM",(long)(tick/1000),(long)((tick%1000)/100));
+      }
+      else
+      {
+        snprintf(label,sizeof(label),"%ldk",(long)tick);
+      }
       spr.setTextColor(WHITE);
       spr.setTextDatum(TC_DATUM);
       spr.drawString(label, px, 155, FONT_DEFAULT);

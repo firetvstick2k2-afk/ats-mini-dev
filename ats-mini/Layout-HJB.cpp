@@ -119,7 +119,7 @@ void drawLayoutHJB()
   if(clockGetDate(&year, &month, &day, &weekday))
   {
     char dateText[12];
-    snprintf(dateText, sizeof(dateText), "%02u.%02u", day, month);
+    snprintf(dateText, sizeof(dateText), "%02u.%02u", (unsigned)day, (unsigned)month);
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(HJB_MUTED);
     spr.drawString(dateText, 174, 7, FONT_DEFAULT);

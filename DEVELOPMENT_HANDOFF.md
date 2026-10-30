@@ -316,3 +316,38 @@ Active work branch: `development` (never modify `main` unless explicitly request
 - Main menu and settings strings are translated to Italian. The small menu-entry limit was checked: main menu max 9 characters, settings max 10 characters, spectrum submenu max 9 characters.
 - Only the menu-language source and build workflow were changed for this task. No firmware build has been run or verified yet; the Italian build still needs to be tested in GitHub Actions before considering it ready.
 - File: https://github.com/13HN2709/ats-mini-dev/blob/development/ats-mini/Menu_italian.cpp.src
+
+
+## V1.31 release build handoff update (2026-10-30)
+
+### User-confirmed features and tests
+- User confirmed that the Italian menu build looks correct and that the XXL labels are fully readable; CW and RTTY decoder work remains paused and must not be advertised as available features.
+- User tested the layout-selection correction on hardware: **Original** selects the original Default layout, **TEF6686** selects the custom TEF6686 layout, and a reset returns to TEF6686 as requested.
+- User tested the compact EiBi status indicator in Layout-TEF6686.cpp: `Downloading...` appears in the top status area between the band label and Wi-Fi/battery area during EiBi loading, then disappears automatically after completion.
+- The user confirmed both changes work correctly on the device.
+
+### Layout and EiBi commits
+- Draw.cpp correction: default/fallback drawing now routes to drawLayoutDefault() for the original layout rather than incorrectly routing both menu entries to TEF6686. Explicit TEF6686 selection and the fresh-install default index remain TEF6686. Commit: 610619929e2dbb75a1e655f0574cdfb02599aaf0.
+- Layout-TEF6686.cpp: compact EiBi download status indicator. Commit: ccc5278e712abb710b77a24eb5f4f0412a319c01.
+- User reports the new build/device tests passed for these two changes. This is user-confirmed hardware testing, not an independently observed Actions run.
+
+### V1.31 release changelog scope
+Only list features actually present and available to users in the exact V1.31 firmware build. Do not list paused or unfinished CW/RTTY decoders or other planned features.
+
+Approved English feature summary for the release notes:
+- Numeric keypad for direct frequency entry; VFO A/B and frequency transfer; adjustable tuning step; memory management.
+- Display layouts: Original (the former Default layout), custom TEF6686 layout, Clean Layout, and Waterfall Layout.
+- TEF6686 is the default layout on a fresh installation/reset.
+- Improved frequency and RDS PS/RT presentation, status indicators, and EiBi download status feedback in the TEF6686 layout.
+- Native VHF/FM Spectrum Scanner and Web Control Center spectrum scanning, including ALL Band scanning only if the exact release build contains the corresponding implementation.
+- Web Control Center over Wi-Fi, including AP Only (WEB CTRL) and AP+Connect (WEB+Conn) modes.
+- Dual RX, integrated BFO, Bandplan Assistant and available frequency/mode hints.
+- German, English, and Italian menu languages.
+- Updated OTA repository URL to the official 13HN2709/ats-mini repository, provided the exact release binary was built after the OTA URL fix commit.
+
+### Current release workflow
+- User is about to launch the V1.31 manual build on public main and add the release text. Wait for the actual workflow result before stating that the build passed or that release assets were published.
+- Verify the official build matrix includes German, English, and Italian for both OSPI and QSPI before calling the release ready.
+- After the build, verify all generated artifacts and confirm the OTA URL fix is included in those binaries. Then prepare/update the GitHub Release only when the user is ready.
+- CW and RTTY are paused and inactive; exclude them from README, changelog, and release assets descriptions.
+- Keep development in private ats-mini-dev → development. Only copy approved release source/text to public ats-mini when explicitly requested.

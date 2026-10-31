@@ -150,13 +150,7 @@ void drawLayoutHJB()
   if(rdsClock && *rdsClock)
     spr.drawString(rdsClock, 160, 53, FONT_DIGITS);
   else if(currentMode == FM)
-  {
     spr.drawFloat(currentFrequency / 100.0f, 2, 160, 53);
-    // Show the FM unit directly below the frequency in the same yellow.
-    spr.setTextColor(HJB_YELLOW);
-    spr.setTextDatum(MC_DATUM);
-    spr.drawString("MHz", 160, 76, FONT_DEFAULT);
-  }
   else
     spr.drawNumber(currentFrequency, 160, 53);
 

@@ -330,6 +330,17 @@ void drawLayoutTEF6686()
     statusY + statusH / 2
   );
 
+  // Show valid RDS clock in yellow directly beneath the MHz/kHz label.
+  // Use the same small bold font as the unit; leave frequency rendering unchanged.
+  const char *tefRdsClock = (currentMode == FM && rdsTimeAvailable()) ? getRdsTime() : NULL;
+  if (tefRdsClock && *tefRdsClock)
+  {
+    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    spr.setTextDatum(MC_DATUM);
+    spr.setTextColor(COLOR_YELLOW);
+    spr.drawString(tefRdsClock, statusX + statusW / 2, statusY + statusH + 8);
+  }
+
   // 6. Frequency - original display function
   const int freqX = 230;
   const int freqY = 45;

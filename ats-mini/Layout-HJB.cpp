@@ -19,7 +19,7 @@ static void hjbDrawSignalGraph()
 {
   // A short rolling trace: SNR is the mostly calm reference line, while RSSI
   // follows real receiver measurements and can rise/fall like the original HJB.
-  const int x0 = 7, y0 = 70, w = 62, h = 40;
+  const int x0 = 7, y0 = 56, w = 62, h = 40;
   const int graphLeft = x0 + 3, graphRight = x0 + w - 3;
   const int graphWidth = graphRight - graphLeft;
   const int graphBottom = y0 + h - 4;
@@ -58,7 +58,7 @@ static void hjbDrawSignalGraph()
 
 static void hjbDrawSignalBars()
 {
-  const int x = 247;
+  const int x = 249;
   const int rssi = constrain((int)rx.getCurrentRSSI(), 0, 100);
   const int snr = constrain((int)rx.getCurrentSNR(), 0, 40);
   const bool stereo = currentMode == FM && fmStereoIdx != FM_STEREO_MONO && rx.getCurrentPilot();
@@ -121,14 +121,15 @@ void drawLayoutHJB()
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(HJB_GREEN);
   spr.setTextDatum(MC_DATUM);
-  spr.drawString(currentMode == FM ? "FM" : (currentMode == AM ? "AM" : (currentMode == USB ? "USB" : "LSB")), 160, 11, FONT_SMALL);
+  spr.setTextDatum(TL_DATUM);
+  spr.drawString(currentMode == FM ? "FM" : (currentMode == AM ? "AM" : (currentMode == USB ? "USB" : "LSB")), 7, 8, FONT_DEFAULT);
 
   const char *pty = currentMode == FM ? getProgramInfo() : "";
   if(pty && *pty)
   {
     spr.setTextDatum(MC_DATUM);
-    spr.setTextColor(HJB_MUTED);
-    spr.drawString(pty, 160, 27, FONT_DEFAULT);
+    spr.setTextColor(0xFFFF);
+    spr.drawString(pty, 160, 23, FONT_SMALL);
   }
 
   // AF is intentionally omitted until the SI4735 library exposes a verified

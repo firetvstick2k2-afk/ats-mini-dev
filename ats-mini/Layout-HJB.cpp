@@ -58,7 +58,7 @@ static void hjbDrawSignalGraph()
 
 static void hjbDrawSignalBars()
 {
-  const int x = 249;
+  const int x = 258;
   const int rssi = constrain((int)rx.getCurrentRSSI(), 0, 100);
   const int snr = constrain((int)rx.getCurrentSNR(), 0, 40);
   const bool stereo = currentMode == FM && fmStereoIdx != FM_STEREO_MONO && rx.getCurrentPilot();
@@ -120,16 +120,17 @@ void drawLayoutHJB()
   // Compact top row; FM and PTY are centered above the frequency.
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(HJB_GREEN);
-  spr.setTextDatum(MC_DATUM);
-  spr.setTextDatum(TL_DATUM);
-  spr.drawString(currentMode == FM ? "FM" : (currentMode == AM ? "AM" : (currentMode == USB ? "USB" : "LSB")), 7, 8, FONT_DEFAULT);
+  // Match the readable size of the voltage indicator in the top row.
+  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+  spr.drawString(currentMode == FM ? "FM" : (currentMode == AM ? "AM" : (currentMode == USB ? "USB" : "LSB")), 7, 5);
+  spr.setFont(FONT_DEFAULT);
 
   const char *pty = currentMode == FM ? getProgramInfo() : "";
   if(pty && *pty)
   {
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(0xFFFF);
-    spr.drawString(pty, 160, 23, FONT_SMALL);
+    spr.drawString(pty, 160, 12, FONT_SMALL);
   }
 
   // AF is intentionally omitted until the SI4735 library exposes a verified
@@ -140,14 +141,15 @@ void drawLayoutHJB()
   drawBleIndicator(WIFI_OFFSET_X - 18, WIFI_OFFSET_Y);
   drawSaveIndicator(SAVE_OFFSET_X, SAVE_OFFSET_Y);
 
-  // Main display: keep the tuned frequency as the primary value for now.
-  // The shared clock may be set by NTP, so it must not be mistaken for
-  // an RDS clock. RDS CT can be added here once a dedicated validity flag
-  // is exposed by the firmware.
+  // Show the clock only after a valid RDS CT group has actually been received.
+  // Otherwise the tuned frequency remains visible, even if NTP set the system clock.
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(HJB_YELLOW);
   spr.setFont(FONT_DIGITS);
-  if(currentMode == FM)
+  const char *rdsClock = (currentMode == FM && rdsTimeAvailable()) ? getRdsTime() : NULL;
+  if(rdsClock && *rdsClock)
+    spr.drawString(rdsClock, 160, 53, FONT_DIGITS);
+  else if(currentMode == FM)
     spr.drawFloat(currentFrequency / 100.0f, 2, 160, 53);
   else
     spr.drawNumber(currentFrequency, 160, 53);

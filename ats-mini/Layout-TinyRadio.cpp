@@ -149,7 +149,5 @@ void drawLayoutTinyRadio()
   // Replaces the triangle and vertical tail to leave more room above for RadioText.
   spr.fillCircle(160, 142, 6, RED);
 
-  // Keep the normal menu/sidebar visible in TinyRadio, as in the other layouts.
-  // Keypad and scanner screens are handled earlier by Draw.cpp.
-  drawSideBar(currentCmd, MENU_OFFSET_X, MENU_OFFSET_Y, MENU_DELTA_X);
+  // TinyRadio keeps its own full-width layout; do not overlay the Original sidebar.
 }

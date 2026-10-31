@@ -252,6 +252,7 @@ const char *getStationName();
 const char *getRadioText();
 const char *getProgramInfo();
 const char *getRdsTime();
+bool rdsTimeAvailable();
 uint16_t getRdsPiCode();
 void clearStationInfo();
 bool checkRds();

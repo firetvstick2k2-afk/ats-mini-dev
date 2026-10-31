@@ -188,5 +188,12 @@ void drawLayoutHJB()
   // Reuse the standard original-style frequency ruler: moving scale, fixed tuned marker.
   drawScale(isSSB() ? (currentFrequency + currentBFO / 1000) : currentFrequency);
 
-  // HJB uses its own left signal graph; do not overlay the Original sidebar/menu here.
+  // Match the TEF6686 layout: render the sidebar only while a menu command is active.
+  if (currentCmd != CMD_NONE &&
+      currentCmd != CMD_SCAN &&
+      currentCmd != CMD_FREQ &&
+      currentCmd != CMD_FREQ_KEYPAD)
+  {
+    drawSideBar(currentCmd, MENU_OFFSET_X, MENU_OFFSET_Y, MENU_DELTA_X);
+  }
 }

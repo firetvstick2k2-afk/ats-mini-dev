@@ -63,10 +63,10 @@ static void hjbDrawSignalBars()
   const int snr = constrain((int)rx.getCurrentSNR(), 0, 40);
   const bool stereo = currentMode == FM && fmStereoIdx != FM_STEREO_MONO && rx.getCurrentPilot();
 
-  // Stereo sits at the top of the right-hand column; two compact meters below.
-  spr.setTextDatum(TR_DATUM);
+  // Center stereo above the RSSI bars, slightly higher than before.
+  spr.setTextDatum(MC_DATUM);
   spr.setTextColor(stereo ? HJB_GREEN : HJB_MUTED);
-  spr.drawString(stereo ? "STEREO" : "MONO", 316, 36, FONT_SMALL);
+  spr.drawString(stereo ? "STEREO" : "MONO", x + 31, 31, FONT_SMALL);
 
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(HJB_MUTED);
@@ -121,14 +121,14 @@ void drawLayoutHJB()
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(HJB_GREEN);
   spr.setTextDatum(MC_DATUM);
-  spr.drawString(currentMode == FM ? "FM" : (currentMode == AM ? "AM" : (currentMode == USB ? "USB" : "LSB")), 160, 3, FONT_SMALL);
+  spr.drawString(currentMode == FM ? "FM" : (currentMode == AM ? "AM" : (currentMode == USB ? "USB" : "LSB")), 160, 11, FONT_SMALL);
 
   const char *pty = currentMode == FM ? getProgramInfo() : "";
   if(pty && *pty)
   {
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(HJB_MUTED);
-    spr.drawString(pty, 160, 19, FONT_DEFAULT);
+    spr.drawString(pty, 160, 27, FONT_DEFAULT);
   }
 
   // AF is intentionally omitted until the SI4735 library exposes a verified
@@ -138,18 +138,6 @@ void drawLayoutHJB()
   drawWiFiIndicator(hasVoltage ? WIFI_OFFSET_X : BATT_OFFSET_X - 13, WIFI_OFFSET_Y);
   drawBleIndicator(WIFI_OFFSET_X - 18, WIFI_OFFSET_Y);
   drawSaveIndicator(SAVE_OFFSET_X, SAVE_OFFSET_Y);
-
-  // Small date readout when the firmware clock has a valid date.
-  uint16_t year;
-  uint8_t month, day, weekday;
-  if(clockGetDate(&year, &month, &day, &weekday))
-  {
-    char dateText[12];
-    snprintf(dateText, sizeof(dateText), "%02u.%02u", (unsigned)day, (unsigned)month);
-    spr.setTextDatum(MC_DATUM);
-    spr.setTextColor(HJB_MUTED);
-    spr.drawString(dateText, 182, 7, FONT_DEFAULT);
-  }
 
   // Main display: keep the tuned frequency as the primary value for now.
   // The shared clock may be set by NTP, so it must not be mistaken for
@@ -199,6 +187,5 @@ void drawLayoutHJB()
   // Reuse the standard original-style frequency ruler: moving scale, fixed tuned marker.
   drawScale(isSSB() ? (currentFrequency + currentBFO / 1000) : currentFrequency);
 
-  // Preserve the compact layout menu/command overlay in this independent layout.
-  drawSideBar(currentCmd, MENU_OFFSET_X, MENU_OFFSET_Y, MENU_DELTA_X);
+  // HJB uses its own left signal graph; do not overlay the Original sidebar/menu here.
 }

@@ -335,10 +335,10 @@ void drawLayoutTEF6686()
   const char *tefRdsClock = (currentMode == FM && rdsTimeAvailable()) ? getRdsTime() : NULL;
   if (tefRdsClock && *tefRdsClock)
   {
-    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    spr.setFont(&lgfx::fonts::FreeSansBold12pt7b);
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(COLOR_YELLOW);
-    spr.drawString(tefRdsClock, statusX + statusW / 2, 48);
+    spr.drawString(tefRdsClock, statusX + statusW / 2, 52);
   }
 
   // 6. Frequency - original display function

@@ -69,6 +69,7 @@ static char bufStationName[50]  = "";
 static char bufRadioText[100]   = "";
 static char bufProgramInfo[100] = "";
 static uint16_t piCode = 0x0000;
+static bool rdsClockReceived = false;
 
 const char *getStationName()
 {
@@ -86,6 +87,18 @@ const char *getStationName()
     return(memoryName);
 
   return(station);
+}
+
+const char *getRdsTime()
+{
+  // Do not expose the system clock as RDS time until a valid CT group arrives.
+  if(!rdsClockReceived || !clockAvailable()) return(NULL);
+  return(clockGet());
+}
+
+bool rdsTimeAvailable()
+{
+  return(rdsClockReceived && clockAvailable());
 }
 
 const char *getRadioText()
@@ -111,6 +124,7 @@ void clearStationInfo()
   bufRadioText[0]   = '\0'; // Multiline!
   bufRadioText[1]   = '\0';
   piCode = 0x0000;
+  rdsClockReceived = false;
 }
 
 static bool showStationName(const char *stationName, bool isLong = false)
@@ -214,11 +228,15 @@ static bool showRdsPiCode(uint16_t rdsPiCode)
 
 static bool showRdsTime()
 {
-  // If NTP time is available or the clock is already set, do not use RDS time
-  if(ntpIsAvailable() || clockAvailable()) return(false);
-
   uint32_t epoch;
-  return(rx.getRdsUTCEpoch(&epoch) && clockSetEpoch(epoch));
+  // Only mark RDS time valid after the receiver returns a valid CT epoch.
+  if(!rx.getRdsUTCEpoch(&epoch)) return(false);
+  bool firstValidRdsTime = !rdsClockReceived;
+  rdsClockReceived = true;
+
+  // Never overwrite an NTP-supplied or already-set system clock.
+  if(ntpIsAvailable() || clockAvailable()) return(firstValidRdsTime);
+  return(clockSetEpoch(epoch) || firstValidRdsTime);
 }
 
 bool checkRds()

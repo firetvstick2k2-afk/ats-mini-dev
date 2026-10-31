@@ -149,5 +149,12 @@ void drawLayoutTinyRadio()
   // Replaces the triangle and vertical tail to leave more room above for RadioText.
   spr.fillCircle(160, 142, 6, RED);
 
-  // TinyRadio keeps its own full-width layout; do not overlay the Original sidebar.
+  // Match the TEF6686 layout: render the sidebar only while a menu command is active.
+  if (currentCmd != CMD_NONE &&
+      currentCmd != CMD_SCAN &&
+      currentCmd != CMD_FREQ &&
+      currentCmd != CMD_FREQ_KEYPAD)
+  {
+    drawSideBar(currentCmd, MENU_OFFSET_X, MENU_OFFSET_Y, MENU_DELTA_X);
+  }
 }

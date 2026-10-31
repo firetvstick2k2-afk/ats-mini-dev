@@ -120,8 +120,8 @@ jobs:
           image = Path("ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin").read_bytes()
 
           # ESP-IDF app descriptor begins at image offset 0x20.
-          version = image[0x2C:0x2C + 32].split(b"\\0", 1)[0]
-          project = image[0x4C:0x4C + 32].split(b"\\0", 1)[0]
+          version = image[0x30:0x30 + 32].split(b"\\0", 1)[0]
+          project = image[0x50:0x50 + 32].split(b"\\0", 1)[0]
           assert version == b"1.31", f"Unexpected firmware version in app descriptor: {version!r}"
           assert project == b"ATS-MINI by 13HN2709", f"Unexpected project name in app descriptor: {project!r}"
 

@@ -338,7 +338,7 @@ void drawLayoutTEF6686()
     spr.setFont(&lgfx::fonts::FreeSansBold12pt7b);
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(COLOR_YELLOW);
-    spr.drawString(tefRdsClock, statusX + statusW / 2, 52);
+    spr.drawString(tefRdsClock, statusX + statusW / 2, audioY + audioH / 2);
   }
 
   // 6. Frequency - original display function

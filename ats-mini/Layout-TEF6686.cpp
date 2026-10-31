@@ -312,7 +312,32 @@ void drawLayoutTEF6686()
     );
   }
 
-  // 5. Main readout: show valid RDS clock instead of frequency, like HJB.
+  // 5. Right-side status boxes: WEB above the untouched MHz/kHz unit box.
+  const int statusX = 242;
+  const int statusW = 68;
+  const int statusH = 20;
+  const int webY = 24;
+  const int unitY = 48;
+
+  const bool webEnabled =
+    (wifiModeIdx == NET_AP_ONLY) ||
+    (wifiModeIdx == NET_AP_CONNECT);
+
+  spr.drawRoundRect(statusX, webY, statusW, statusH, 3, COLOR_BLUE);
+  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+  spr.setTextDatum(MC_DATUM);
+  spr.setTextColor(webEnabled ? COLOR_GREEN : COLOR_RED);
+  spr.drawString("WEB", statusX + statusW / 2, webY + statusH / 2);
+
+  spr.drawRoundRect(statusX, unitY, statusW, statusH, 3, COLOR_BLUE);
+  spr.setTextColor(COLOR_GREEN);
+  spr.drawString(
+    currentMode == FM ? "MHz" : "kHz",
+    statusX + statusW / 2,
+    unitY + statusH / 2
+  );
+
+  // 6. Main readout: show valid RDS clock instead of frequency, like HJB.
   // If no valid RDS CT time is available, keep showing the tuned frequency.
   const char *tefRdsClock = (currentMode == FM && rdsTimeAvailable()) ? getRdsTime() : NULL;
   spr.setTextDatum(MC_DATUM);

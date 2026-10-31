@@ -23,6 +23,43 @@
 // - Target frequency is a recommendation only.
 // --------------------------------------------------
 
+
+// Draw a compact seven-segment digit for the TEF layout's RDS clock.
+static void drawTEFClockDigit(int x, int y, char digit, uint16_t color)
+{
+  // Segment order: A (top), B (upper-right), C (lower-right),
+  // D (bottom), E (lower-left), F (upper-left), G (middle).
+  static const uint8_t segments[10] = {
+    0b00111111, // 0
+    0b00000110, // 1
+    0b01011011, // 2
+    0b01001111, // 3
+    0b01100110, // 4
+    0b01101101, // 5
+    0b01111101, // 6
+    0b00000111, // 7
+    0b01111111, // 8
+    0b01101111  // 9
+  };
+
+  if (digit < '0' || digit > '9') return;
+  const uint8_t mask = segments[digit - '0'];
+  const int w = 7, h = 13, t = 2;
+  if (mask & 0b00000001) spr.fillRect(x + t, y, w - 2 * t, t, color);
+  if (mask & 0b00000010) spr.fillRect(x + w - t, y + t, t, h / 2 - t, color);
+  if (mask & 0b00000100) spr.fillRect(x + w - t, y + h / 2, t, h / 2 - t, color);
+  if (mask & 0b00001000) spr.fillRect(x + t, y + h - t, w - 2 * t, t, color);
+  if (mask & 0b00010000) spr.fillRect(x, y + h / 2, t, h / 2 - t, color);
+  if (mask & 0b00100000) spr.fillRect(x, y + t, t, h / 2 - t, color);
+  if (mask & 0b01000000) spr.fillRect(x + t, y + h / 2 - t / 2, w - 2 * t, t, color);
+}
+
+static void drawTEFClockColon(int x, int y, uint16_t color)
+{
+  spr.fillRect(x, y + 4, 2, 2, color);
+  spr.fillRect(x, y + 9, 2, 2, color);
+}
+
 struct TEFBandplanHint
 {
   const char *label;
@@ -330,15 +367,32 @@ void drawLayoutTEF6686()
     statusY + statusH / 2
   );
 
-  // Show valid RDS clock in yellow directly beneath the MHz/kHz label.
-  // Use the same small bold font as the unit; leave frequency rendering unchanged.
+  // Show valid RDS clock as compact yellow seven-segment digits,
+  // centered at the same vertical position as the MONO indicator.
   const char *tefRdsClock = (currentMode == FM && rdsTimeAvailable()) ? getRdsTime() : NULL;
-  if (tefRdsClock && *tefRdsClock)
+  if (tefRdsClock && strlen(tefRdsClock) >= 5)
   {
-    spr.setFont(&lgfx::fonts::FreeSansBold12pt7b);
-    spr.setTextDatum(MC_DATUM);
+    const int digitW = 7;
+    const int digitGap = 2;
+    const int colonW = 2;
+    const int totalW = digitW * 4 + digitGap * 3 + colonW + digitGap;
+    const int clockX = statusX + statusW / 2 - totalW / 2;
+    const int clockY = audioY + audioH / 2 - 6;
+    int x = clockX;
     spr.setTextColor(COLOR_YELLOW);
-    spr.drawString(tefRdsClock, statusX + statusW / 2, audioY + audioH / 2);
+    for (int i = 0; i < 5; ++i)
+    {
+      if (tefRdsClock[i] == ':')
+      {
+        drawTEFClockColon(x, clockY, COLOR_YELLOW);
+        x += colonW + digitGap;
+      }
+      else
+      {
+        drawTEFClockDigit(x, clockY, tefRdsClock[i], COLOR_YELLOW);
+        x += digitW + digitGap;
+      }
+    }
   }
 
   // 6. Frequency - original display function

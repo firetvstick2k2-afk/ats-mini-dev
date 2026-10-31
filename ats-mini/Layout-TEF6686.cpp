@@ -345,7 +345,7 @@ void drawLayoutTEF6686()
   if (tefRdsClock && *tefRdsClock)
   {
     spr.setTextDatum(MR_DATUM);
-    spr.setTextColor(COLOR_GREEN);
+    spr.setTextColor(COLOR_YELLOW); // Match the HJB RDS clock color.
     spr.drawString(tefRdsClock, 230, 45, FONT_DIGITS);
   }
   else

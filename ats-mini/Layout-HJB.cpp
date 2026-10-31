@@ -40,19 +40,19 @@ static void hjbDrawSignalGraph()
 
   spr.drawRect(x0, y0, w, h, 0x4208);
   const int snrY = graphBottom - map(snrLevel, 0, 40, 0, graphBottom - graphTop);
-  spr.drawFastHLine(graphLeft, snrY, graphWidth, HJB_BLUE);
+  spr.drawFastHLine(graphLeft, snrY, graphWidth, HJB_RED);
   for (int i = 1; i < 56; ++i)
   {
     const int x1 = graphLeft + ((i - 1) * graphWidth) / 55;
     const int x2 = graphLeft + (i * graphWidth) / 55;
     const int y1 = graphBottom - map((int)rssiHistory[i - 1], 0, 100, 0, graphBottom - graphTop);
     const int y2 = graphBottom - map((int)rssiHistory[i], 0, 100, 0, graphBottom - graphTop);
-    spr.drawLine(x1, y1, x2, y2, HJB_RED);
+    spr.drawLine(x1, y1, x2, y2, HJB_BLUE);
   }
   spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(HJB_RED);
-  spr.drawString("RSSI", x0 + 2, y0 - 10, FONT_DEFAULT);
   spr.setTextColor(HJB_BLUE);
+  spr.drawString("RSSI", x0 + 2, y0 - 10, FONT_DEFAULT);
+  spr.setTextColor(HJB_RED);
   spr.drawString("SNR", x0 + 34, y0 - 10, FONT_DEFAULT);
 }
 

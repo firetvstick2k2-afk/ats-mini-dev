@@ -112,9 +112,23 @@ jobs:
           # shellcheck disable=SC2015
           ls changelog/*.md && uv run towncrier build --keep --version Unreleased || true
 
-      - name: Check OTA firmware metadata
-        run: >-
-          python -c 'with open("ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin","rb") as f: f.seek(288); assert f.read(4) == b"ATSM", "Missing OTA metadata at offset 288"'
+      - name: Check firmware identity and OTA metadata
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          image = Path("ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin").read_bytes()
+
+          # ESP-IDF app descriptor begins at image offset 0x20.
+          version = image[0x2C:0x2C + 32].split(b"\\0", 1)[0]
+          project = image[0x4C:0x4C + 32].split(b"\\0", 1)[0]
+          assert version == b"1.31", f"Unexpected firmware version in app descriptor: {version!r}"
+          assert project == b"ATS-MINI by 13HN2709", f"Unexpected project name in app descriptor: {project!r}"
+
+          # Existing ATSM OTA metadata must remain intact.
+          assert image[288:292] == b"ATSM", "Missing OTA metadata at offset 288"
+          print(f"Firmware identity OK: {project.decode()} v{version.decode()}; ATSM metadata OK")
+          PY
 
       - name: Prepare compiled artifact
         run: |

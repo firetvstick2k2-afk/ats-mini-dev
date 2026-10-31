@@ -337,18 +337,33 @@ void drawLayoutTEF6686()
     unitY + statusH / 2
   );
 
-  // 6. Main readout: show valid RDS clock instead of frequency, like HJB.
-  // If no valid RDS CT time is available, keep showing the tuned frequency.
+  // 6. Main readout: use the exact original Main frequency anchor.
+  // drawFrequency uses right-aligned FONT_DIGITS at x=230, y=45.
+  // Keep the RDS clock on that same anchor so switching between clock/frequency
+  // never moves the main readout vertically or horizontally.
   const char *tefRdsClock = (currentMode == FM && rdsTimeAvailable()) ? getRdsTime() : NULL;
-  spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(COLOR_GREEN);
-  spr.setFont(FONT_DIGITS);
   if (tefRdsClock && *tefRdsClock)
-    spr.drawString(tefRdsClock, 160, 53, FONT_DIGITS);
-  else if (currentMode == FM)
-    spr.drawFloat(currentFrequency / 100.0f, 2, 160, 53);
+  {
+    spr.setTextDatum(MR_DATUM);
+    spr.setTextColor(COLOR_GREEN);
+    spr.drawString(tefRdsClock, 230, 45, FONT_DIGITS);
+  }
   else
-    spr.drawNumber(currentFrequency, 160, 53);
+  {
+    uint8_t freqHighlight =
+      currentCmd == CMD_FREQ
+        ? getFreqInputPos() + (pushAndRotate ? 0x80 : 0)
+        : 100;
+
+    drawFrequency(
+      currentFrequency,
+      230,
+      45,
+      400,
+      400,
+      freqHighlight
+    );
+  }
 
   // 7. S-Meter
   const int meterX = 10;

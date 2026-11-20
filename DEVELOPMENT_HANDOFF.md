@@ -701,3 +701,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - UI keeps the latest three messages across slots; the decoder DSP/audio/slot logic was not changed. The displayed error counter sums `ldpcErrors` reported on successfully decoded messages; it is not a count of every failed decode attempt.
 - Source commits: `c2af7005bc4c70a4a7c36821a83f1fc020a1288f` (initial UI) and `2eac7c1ea2a11a7fc23313db7bf76a0a96bb911a` (slot-history fix).
 - Source review only; no build or hardware test has been run. Next: manual OSPI-DE build on `development`, then verify actual flag glyph/graphics, row readability, QTH distance, progress bar, and FT8/FT4 behavior.
+
+
+## FT8 audio monitoring and result retention — 2026-11-20
+- User confirmed the FT8 decoder has now successfully decoded messages on hardware (the latest redesigned build was not yet tested at the time of this request; this confirmation refers to the running decoder behavior).
+- While the FT8/FT4 decoder page is active, receiver output volume is temporarily raised to at least 50/63 via `rx.setVolume()` so the user can hear the received signal and the existing audio tap receives the higher output level. If the user's volume is already above 50, it is left unchanged. The exact previous volume is restored on decoder exit. The ADC sample buffer and decoder DSP path are not digitally amplified or modified.
+- When a slot has zero decoded messages, `FtxDecoderService::decodeAndPublish()` now keeps the last non-empty published result set instead of replacing it with an empty array. This complements the UI's three-message rolling history so a weak/empty subsequent slot does not wipe the last successful decodes.
+- Commits: UI/audio volume `4e6d9c8caf325e336cf32ef56e36b484dc442c48`; empty-slot result retention `c0b3a3111d76410bb27bfff7dc5a1c635ee95d0d`.
+- No build or hardware verification was run for these two changes. User should manually run the OSPI-DE workflow on `development`, check audible volume during FT8, confirm volume restoration on exit, and verify that two prior messages remain visible when the next slot has no successful decode.

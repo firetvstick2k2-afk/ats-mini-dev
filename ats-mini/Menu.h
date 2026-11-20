@@ -55,6 +55,7 @@
 #define CMD_SPECTRUM_INPUT 0x3B00 // Independent VHF scanner frequency keypad
 #define CMD_ALL_SPECTRUM 0x3C00 // Isolated ALL Band Spectrum graph
 #define CMD_ALL_SPECTRUM_INPUT 0x3D00 // Isolated ALL Band Spectrum keypad
+#define CMD_DECODER_FREQUENCIES 0x3E00 // Decoder frequency categories and presets
 
 
 
@@ -140,6 +141,12 @@ static inline bool isSettingsMode(uint16_t cmd)
 uint8_t seekMode(bool toggle = false);
 void drawSideBar(uint16_t cmd, int x, int y, int sx);
 void drawFullScreenMenu(uint16_t cmd);
+void drawDecoderFrequencyMenu();
+void decoderFrequencyOpen();
+bool decoderFrequencyRotate(int16_t enc);
+bool decoderFrequencyClick();
+bool decoderFrequencyBack();
+bool decoderFrequencyTick(uint32_t now);
 bool doSideBar(uint16_t cmd, int16_t enc, int16_t enca);
 void doSelectDigit(int16_t enc);
 bool clickHandler(uint16_t cmd, bool shortPress);

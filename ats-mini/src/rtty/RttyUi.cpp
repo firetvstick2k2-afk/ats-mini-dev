@@ -13,6 +13,8 @@ RttyService service;
 bool pageActive=false;
 uint8_t restoreNetworkMode=NET_OFF;
 uint32_t lastRefresh=0;
+uint8_t baudIndex=0;
+const float baudChoices[3]={45.45f,50.0f,75.0f};
 uint8_t volumeBefore=0;
 bool volumeBoost=false;
 constexpr uint8_t kPlaybackVolume=50;
@@ -32,6 +34,7 @@ bool rttyUiOpen() {
   volumeBoost=true;
   pageActive=true;
   lastRefresh=0;
+  baudIndex=0;
   return true;
 }
 
@@ -42,6 +45,14 @@ void rttyUiExit() {
   if(volumeBoost) { volume=volumeBefore; rx.setVolume(volume); volumeBoost=false; }
   netInit(restoreNetworkMode);
   currentCmd=CMD_NONE;
+}
+
+void rttyUiRotate(int16_t delta) {
+  if(!pageActive || !delta) return;
+  int next=static_cast<int>(baudIndex)+delta;
+  while(next<0) next+=3;
+  baudIndex=static_cast<uint8_t>(next%3);
+  service.setBaud(baudChoices[baudIndex]);
 }
 
 bool rttyUiTick(uint32_t now) {
@@ -68,7 +79,7 @@ void drawRttyDecoderPage() {
   spr.setTextColor(active?green:red,blueA);
   spr.setFont(FONT_SMALL);
   char status[32];
-  snprintf(status,sizeof(status),"%s  %.2f Bd",active?"RX":"NO SIGNAL",service.baud());
+  snprintf(status,sizeof(status),"%s %.2fBd",active?"RX":"NO RX",service.baud());
   spr.drawString(status,302,16);
 
   const char* decoded=service.text();
@@ -104,5 +115,5 @@ void drawRttyDecoderPage() {
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(0xBDF7,navy);
   spr.setFont(FONT_SMALL);
-  spr.drawString("CLICK: EXIT  |  LONG PRESS: EXIT",160,163);
+  spr.drawString("ROTATE: BAUD  |  CLICK/LONG: EXIT",160,163);
 }

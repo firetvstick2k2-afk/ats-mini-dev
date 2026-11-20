@@ -681,3 +681,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Workflow commit: `d421dcc0f5ac2e1398435d7ffa6039cb5fa8d6bd`.
 - This is an expected speed improvement, not yet measured. The first run after the change may still need to populate the cache; compare the next two successful OSPI-DE runs. Do not change `main`; user builds manually and does not want Actions triggered automatically.
 - Earlier FT8 stack-size correction: commit `5552f57f7ca66acf46ca92fb6b2ee8d6657f47f8` fixed a malformed line-comment that had hidden the `kWorkerStackBytes = 16384` definition, and retained the before/after stack high-water diagnostics. The prior note's commit `21d6db...` was not the final corrected source state.
+
+## Verbindliche Portierungsquelle Mini_OS → ATS Mini Dev — 2026-11-20
+- **Grundsatz des Projekts:** Die Funktionen und Layouts, die wir in ATS Mini Dev übernehmen bzw. weiterentwickeln, stammen aus dem Repository `firetvstick2k2-afk/Mini_OS`, Branch **`dev/first-build-preparation`** (der tatsächliche Branchname; nicht `dev/first-build-reparation`).
+- **Zielrepository:** `firetvstick2k2-afk/ats-mini-dev`, ausschließlich Branch **`development`**.
+- Wir portieren die relevanten Mini_OS-Funktionen und -Layouts von diesem Quellbranch nach ATS Mini Dev / `development`. Dazu gehören ausdrücklich bereits übernommene Komponenten wie **DAB Style**, **FT8-Decoder** und weitere aus Mini_OS importierte Funktionen.
+- Mini_OS ist damit die maßgebliche Herkunfts-/Referenzbasis für diese Portierungen. Bei Änderungen oder Fehleranalysen zuerst den entsprechenden Stand im Quellbranch prüfen und dann die ATS-Mini-Dev-Integration auf `development` abgleichen.
+- Die Portierung bedeutet nicht, dass jede Mini_OS-Funktion automatisch vollständig oder identisch integriert ist: den jeweiligen Integrationsstatus weiterhin einzeln prüfen und als vollständig / teilweise / offen dokumentieren.
+- **Branch-Schutz bleibt verbindlich:** Mini_OS-Quellbranch nur als Quelle lesen; ATS Mini Dev ausschließlich auf `development` ändern. `main` und das öffentliche Repository bleiben unangetastet, sofern der Nutzer nichts anderes ausdrücklich verlangt.

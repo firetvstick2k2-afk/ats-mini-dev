@@ -63,7 +63,7 @@ static constexpr DecoderFrequencyPreset kDecoderFrequencyPresets[] = {
   {"PINNEBERG DDH 8", 14467, USB, 4, DecoderKind::RTTY},
   {"DWD FAX 7.880", 7880, USB, 4},
   {"DWD FAX 13.882", 13883, USB, 4},
-  {"DWD RTTY 3.855", 3855, USB, 4, DecoderKind::RTTY},
+  {"DWD FAX 3.855", 3855, USB, 4},
 
   // NCDXF / IARU international propagation beacons
   {"NCDXF BEACON 20m", 14100, USB, 4},

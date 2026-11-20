@@ -13,6 +13,7 @@
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
 #include "src/radio/DecoderFrequencyList.h"
+#include "src/ftx/FtxUi.h"
 #include "Storage.h"
 
 #include <time.h>
@@ -1033,6 +1034,7 @@ bool clickHandler(uint16_t cmd, bool shortPress)
   {
     case CMD_MENU:     clickMenu(menuIdx, shortPress);break;
     case CMD_DECODER_FREQUENCIES: decoderFrequencyClick(); break;
+    case CMD_FTX_DECODER: ftxUiExit(); break;
     case CMD_SPECTRUM_MENU:
       if(spectrumMenuIdx == 0) spectrumScannerStart();
       else currentCmd = CMD_SPECTRUM_MENU; // All-band scanner is reserved for a later feature.
@@ -1934,9 +1936,9 @@ bool decoderFrequencyClick()
   const DecoderKind decoder = kDecoderFrequencyPresets[presetIndex].decoder;
   if(decoder == DecoderKind::FT8 || decoder == DecoderKind::FT4)
   {
-    // FT8/FT4 page and service lifecycle are the next integration stage.
-    statusShow(decoder == DecoderKind::FT8 ? "FT8 decoder page pending" : "FT4 decoder page pending",
-               "Frequency is tuned for monitoring");
+    if(!tuneDecoderFrequencyPreset(presetIndex)) return true;
+    if(ftxUiOpen(decoder == DecoderKind::FT8 ? FtxMode::FT8 : FtxMode::FT4))
+      currentCmd = CMD_FTX_DECODER;
     return true;
   }
   currentCmd = CMD_NONE;

@@ -74,6 +74,7 @@ jobs:
         with:
           name: Mini_OS-build-${{ github.run_number }}-ospi-de
           path: artifact/Mini_OS_#${{ github.run_number }}.bin
+          archive: false
           if-no-files-found: error
           retention-days: 14
 

@@ -628,3 +628,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Added the new renderer to `Draw.cpp` and the Makefile source list. No TEF6686 renderer changes were made.
 - No fixed logo is needed on non-FM bands: sender PI logos are FM/RDS-specific. The Clean fallback retains its bandplan guidance and does not display a stale FM logo.
 - Source-level integration only. No firmware build, GitHub Actions run, or hardware test has been performed. User must run the manual OSPI-DE build and then test FM → non-FM/All Band → FM switching and local logo rendering.
+
+
+### DAB Style alternative layout and color refinement — implemented (2026-11-20)
+- User requested TinyRadio instead of Layout-Clean as the non-FM fallback while DAB Style (index 8) is selected. Updated the special dispatch in `ats-mini/Draw.cpp`: FM continues to use DAB Style; non-FM bands now use `drawLayoutTinyRadio()`. Returning to FM restores DAB Style automatically. Other selected layouts and their normal dispatch remain unchanged.
+- Updated `ats-mini/Layout-DABStyle.cpp`: all former green accent elements (header accent, divider, badge frame/text and RadioText frame) now use bright cyan-blue RGB565 `0x07FF`, matching the vivid blue menu frame. The large frequency digits now use white `0xFFFF`, matching the menu text. The MHz label remains cyan-blue and the other white elements remain unchanged.
+- Commits: `63354f1c598fc6ad35e14a6676e6e2095011a455` (TinyRadio fallback); `87a9c04ad1ff0710e68712f659c3e28a0ac5ac68` (DAB Style colors).
+- Source changes committed on `development` only. No firmware build, GitHub Actions run, or hardware test was performed. User should test DAB Style on FM, switch to a non-FM band to confirm TinyRadio, then return to FM and confirm DAB Style is restored.

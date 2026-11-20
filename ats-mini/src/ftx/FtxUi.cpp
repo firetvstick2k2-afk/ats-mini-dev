@@ -27,6 +27,12 @@ uint32_t ldpcErrorCount = 0;
 time_t lastProcessedSlot = 0;
 bool haveProcessedSlot = false;
 
+// Temporarily raise receiver audio while the digital decoder is active.
+// The original user volume is restored when leaving the decoder page.
+constexpr uint8_t kFtxPlaybackVolume = 50;
+uint8_t volumeBeforeFtx = 0;
+bool ftxVolumeBoostActive = false;
+
 const char* countryForCall(const char* call)
 {
   if(!call || !*call) return "";
@@ -268,6 +274,16 @@ bool ftxUiOpen(FtxMode mode)
     return false;
   }
 
+  // Raise the SI473x output level for audible monitoring and a stronger
+  // signal at the existing audio tap. The decoder samples themselves are
+  // untouched; only the receiver's output volume register is changed.
+  volumeBeforeFtx = volume;
+  if(volume < kFtxPlaybackVolume) {
+    volume = kFtxPlaybackVolume;
+    rx.setVolume(volume);
+  }
+  ftxVolumeBoostActive = true;
+
   memset(recentMessages,0,sizeof(recentMessages));
   decodedMessageCount=ldpcErrorCount=0;
   lastProcessedSlot=0;
@@ -282,6 +298,11 @@ void ftxUiExit()
   if(!pageActive) return;
   pageActive = false;
   decoderService.exit();
+  if(ftxVolumeBoostActive) {
+    volume = volumeBeforeFtx;
+    rx.setVolume(volume);
+    ftxVolumeBoostActive = false;
+  }
   netInit(restoreNetworkMode);
   currentCmd = CMD_NONE;
 }

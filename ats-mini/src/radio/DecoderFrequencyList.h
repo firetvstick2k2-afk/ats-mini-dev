@@ -3,7 +3,7 @@
 
 // Fixed receiver presets. SI4735 AM/SSB tuning is expressed in whole kHz;
 // decimal-kHz carriers are rounded to the nearest receiver kHz.
-enum class DecoderKind : uint8_t { None, FT8, FT4 };
+enum class DecoderKind : uint8_t { None, FT8, FT4, RTTY };
 
 struct DecoderFrequencyPreset {
   const char* label;
@@ -48,22 +48,22 @@ static constexpr DecoderFrequencyPreset kDecoderFrequencyPresets[] = {
   {"FT4 10m", 28180, USB, 4, DecoderKind::FT4},
 
   // RTTY
-  {"RTTY 80m", 3580, USB, 4},
-  {"RTTY 40m", 7045, USB, 4},
-  {"RTTY 20m", 14080, USB, 4},
-  {"RTTY 15m", 21080, USB, 4},
-  {"RTTY 10m", 28080, USB, 4},
+  {"RTTY 80m", 3580, USB, 4, DecoderKind::RTTY},
+  {"RTTY 40m", 7045, USB, 4, DecoderKind::RTTY},
+  {"RTTY 20m", 14080, USB, 4, DecoderKind::RTTY},
+  {"RTTY 15m", 21080, USB, 4, DecoderKind::RTTY},
+  {"RTTY 10m", 28080, USB, 4, DecoderKind::RTTY},
 
   // DWD Pinneberg: RTTY/weather data and weather fax
-  {"PINNEBERG DDH 47", 147, AM, 4},
-  {"PINNEBERG DDK 2", 4583, USB, 4},
-  {"PINNEBERG DDH 7", 7646, USB, 4},
-  {"PINNEBERG DDK 9", 10101, USB, 4},
-  {"PINNEBERG DDH 9", 11039, USB, 4},
-  {"PINNEBERG DDH 8", 14467, USB, 4},
+  {"PINNEBERG DDH 47", 147, AM, 4, DecoderKind::RTTY},
+  {"PINNEBERG DDK 2", 4583, USB, 4, DecoderKind::RTTY},
+  {"PINNEBERG DDH 7", 7646, USB, 4, DecoderKind::RTTY},
+  {"PINNEBERG DDK 9", 10101, USB, 4, DecoderKind::RTTY},
+  {"PINNEBERG DDH 9", 11039, USB, 4, DecoderKind::RTTY},
+  {"PINNEBERG DDH 8", 14467, USB, 4, DecoderKind::RTTY},
   {"DWD FAX 7.880", 7880, USB, 4},
   {"DWD FAX 13.882", 13883, USB, 4},
-  {"DWD RTTY 3.855", 3855, USB, 4},
+  {"DWD RTTY 3.855", 3855, USB, 4, DecoderKind::RTTY},
 
   // NCDXF / IARU international propagation beacons
   {"NCDXF BEACON 20m", 14100, USB, 4},

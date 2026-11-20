@@ -35,7 +35,8 @@ HEADERS = \
 	Utils.h Button.h EIBI.h Remote.h BleMode.h TcpMode.h BlePeripheral.h \
 	BleUartPeripheral.h BleCentral.h BleHidCentral.h \
 	SI4735-fixed.h patch_init.h PatchParser.h Patches.h Splash.h Ota.h \
-	$(wildcard Page*.h)
+	$(wildcard Page*.h) \
+	$(wildcard src/audio/*.h src/ftx/*.h src/ftx/ft8_lib/common/*.h src/ftx/ft8_lib/fft/*.h src/ftx/ft8_lib/ft8/*.h)
 
 SRC = \
 	$(INO) Utils.cpp Rotary.cpp Button.cpp Draw.cpp Menu.cpp Memories.cpp \
@@ -43,7 +44,8 @@ SRC = \
 	Network.cpp Patches.cpp Ota.cpp Splash.cpp EIBI.cpp Scan.cpp About.cpp BleMode.cpp TcpMode.cpp \
 	BlePeripheral.cpp BleUartPeripheral.cpp \
 	BleCentral.cpp BleHidCentral.cpp \
-	Layout-Default.cpp Layout-SMeter.cpp
+	Layout-Default.cpp Layout-SMeter.cpp \
+	$(wildcard src/audio/*.cpp src/ftx/*.cpp src/ftx/ft8_lib/common/*.c src/ftx/ft8_lib/fft/*.c src/ftx/ft8_lib/ft8/*.c)
 
 all: build
 

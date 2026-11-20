@@ -477,3 +477,27 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Before the first build, the source still needs compilation against the exact installed SI4735/LovyanGFX APIs. No build has run and no device test has been performed. Once the source review is complete, the user will run the manual GitHub Actions workflow on private `development`; do not trigger it without explicit confirmation.
 - First device checks after a successful build: FM with and without PS/RT/PTY, FM frequency/unit alignment, SW/AM frequency and ruler, marker movement, date placement, RSSI/SNR indicators, and stereo/mono behavior.
 - HJB remains private and must not be copied to public `13HN2709/ats-mini` unless the user explicitly approves a future public release.
+
+
+## FT8/FT4 decoder port — initial source import (2026-11-20)
+
+### Scope and branch
+- Work is being performed only in private `ats-mini-dev` → `development`, sourced from `Mini_OS` → `dev/first-build-preparation`.
+- User confirmed that the audio input and hardware compatibility are already verified on their device. Treat GPIO11 audio capture compatibility as user-confirmed; do not reopen it as a blocker.
+- No changes to `main`, public `13HN2709/ats-mini`, or other branches.
+
+### Imported source
+- Added `src/ftx/FtxDecoder.h/.cpp` and `src/ftx/FtxDecoderService.h/.cpp`.
+- Added `src/audio/AudioCaptureService.h/.cpp`.
+- Imported the full FT8 library source tree under `src/ftx/ft8_lib/`, including common monitor, KISS FFT, FT8 encode/decode, LDPC, CRC, message and text modules and their license files.
+- Adapted only the service include paths to the ATS Mini Dev directory layout.
+- Added `src/ftx/FtxDiagnostics.h` as a serial-only adapter for the Mini OS `BootDiagnostics` calls. This avoids importing Mini OS storage/LittleFS dependencies.
+- Updated Makefile dependency lists to include the imported C/C++ sources and headers under `src/audio` and `src/ftx`.
+
+### Not yet integrated / not yet verified
+- This is the decoder/audio/DSP source import only. No menu, decoder page, display, or user-facing activation has been connected yet.
+- The original Mini OS test vectors have not yet been ported or executed in ATS Mini Dev.
+- No firmware build, GitHub Actions workflow, or hardware flash/test was run by the assistant. User performs those checks manually.
+- Offline UTC synchronization still needs source-level review. The capture service timestamps samples using `gettimeofday()`; before enabling slot processing, confirm the ATS Mini Dev system clock is set accurately without Wi-Fi, preferably from the existing RDS CT path if that path can safely set system UTC.
+- Preserve all upstream FT8/KISS FFT license files.
+- Keep the imported decoder isolated from existing radio layouts and scanner features.

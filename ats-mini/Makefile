@@ -36,7 +36,7 @@ HEADERS = \
 	BleUartPeripheral.h BleCentral.h BleHidCentral.h \
 	SI4735-fixed.h patch_init.h PatchParser.h Patches.h Splash.h Ota.h \
 	$(wildcard Page*.h) \
-	$(wildcard src/audio/*.h src/ftx/*.h src/ftx/ft8_lib/common/*.h src/ftx/ft8_lib/fft/*.h src/ftx/ft8_lib/ft8/*.h)
+	$(wildcard src/audio/*.h src/radio/*.h src/ftx/*.h src/ftx/ft8_lib/common/*.h src/ftx/ft8_lib/fft/*.h src/ftx/ft8_lib/ft8/*.h)
 
 SRC = \
 	$(INO) Utils.cpp Rotary.cpp Button.cpp Draw.cpp Menu.cpp Memories.cpp \

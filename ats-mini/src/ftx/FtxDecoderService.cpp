@@ -7,7 +7,7 @@
 
 namespace {
 constexpr size_t kAudioQueueDepth = 160;
-constexpr uint32_t kWorkerStackBytes = 8192;
+// The FT8 LDPC/candidate decode path exceeded the original 8 KiB task stack.\n// Start with 16 KiB and log the remaining high-water mark around each decode.\nconstexpr uint32_t kWorkerStackBytes = 16384;
 constexpr UBaseType_t kWorkerPriority = 2;
 constexpr BaseType_t kWorkerCore = 1;
 constexpr int64_t kBlockDurationUs =

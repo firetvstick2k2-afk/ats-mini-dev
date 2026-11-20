@@ -127,7 +127,7 @@ void drawLayoutDABStyle()
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(GREEN);
   spr.setFont(&lgfx::fonts::Font0);
-  spr.drawString(rx.getCurrentStereo() ? "STEREO" : "MONO",163,badgeY+6);
+  spr.drawString("FM",163,badgeY+6);
   spr.drawRoundRect(210,badgeY,w-218,20,4,WHITE);
   const char *pty=getProgramInfo();
   spr.setTextColor(WHITE);

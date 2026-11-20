@@ -189,3 +189,13 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Preserve FT8/FT4 completely. No files under `ats-mini/src/ftx/` may be changed for this work.
 - The exact CW reference UI has not yet been found in the available Mini_OS branches and guessed paths. Locate the true source before implementing the matching RTTY UI; do not approximate it with the generic decoder layout.
 - No build or device test has been run.
+
+
+## RTTY decoder — latest implementation state (2026-11-21)
+- Exact CW visual reference recovered: `Mini_OS/firmware/ats-mini-os/src/display/DisplayDriver.cpp`, `drawLegacyCWPage()`, branch `dev/first-build-preparation`.
+- RTTY screen now uses the same top frequency/status bar and four deep-blue text rows. Encoder rotates baud 45.45 / 50 / 75; click or long press exits.
+- RTTY uses its own GPIO11 capture at 8 kHz and a separate worker/tone estimator. This is deliberately separate from the 4 kHz shared FT8/FT4 capture. No files under `ats-mini/src/ftx/` were changed for RTTY.
+- Five amateur RTTY presets plus Pinneberg DDH/DDK and DWD RTTY 3.855 are routed to RTTY. Weather-fax entries remain listen-only.
+- RTTY frequency routing, UI, and service are committed on `development`. No build, Actions run, flash, or RF test has been completed. Workflow dispatch was not available through the connected GitHub actions in this session; user should manually start OSPI-DE build on `development`.
+- First build candidate: Goertzel FSK tone pair detection (300–3500 Hz), automatic polarity, manually selectable 45.45/50/75 baud. Hardware/RF validation remains essential; do not describe decoding as proven until tested.
+- Preserve FT8/FT4, TEF6686, LittleFS and all other protected areas.

@@ -14,6 +14,7 @@
 #include "AllBandSpectrum.h"
 #include "src/radio/DecoderFrequencyList.h"
 #include "src/ftx/FtxUi.h"
+#include "src/rtty/RttyUi.h"
 #include "Storage.h"
 
 #include <time.h>
@@ -1991,6 +1992,11 @@ bool decoderFrequencyClick()
   {
     if(ftxUiOpen(decoder == DecoderKind::FT8 ? FtxMode::FT8 : FtxMode::FT4))
       currentCmd = CMD_FTX_DECODER;
+    return true;
+  }
+  if(decoder == DecoderKind::RTTY)
+  {
+    if(rttyUiOpen()) currentCmd = CMD_RTTY_DECODER;
     return true;
   }
   currentCmd = CMD_NONE;

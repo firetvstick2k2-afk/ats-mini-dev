@@ -259,7 +259,7 @@ static uint8_t dateTimeMinute;
 static uint8_t dateTimeSecond;
 
 uint8_t uiLayoutIdx = 5;
-static const char *uiLayoutDesc[] = { "Original", "S-Meter", "NewUI", "Waterfall", "Clean", "TEF6686", "TinyRadio", "HJB" };
+static const char *uiLayoutDesc[] = { "Original", "S-Meter", "NewUI", "Waterfall", "Clean", "TEF6686", "TinyRadio", "HJB", "DAB Style (FM only)" };
 
 uint8_t usbModeIdx = USB_OFF;
 static const char *usbModeDesc[] = { "Off", "Ad hoc" };

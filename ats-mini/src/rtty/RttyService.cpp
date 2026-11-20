@@ -10,10 +10,13 @@ constexpr int kFrameSamples=512;
 constexpr float kMinToneHz=350.0f,kMaxToneHz=1850.0f,kToneStepHz=8.0f;
 constexpr int kToneBins=static_cast<int>((kMaxToneHz-kMinToneHz)/kToneStepHz)+1;
 float coeff[kToneBins];
+float hann[kFrameSamples];
 bool coeffReady=false;
 
 void initCoefficients() {
   if(coeffReady) return;
+  for(int n=0;n<kFrameSamples;++n)
+    hann[n]=0.5f-0.5f*cosf(2.0f*static_cast<float>(M_PI)*n/(kFrameSamples-1));
   for(int i=0;i<kToneBins;++i) {
     const float f=kMinToneHz+i*kToneStepHz;
     coeff[i]=2.0f*cosf(2.0f*static_cast<float>(M_PI)*f/AudioCaptureService::kSampleRate);
@@ -47,7 +50,7 @@ bool RttyService::enter(AudioCaptureService& capture) {
 #else
   if(!capture.begin() || !begin(capture)) return false;
   xQueueReset(queue_);
-  frameCount_=0; dc_=2048.0f; markHz_=spaceHz_=0; signal_=false;
+  frameCount_=0; dc_=2048.0f; markHz_=spaceHz_=toneLowHz_=toneHighHz_=0; signal_=false;
   shownText_[0]=0; textLength_=0; baud_=45.45f;
   rtty_init(); rtty_set_baud(baud_); rtty_set_polarity(RTTY_POL_AUTO);
   active_=true;
@@ -60,7 +63,7 @@ void RttyService::exit() {
   active_=false;
   if(capture_) capture_->unsubscribe(this);
   if(queue_) xQueueReset(queue_);
-  frameCount_=0; signal_=false; markHz_=spaceHz_=0;
+  frameCount_=0; signal_=false; markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
   rtty_set_tones(0,0);
 }
 
@@ -102,8 +105,7 @@ bool RttyService::estimateTones(const float* samples,float& low,float& high) {
     const float c=coeff[b];
     float q0=0,q1=0,q2=0;
     for(int n=0;n<kFrameSamples;++n) {
-      const float window=0.5f-0.5f*cosf(2.0f*static_cast<float>(M_PI)*n/(kFrameSamples-1));
-      q0=samples[n]*window+c*q1-q2;
+      q0=samples[n]*hann[n]+c*q1-q2;
       q2=q1; q1=q0;
     }
     power[b]=q1*q1+q2*q2-c*q1*q2;
@@ -129,7 +131,7 @@ bool RttyService::estimateTones(const float* samples,float& low,float& high) {
     const float score=weaker*(0.55f+0.45f*balance);
     if(score>bestScore) { bestScore=score; bestA=peaks[a]; bestB=peaks[b]; }
   }
-  if(bestA<0 || bestB<0 || bestScore<1.0e7f) return false;
+  if(bestA<0 || bestB<0 || bestScore<500.0f) return false;
   low=kMinToneHz+bestA*kToneStepHz;
   high=kMinToneHz+bestB*kToneStepHz;
   return true;
@@ -144,10 +146,11 @@ void RttyService::processSamples(const int16_t* samples,size_t count) {
     if(frameCount_==kFrameSamples) {
       float low=0,high=0;
       if(estimateTones(frame_,low,high)) {
-        if(markHz_==0 || fabsf(low-markHz_)>20 || fabsf(high-spaceHz_)>20) {
+        if(toneLowHz_==0 || fabsf(low-toneLowHz_)>20 || fabsf(high-toneHighHz_)>20) {
           rtty_set_tones(low,high);
-          markHz_=rtty_mark_hz(); spaceHz_=rtty_space_hz();
+          toneLowHz_=low; toneHighHz_=high;
         }
+        markHz_=rtty_mark_hz(); spaceHz_=rtty_space_hz();
         signal_=true;
       } else {
         signal_=false;

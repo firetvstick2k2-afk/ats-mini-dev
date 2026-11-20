@@ -662,6 +662,7 @@ bool processRssiSnr()
 
 void loop()
 {
+  static bool decoderMenuLongPressHandled = false;
   uint32_t currentTime = millis();
   // Remember the last band and frequency used for frequency-dependent layout hints.
   static uint32_t lastBandplanDisplayFrequency = UINT32_MAX;
@@ -673,6 +674,7 @@ void loop()
   int16_t encCountAccel = (int16_t)(encCounts >> 16);
 
   ButtonTracker::State pb1st = pb1.update(digitalRead(ENCODER_PUSH_BUTTON) == LOW);
+  if(!pb1st.isPressed) decoderMenuLongPressHandled = false;
 
 
   int ser_event = serialLoop(usbModeIdx);
@@ -861,18 +863,20 @@ void loop()
         currentCmd = CMD_NONE;
       needRedraw = true;
     }
-    else if(pb1st.isLongPressed && currentCmd == CMD_FTX_DECODER)
+    else if(pb1st.isLongPressed && currentCmd == CMD_FTX_DECODER && !decoderMenuLongPressHandled)
     {
+      decoderMenuLongPressHandled = true;
       ftxUiExit();
       needRedraw = true;
       elapsedSleep = elapsedCommand = currentTime = millis();
     }
-    else if(pb1st.isLongPressed && currentCmd == CMD_DECODER_FREQUENCIES)
+    else if(pb1st.isLongPressed && currentCmd == CMD_DECODER_FREQUENCIES && !decoderMenuLongPressHandled)
     {
+      decoderMenuLongPressHandled = true;
       needRedraw |= decoderFrequencyBack();
       elapsedSleep = elapsedCommand = currentTime = millis();
     }
-    else if(pb1st.isLongPressed)
+    else if(pb1st.isLongPressed && !decoderMenuLongPressHandled)
     {
       sleepOn(!sleepOn());
       elapsedSleep = elapsedCommand = currentTime = millis();

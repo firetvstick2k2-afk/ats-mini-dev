@@ -609,3 +609,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The existing workflow file is `.github/workflows/build.yml`; its build, artifact upload, manual `workflow_dispatch` trigger, and release job logic were retained during narrowing. Restore only the matrix unless a separately reviewed release requirement calls for another change.
 - The last full-matrix run `44690333439` completed successfully: all six build jobs passed, including OSPI-DE. It produced 18 artifacts total. OSPI-DE artifacts included `ats-mini-dev-v1.30-165-g54a7d0d-ospi-de`, `ats-mini-v1.30-165-g54a7d0d-ospi-de-ota.bin`, and `sketches-report-ospi-de`.
 - Current active matrix is intentionally OSPI-DE only. This note preserves the exact prior settings for later restoration; it does not itself change the workflow.
+
+
+### LittleFS logo directory preparation for DAB Style — implemented (2026-11-20)
+- Added `logosInit()` in `ats-mini/Storage.cpp`, called immediately after the existing `diskInit()` startup call. It creates `/Logos/` when missing and verifies that an existing path is actually a directory.
+- On startup it scans only files directly in the LittleFS root and collects PNG files case-insensitively. It excludes the existing splash path `/splash.png`; directories and non-PNG files are untouched.
+- Root-level PNG files are moved into `/Logos/<filename>` using LittleFS rename. Existing destination files are never overwritten; on a name collision the root-level source is left untouched. The scan is collected before renaming to avoid skipping directory entries.
+- The existing `diskInit()` mount/format behavior was not modified. The helper does not format, erase, or recreate LittleFS.
+- This is storage preparation for the DAB Style logo integration; it does not yet add a DAB Style layout or change the logo renderer. The MiniOS repository currently contains planning/architecture documentation for layouts and storage rather than an executable implementation of this migration, so the behavior above is implemented directly in ATS Mini Dev.
+- Source-level review only; no firmware build, Actions run, or hardware test has been performed.

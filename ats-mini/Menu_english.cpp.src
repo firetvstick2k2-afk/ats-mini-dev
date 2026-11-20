@@ -1933,10 +1933,18 @@ bool decoderFrequencyClick()
     return true;
   }
   const uint8_t presetIndex = kDecoderFrequencyCategories[decoderCategoryIndex].firstPreset + decoderPresetIndex;
+  if(decoderLastTunedPreset != decoderPresetIndex)
+  {
+    if(!tuneDecoderFrequencyPreset(presetIndex))
+    {
+      statusShow("Preset cannot be tuned", "No matching receiver band");
+      return true;
+    }
+    decoderLastTunedPreset = decoderPresetIndex;
+  }
   const DecoderKind decoder = kDecoderFrequencyPresets[presetIndex].decoder;
   if(decoder == DecoderKind::FT8 || decoder == DecoderKind::FT4)
   {
-    if(!tuneDecoderFrequencyPreset(presetIndex)) return true;
     if(ftxUiOpen(decoder == DecoderKind::FT8 ? FtxMode::FT8 : FtxMode::FT4))
       currentCmd = CMD_FTX_DECODER;
     return true;
@@ -1960,10 +1968,10 @@ bool decoderFrequencyTick(uint32_t now)
 {
   if(!decoderPresetView || decoderLastTunedPreset == decoderPresetIndex ||
      static_cast<uint32_t>(now - decoderSelectionChangedAt) < 2000) return false;
-  decoderLastTunedPreset = decoderPresetIndex;
   const uint8_t presetIndex = kDecoderFrequencyCategories[decoderCategoryIndex].firstPreset + decoderPresetIndex;
   const bool tuned = tuneDecoderFrequencyPreset(presetIndex);
-  if(!tuned) statusShow("Preset cannot be tuned", "No matching receiver band");
+  if(tuned) decoderLastTunedPreset = decoderPresetIndex;
+  else statusShow("Preset cannot be tuned", "No matching receiver band");
   return tuned;
 }
 

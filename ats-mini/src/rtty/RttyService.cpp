@@ -8,7 +8,7 @@ namespace {
 constexpr size_t kQueueDepth=24;
 constexpr uint32_t kWorkerStack=8192;
 constexpr uint32_t kCaptureStack=4096;
-constexpr int kFrameSamples=512;
+constexpr int kFrameSamples=1024;
 constexpr float kMinToneHz=300.0f,kMaxToneHz=3500.0f,kToneStepHz=12.0f;
 constexpr int kToneBins=static_cast<int>((kMaxToneHz-kMinToneHz)/kToneStepHz)+1;
 float coeff[kToneBins],hann[kFrameSamples];
@@ -32,14 +32,15 @@ bool RttyService::begin() {
   return false;
 #else
   queue_=xQueueCreate(kQueueDepth,sizeof(AudioChunk));
-  if(!queue_) return false;
+  engineMutex_=xSemaphoreCreateMutex();
+  if(!queue_ || !engineMutex_) { if(queue_) vQueueDelete(queue_); if(engineMutex_) vSemaphoreDelete(engineMutex_); queue_=nullptr; engineMutex_=nullptr; return false; }
   initCoefficients();
   if(xTaskCreatePinnedToCore(captureTaskEntry,"rtty-capture",kCaptureStack,this,3,&captureTask_,0)!=pdPASS) {
-    vQueueDelete(queue_); queue_=nullptr; return false;
+    vQueueDelete(queue_); vSemaphoreDelete(engineMutex_); queue_=nullptr; engineMutex_=nullptr; return false;
   }
   if(xTaskCreatePinnedToCore(workerTaskEntry,"rtty-worker",kWorkerStack,this,2,&workerTask_,1)!=pdPASS) {
     vTaskDelete(captureTask_); captureTask_=nullptr;
-    vQueueDelete(queue_); queue_=nullptr; return false;
+    vQueueDelete(queue_); vSemaphoreDelete(engineMutex_); queue_=nullptr; engineMutex_=nullptr; return false;
   }
   initialized_=true;
   return true;
@@ -54,7 +55,9 @@ bool RttyService::enter() {
   frameCount_=0; dc_=2048.0f;
   markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
   signal_=false; shownText_[0]=0; textLength_=0; baud_=45.45f;
+  xSemaphoreTake(engineMutex_,portMAX_DELAY);
   rtty_init(); rtty_set_baud(baud_); rtty_set_polarity(RTTY_POL_AUTO);
+  xSemaphoreGive(engineMutex_);
   active_=true;
   return true;
 }
@@ -64,13 +67,13 @@ void RttyService::exit() {
   if(queue_) xQueueReset(queue_);
   frameCount_=0; signal_=false;
   markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
-  rtty_set_tones(0,0);
+  if(engineMutex_) { xSemaphoreTake(engineMutex_,portMAX_DELAY); rtty_set_tones(0,0); xSemaphoreGive(engineMutex_); }
 }
 
 void RttyService::setBaud(float value) {
   if(value!=45.45f && value!=50.0f && value!=75.0f) return;
   baud_=value;
-  rtty_set_baud(value);
+  if(engineMutex_) { xSemaphoreTake(engineMutex_,portMAX_DELAY); rtty_set_baud(value); xSemaphoreGive(engineMutex_); }
 }
 
 void RttyService::captureTaskEntry(void* arg) { static_cast<RttyService*>(arg)->captureTask(); }
@@ -111,7 +114,7 @@ void RttyService::workerTask() {
   AudioChunk chunk{};
   for(;;) {
     if(xQueueReceive(queue_,&chunk,portMAX_DELAY)!=pdTRUE) continue;
-    if(active_) processSamples(chunk.samples,64);
+    if(active_ && engineMutex_) { xSemaphoreTake(engineMutex_,portMAX_DELAY); if(active_) processSamples(chunk.samples,64); xSemaphoreGive(engineMutex_); }
   }
 }
 
@@ -179,7 +182,8 @@ void RttyService::update() {
   if(!active_ || millis()-lastUiMs_<100) return;
   lastUiMs_=millis();
   char decoded[65]{};
-  const size_t n=rtty_take_text(decoded,sizeof(decoded));
+  size_t n=0;
+  if(engineMutex_) { xSemaphoreTake(engineMutex_,portMAX_DELAY); n=rtty_take_text(decoded,sizeof(decoded)); signal_=signal_ || rtty_active(); xSemaphoreGive(engineMutex_); }
   if(n) {
     for(size_t i=0;i<n;++i) {
       if(decoded[i]=='\r') continue;
@@ -191,5 +195,4 @@ void RttyService::update() {
     }
     shownText_[textLength_]=0;
   }
-  signal_=signal_ || rtty_active();
 }

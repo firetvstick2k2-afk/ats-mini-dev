@@ -220,14 +220,15 @@ void refreshRecentMessages()
 {
   FtxDecodedMessage messages[FtxDecoderService::kResultCapacity]{};
   const size_t count=decoderService.copyResults(messages,FtxDecoderService::kResultCapacity);
-  for(size_t i=0;i<count;++i) {
-    if(!haveProcessedSlot || messages[i].slotUtc>lastProcessedSlot) {
-      if(messages[i].slotUtc>lastProcessedSlot) {
-        lastProcessedSlot=messages[i].slotUtc;
-        haveProcessedSlot=true;
-      }
-      addRecentMessage(messages[i]);
-    }
+  if(!count) return;
+  time_t newestSlot=lastProcessedSlot;
+  for(size_t i=0;i<count;++i)
+    if(messages[i].slotUtc>newestSlot) newestSlot=messages[i].slotUtc;
+  if(!haveProcessedSlot || newestSlot>lastProcessedSlot) {
+    for(size_t i=0;i<count;++i)
+      if(messages[i].slotUtc==newestSlot) addRecentMessage(messages[i]);
+    lastProcessedSlot=newestSlot;
+    haveProcessedSlot=true;
   }
 }
 
@@ -322,13 +323,6 @@ void drawFtxDecoderPage()
   spr.drawRect(8,34,304,12,0x0359);
   spr.fillRect(10,36,innerWidth,8,blueDark);
   if(progress>0) spr.fillRect(10,36,progress,8,cyan);
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(0xBDF7);
-  char progressText[24];
-  snprintf(progressText,sizeof(progressText),"%lu/%lu",
-    static_cast<unsigned long>(blocks),static_cast<unsigned long>(maxBlocks));
-  spr.drawString(progressText,309,48,FONT_SMALL);
-
   // Three large, alternating blue message rows with flag and QTH distance.
   for(int i=0;i<3;++i) {
     const int y=52+i*37;

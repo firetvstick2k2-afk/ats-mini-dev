@@ -645,3 +645,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Routine build target remains **OSPI-DE only** via manual `workflow_dispatch`. User starts builds and flashes/tests the ATS Mini V4; assistant must not trigger or claim a build/device test without evidence.
 - No changes to TEF6686 layout, default layout index (5), main branch, or public release repo.
 - Next broader development priorities already agreed: (1) Speicher-/Speichermanagement review, especially LittleFS/logo storage safety; (2) review and correctly complete half-finished ports/features instead of adding more features; (3) stabilize core functions before resuming optional decoder/waterfall polish. Preserve working LittleFS mount/format behavior; do not format or erase user data.
+
+
+### OSPI-DE Build-Fehlerbehebung und Development-Workflow — 2026-11-20
+- Nutzer bestätigt ausdrücklich, dass ausschließlich auf `development` gearbeitet wird; `main` darf nicht als Arbeitsbranch verwendet werden.
+- Untersucht wurde GitHub Actions Run #3 / ID `44800260714` auf `development`. Fehlerursachen laut Compiler: fehlendes `Menu.h` in `Layout-DABStyle.cpp` (dadurch unbekannte `getCurrentBand()`, `CMD_NONE`, `CMD_SCAN`, `CMD_FREQ`, `drawSideBar()`) sowie LovyanGFX Sprite-/LittleFS-Inkompatibilität bei `spr.drawPngFile(LittleFS,...)`.
+- `ats-mini/Layout-DABStyle.cpp` angepasst: `LittleFS.h` wird vor `Common.h`/LovyanGFX geladen; `Menu.h` liefert die fehlenden Deklarationen. PNG wird nun über ein geöffnetes LittleFS-`File` als Stream mit `spr.drawPng(&logoFile, ...)` dekodiert. Logo-Suche und Fallback-Anzeige bleiben erhalten.
+- `.github/workflows/build.yml` auf `development` neu strukturiert: ausschließlich OSPI-DE und Deutsch; erzeugt/ladet nur `Mini_OS_#${{ github.run_number }}.bin` als Build-Artefakt. OTA-Metadatenprüfung, OTA-BIN, Partitions-/Bootloaderdateien, Sketch-Report und ZIP-Erstellung entfernt. Bei manuell angegebener Release-Version bzw. passenden Tag-Events wird die rohe BIN als GitHub-Release-Asset bereitgestellt.
+- Commits: Code `188f0cb7ba75b99b8cb6c7a7cc160d0396f04d1c`; Workflow `9b38c9c954999269e00cb16a59014975a6e0c4a4`.
+- Beide geänderten Dateien wurden nach dem Commit erneut von `development` abgerufen und auf die erwarteten Inhalte geprüft. Kein Build/Actions-Run/Flash durch Assistant. Nächster Schritt: Nutzer startet den Build manuell auf `development`; erst danach Compiler- oder Hardware-Erfolg dokumentieren.

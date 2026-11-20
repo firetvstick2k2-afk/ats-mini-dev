@@ -757,6 +757,14 @@ void loop()
   if(currentCmd == CMD_DUAL_RX && digitalRead(ENCODER_PUSH_BUTTON) != LOW && dualRxTick(currentTime))
     needRedraw = true;
 
+  if(currentCmd == CMD_DECODER_FREQUENCIES && encCount)
+  {
+    decoderFrequencyRotate(encCount);
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime;
+    encCount = encCountAccel = 0;
+  }
+
   if(currentCmd == CMD_ALL_SPECTRUM_INPUT && encCount)
   {
     allBandSpectrumInputRotate(encCount);
@@ -851,6 +859,11 @@ void loop()
       else
         currentCmd = CMD_NONE;
       needRedraw = true;
+    }
+    else if(pb1st.isLongPressed && currentCmd == CMD_DECODER_FREQUENCIES)
+    {
+      needRedraw |= decoderFrequencyBack();
+      elapsedSleep = elapsedCommand = currentTime = millis();
     }
     else if(pb1st.isLongPressed)
     {
@@ -973,9 +986,12 @@ void loop()
     pb1st.wasClicked = pb1st.wasShortPressed = false;
   }
 
+  if(currentCmd == CMD_DECODER_FREQUENCIES && decoderFrequencyTick(currentTime))
+    needRedraw = true;
+
   if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
   {
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT)
+    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES)
     {
       currentCmd = CMD_NONE;
       needRedraw = true;

@@ -1,16 +1,17 @@
 #include "RttyService.h"
 #include "RttyDecoder.h"
+#include <esp_timer.h>
 #include <math.h>
 #include <string.h>
 
 namespace {
-constexpr size_t kQueueDepth=96;
+constexpr size_t kQueueDepth=24;
 constexpr uint32_t kWorkerStack=8192;
+constexpr uint32_t kCaptureStack=4096;
 constexpr int kFrameSamples=512;
-constexpr float kMinToneHz=350.0f,kMaxToneHz=1850.0f,kToneStepHz=8.0f;
+constexpr float kMinToneHz=300.0f,kMaxToneHz=3500.0f,kToneStepHz=12.0f;
 constexpr int kToneBins=static_cast<int>((kMaxToneHz-kMinToneHz)/kToneStepHz)+1;
-float coeff[kToneBins];
-float hann[kFrameSamples];
+float coeff[kToneBins],hann[kFrameSamples];
 bool coeffReady=false;
 
 void initCoefficients() {
@@ -19,51 +20,50 @@ void initCoefficients() {
     hann[n]=0.5f-0.5f*cosf(2.0f*static_cast<float>(M_PI)*n/(kFrameSamples-1));
   for(int i=0;i<kToneBins;++i) {
     const float f=kMinToneHz+i*kToneStepHz;
-    coeff[i]=2.0f*cosf(2.0f*static_cast<float>(M_PI)*f/AudioCaptureService::kSampleRate);
+    coeff[i]=2.0f*cosf(2.0f*static_cast<float>(M_PI)*f/RttyService::kSampleRate);
   }
   coeffReady=true;
 }
 }
 
-bool RttyService::begin(AudioCaptureService& capture) {
-  if(initialized_) return capture_==&capture;
+bool RttyService::begin() {
+  if(initialized_) return true;
 #if defined(LILYGO_SI473X)
-  (void)capture;
   return false;
 #else
   queue_=xQueueCreate(kQueueDepth,sizeof(AudioChunk));
   if(!queue_) return false;
-  capture_=&capture;
   initCoefficients();
-  if(xTaskCreatePinnedToCore(taskEntry,"rtty-worker",kWorkerStack,this,2,&task_,1)!=pdPASS) {
-    vQueueDelete(queue_); queue_=nullptr; capture_=nullptr; return false;
+  if(xTaskCreatePinnedToCore(captureTaskEntry,"rtty-capture",kCaptureStack,this,3,&captureTask_,0)!=pdPASS) {
+    vQueueDelete(queue_); queue_=nullptr; return false;
+  }
+  if(xTaskCreatePinnedToCore(workerTaskEntry,"rtty-worker",kWorkerStack,this,2,&workerTask_,1)!=pdPASS) {
+    vTaskDelete(captureTask_); captureTask_=nullptr;
+    vQueueDelete(queue_); queue_=nullptr; return false;
   }
   initialized_=true;
   return true;
 #endif
 }
 
-bool RttyService::enter(AudioCaptureService& capture) {
+bool RttyService::enter() {
   exit();
-#if defined(LILYGO_SI473X)
-  (void)capture; return false;
-#else
-  if(!capture.begin() || !begin(capture)) return false;
+  if(!begin()) return false;
+  pinMode(kAudioPin,INPUT);
   xQueueReset(queue_);
-  frameCount_=0; dc_=2048.0f; markHz_=spaceHz_=toneLowHz_=toneHighHz_=0; signal_=false;
-  shownText_[0]=0; textLength_=0; baud_=45.45f;
+  frameCount_=0; dc_=2048.0f;
+  markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
+  signal_=false; shownText_[0]=0; textLength_=0; baud_=45.45f;
   rtty_init(); rtty_set_baud(baud_); rtty_set_polarity(RTTY_POL_AUTO);
   active_=true;
-  if(!capture_->subscribe(this,onAudioSamples)) { active_=false; return false; }
   return true;
-#endif
 }
 
 void RttyService::exit() {
   active_=false;
-  if(capture_) capture_->unsubscribe(this);
   if(queue_) xQueueReset(queue_);
-  frameCount_=0; signal_=false; markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
+  frameCount_=0; signal_=false;
+  markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
   rtty_set_tones(0,0);
 }
 
@@ -73,29 +73,45 @@ void RttyService::setBaud(float value) {
   rtty_set_baud(value);
 }
 
-void RttyService::onAudioSamples(void* context,const int16_t* samples,size_t count,int64_t utcStartMicros) {
-  (void)utcStartMicros;
-  auto* self=static_cast<RttyService*>(context);
-  if(!self || !self->active_ || !self->queue_ || !samples ||
-     count==0 || count>AudioCaptureService::kBlockSamples) return;
+void RttyService::captureTaskEntry(void* arg) { static_cast<RttyService*>(arg)->captureTask(); }
+void RttyService::workerTaskEntry(void* arg) { static_cast<RttyService*>(arg)->workerTask(); }
+
+void RttyService::captureTask() {
   AudioChunk chunk{};
-  memcpy(chunk.samples,samples,count*sizeof(int16_t));
-  chunk.count=static_cast<uint8_t>(count);
-  if(xQueueSend(self->queue_,&chunk,0)!=pdTRUE) {
-    // Drop the oldest audio block to keep decoder latency bounded.
-    AudioChunk discard{};
-    xQueueReceive(self->queue_,&discard,0);
-    xQueueSend(self->queue_,&chunk,0);
+  size_t count=0;
+  int64_t base=0,next=0;
+  uint64_t index=0;
+  for(;;) {
+    if(!active_) {
+      count=0; base=next=0; index=0;
+      vTaskDelay(pdMS_TO_TICKS(20));
+      continue;
+    }
+    if(!base) { base=next=esp_timer_get_time(); index=0; }
+    while(esp_timer_get_time()<next) taskYIELD();
+    ++index;
+    next=base+static_cast<int64_t>(index*1000000ULL/kSampleRate);
+    int value=analogRead(kAudioPin);
+    if(value<0) value=2048;
+    chunk.samples[count++]=static_cast<int16_t>(value);
+    if(count==64) {
+      if(xQueueSend(queue_,&chunk,0)!=pdTRUE) {
+        AudioChunk discard{};
+        xQueueReceive(queue_,&discard,0);
+        xQueueSend(queue_,&chunk,0);
+      }
+      count=0;
+    }
+    if(index%(kSampleRate/2)==0) { vTaskDelay(1); base=next=esp_timer_get_time(); index=0; }
+    if(esp_timer_get_time()-next>10000) { base=next=esp_timer_get_time(); index=0; }
   }
 }
-
-void RttyService::taskEntry(void* arg) { static_cast<RttyService*>(arg)->workerTask(); }
 
 void RttyService::workerTask() {
   AudioChunk chunk{};
   for(;;) {
     if(xQueueReceive(queue_,&chunk,portMAX_DELAY)!=pdTRUE) continue;
-    if(active_) processSamples(chunk.samples,chunk.count);
+    if(active_) processSamples(chunk.samples,64);
   }
 }
 
@@ -110,7 +126,6 @@ bool RttyService::estimateTones(const float* samples,float& low,float& high) {
     }
     power[b]=q1*q1+q2*q2-c*q1*q2;
   }
-
   int peaks[16]; float peakPower[16]; int peakCount=0;
   for(int i=2;i<kToneBins-2;++i) {
     if(power[i]<=power[i-1] || power[i]<power[i+1]) continue;
@@ -127,8 +142,7 @@ bool RttyService::estimateTones(const float* samples,float& low,float& high) {
     if(shift<80.0f || shift>1000.0f) continue;
     const float weaker=fminf(peakPower[a],peakPower[b]);
     const float stronger=fmaxf(peakPower[a],peakPower[b]);
-    const float balance=weaker/(stronger+1.0f);
-    const float score=weaker*(0.55f+0.45f*balance);
+    const float score=weaker*(0.55f+0.45f*weaker/(stronger+1.0f));
     if(score>bestScore) { bestScore=score; bestA=peaks[a]; bestB=peaks[b]; }
   }
   if(bestA<0 || bestB<0 || bestScore<500.0f) return false;
@@ -146,15 +160,12 @@ void RttyService::processSamples(const int16_t* samples,size_t count) {
     if(frameCount_==kFrameSamples) {
       float low=0,high=0;
       if(estimateTones(frame_,low,high)) {
-        if(toneLowHz_==0 || fabsf(low-toneLowHz_)>20 || fabsf(high-toneHighHz_)>20) {
+        if(toneLowHz_==0 || fabsf(low-toneLowHz_)>24 || fabsf(high-toneHighHz_)>24) {
           rtty_set_tones(low,high);
           toneLowHz_=low; toneHighHz_=high;
         }
-        markHz_=rtty_mark_hz(); spaceHz_=rtty_space_hz();
         signal_=true;
-      } else {
-        signal_=false;
-      }
+      } else signal_=false;
       if(rtty_mark_hz()>0) {
         rtty_process(frame_,kFrameSamples);
         markHz_=rtty_mark_hz(); spaceHz_=rtty_space_hz();

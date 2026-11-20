@@ -538,3 +538,14 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Tune using the narrowest existing non-FM band range that contains the preset frequency, changing only the selected band's mode/frequency/bandwidth as needed; keep the currently selected UI layout unchanged.
 - Ordinary presets return to the active radio layout on click. FT8/FT4 presets are reserved for the dedicated decoder entry/page and service lifecycle, which remain a separate follow-up stage; do not start CW/RTTY decoders.
 - No firmware build, GitHub Actions run, or hardware test is to be started by the assistant.
+
+
+### Decoder frequency menu — first UI milestone committed (2026-11-20)
+- Added `CMD_DECODER_FREQUENCIES` and its dedicated full-screen renderer in `Draw.cpp`; the active radio layout remains selected and is only redrawn when this command is exited.
+- Added the new main-menu entry at index 20 in English, German, and Italian menu sources. The existing 20 item indices were preserved by appending the entry.
+- Added category and preset navigation: main menu → 11 categories → presets. Encoder rotation changes selection; long press backs to the previous level or main menu.
+- Added a 2,000 ms idle preview timer in the main loop. A preset is tuned after the encoder has stopped moving for two seconds; subsequent movement restarts the timer.
+- Tuning selects the narrowest existing non-FM band that covers the preset, applies the preset modulation/frequency/bandwidth, then uses the existing `selectBand()` radio path. No radio layout source file was changed.
+- Normal preset click returns to `CMD_NONE` (the currently selected layout). FT8/FT4 click currently reports that the decoder page is pending; it deliberately does not launch a partial decoder. Dedicated FT8/FT4 page, UTC/Wi-Fi lifecycle, and service connection remain the next implementation stage.
+- Commits: `bb8aca0d031fad4782ed20dacccbf5f910190f01` (command/API); `ba1004b43279d9e33eac387c6665d240211b7baa` (draw dispatch); `d6ae5a87b8ff17a7322a8cbd6b79e5713f2315c8` (encoder/timer/back handling); `b92963444d6c20ab7227437107ad804fb9b49b24`, `ae490b302cc5f6263f34add2e5ea7437b4d73b47`, `a376b50d7285846753ec9cb102891cba1c71e8bc` (EN/DE/IT menu integration).
+- Source-level review only. No build, Actions run, or hardware test was run.

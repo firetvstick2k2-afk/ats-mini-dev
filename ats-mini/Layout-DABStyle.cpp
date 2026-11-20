@@ -1,6 +1,7 @@
-#include "Common.h"
-#include "Draw.h"
 #include <LittleFS.h>
+#include "Common.h"
+#include "Menu.h"
+#include "Draw.h"
 #include <ctype.h>
 
 // FM-only DAB-style screen ported from the ATS Mini OS FM layout.
@@ -95,7 +96,16 @@ void drawLayoutDABStyle()
   findStationLogo(getRdsPiCode());
   bool logoDrawn=false;
   if(cachedLogoPath[0])
-    logoDrawn=spr.drawPngFile(LittleFS,cachedLogoPath,logoX+4,logoY+4,logoW-8,logoH-8);
+  {
+    // LovyanGFX Sprite cannot use the filesystem overload directly here.
+    // Decode from the LittleFS File stream instead.
+    File logoFile = LittleFS.open(cachedLogoPath, "r");
+    if(logoFile)
+    {
+      logoDrawn = spr.drawPng(&logoFile, logoX+4, logoY+4, logoW-8, logoH-8);
+      logoFile.close();
+    }
+  }
   if(!logoDrawn)
   {
     spr.fillRoundRect(logoX,logoY,logoW,logoH,5,BG);

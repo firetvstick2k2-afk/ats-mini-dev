@@ -4,32 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       revision:
-        description: "A tag to release, e.g. v1.00"
+        description: "Optional release tag, e.g. v1.00"
         type: string
         required: false
 
 jobs:
   build:
-    name: build ${{ matrix.board.artifact-suffix }}-${{ matrix.lang }}
+    name: build ospi-de
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-    strategy:
-      fail-fast: true
-      matrix:
-        lang: [de]
-        board:
-          - profile: esp32s3-ospi
-            fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none
-            artifact-suffix: ospi
-            cli-compile-flags: |
-              - --profile
-              - esp32s3-ospi
-              - --export-binaries
-
     outputs:
       slug: ${{ steps.slug.outputs.slug }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -38,15 +24,8 @@ jobs:
           fetch-tags: true
           ref: "${{ github.ref }}"
 
-      - name: Prepare Menu for Selected Language
-        run: |
-          if [ "${{ matrix.lang }}" = "de" ]; then
-            cp ats-mini/Menu_german.cpp.src ats-mini/Menu.cpp
-          elif [ "${{ matrix.lang }}" = "it" ]; then
-            cp ats-mini/Menu_italian.cpp.src ats-mini/Menu.cpp
-          else
-            cp ats-mini/Menu_english.cpp.src ats-mini/Menu.cpp
-          fi
+      - name: Prepare German menu
+        run: cp ats-mini/Menu_german.cpp.src ats-mini/Menu.cpp
 
       - name: Get version slug
         id: slug
@@ -61,77 +40,42 @@ jobs:
         run: |
           echo "Disk space before cleanup:"
           df -h /
-          echo "Largest top-level directories:"
           sudo du -xhd1 /usr/local /opt /usr/share 2>/dev/null | sort -h | tail -n 25 || true
-
-          # These preinstalled toolchains are unrelated to the Arduino ESP32 build.
-          # Keep Python, Node.js, Git, and the GitHub Actions runner intact.
           sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/dotnet /usr/local/share/powershell /usr/local/.ghcup /usr/share/swift
-
-          # Remove package-manager caches only; do not remove installed build tools.
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
           echo "Disk space after cleanup:"
           df -h /
 
-      - name: Compile firmware
+      - name: Compile OSPI-DE firmware
         uses: arduino/compile-sketches@v1
         with:
           cli-version: 1.4.1
           github-token: ${{ secrets.GITHUB_TOKEN }}
           sketch-paths: |
             - ats-mini
-          fqbn: ${{ matrix.board.fqbn }}
-          cli-compile-flags: ${{ matrix.board.cli-compile-flags }}
+          fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none
+          cli-compile-flags: |
+            - --profile
+            - esp32s3-ospi
+            - --export-binaries
           enable-deltas-report: false
           enable-warnings-report: true
 
-      - name: Save sketches report artifact
-        uses: actions/upload-artifact@v7
-        with:
-          if-no-files-found: error
-          path: sketches-reports
-          name: sketches-report-${{ matrix.board.artifact-suffix }}-${{ matrix.lang }}
-
-      - name: Install uv and python
-        uses: astral-sh/setup-uv@v8.1.0
-        with:
-          version-file: "pyproject.toml"
-          enable-cache: true
-          cache-dependency-glob: "**/pyproject.toml"
-
-      - name: Compile the unreleased changelog
+      - name: Prepare single firmware binary
         run: |
-          # shellcheck disable=SC2015
-          ls changelog/*.md && uv run towncrier build --keep --version Unreleased || true
+          mkdir -p artifact
+          test -s ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin
+          cp ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin "artifact/Mini_OS_#${{ github.run_number }}.bin"
+          ls -lh artifact
 
-      - name: Check OTA firmware metadata
-        run: >-
-          python -c 'with open("ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin","rb") as f: f.seek(288); assert f.read(4) == b"ATSM", "Missing OTA metadata at offset 288"'
-
-      - name: Prepare compiled artifact
-        run: |
-          mkdir -p artifact/ats-mini-${{ steps.slug.outputs.slug }}-${{ matrix.board.artifact-suffix }}-${{ matrix.lang }}
-          cp ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin artifact/ats-mini-${{ steps.slug.outputs.slug }}-${{ matrix.board.artifact-suffix }}-${{ matrix.lang }}-ota.bin
-          cp ats-mini/build/esp32.esp32.esp32s3/boot_app0.bin artifact/ats-mini-${{ steps.slug.outputs.slug }}-${{ matrix.board.artifact-suffix }}-${{ matrix.lang }}/
-          mv ats-mini/build/esp32.esp32.esp32s3/*.ino.bin ats-mini/build/esp32.esp32.esp32s3/*.ino.*.bin artifact/ats-mini-${{ steps.slug.outputs.slug }}-${{ matrix.board.artifact-suffix }}-${{ matrix.lang }}/
-          cp CHANGELOG.md artifact/ats-mini-${{ steps.slug.outputs.slug }}-${{ matrix.board.artifact-suffix }}-${{ matrix.lang }}/
-
-      - name: Upload compiled artifact
+      - name: Upload firmware artifact
         uses: actions/upload-artifact@v7
         with:
+          name: Mini_OS-build-${{ github.run_number }}-ospi-de
+          path: artifact/Mini_OS_#${{ github.run_number }}.bin
           if-no-files-found: error
-          name: ${{ github.event.repository.name }}-${{ steps.slug.outputs.slug }}-${{ matrix.board.artifact-suffix }}-${{ matrix.lang }}
-          path: |
-            artifact
-            !artifact/*-ota.bin
-
-      - name: Upload OTA artifact
-        uses: actions/upload-artifact@v7
-        with:
-          if-no-files-found: error
-          path: artifact/ats-mini-${{ steps.slug.outputs.slug }}-${{ matrix.board.artifact-suffix }}-${{ matrix.lang }}-ota.bin
-          archive: false
+          retention-days: 14
 
   release:
     if: ${{ (github.event_name == 'workflow_dispatch' && inputs.revision != '') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
@@ -139,35 +83,42 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
-    strategy:
-      fail-fast: true
     steps:
-      - name: Download the build artifacts
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: "${{ github.ref }}"
+
+      - name: Download firmware binary
         uses: actions/download-artifact@v8
         with:
-          pattern: 'ats-mini-*'
-          merge-multiple: true
+          name: Mini_OS-build-${{ github.run_number }}-ospi-de
           path: artifact
 
-      - name: Archive the build artifacts
-        run: cd "artifact" && find . -mindepth 1 -maxdepth 1 -type d -exec sh -c 'zip -r "../${1%/}.zip" "$1"' _ {} \;
-
-      - name: Create release
+      - name: Prepare release notes
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-          SLUG: ${{ needs.build.outputs.slug }}
-        run: >-
-          python -c 'import os,re,glob; p=glob.glob(f"artifact/ats-mini-{os.environ[\"SLUG\"]}-ospi-*/CHANGELOG.md")[0]; t=open(p).read(); r=re.search(f"(^## {os.environ[\"SLUG\"][1:].replace(\".\", \"\\\\.\")} .*?)(?=^## \\\\d|\\\\Z)", t, re.MULTILINE | re.DOTALL); print(r.group(0) if r else "")' |
-          gh release create "$SLUG" --repo '${{ github.repository }}' --target '${{ github.sha }}' --notes-file -
-
-      - name: Upload release artifacts
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          FILENAMES: >-
-            ${{ github.event.repository.name }}-${{ needs.build.outputs.slug }}-*.zip
-            artifact/${{ github.event.repository.name }}-${{ needs.build.outputs.slug }}-*-ota.bin
           SLUG: ${{ needs.build.outputs.slug }}
         run: |
-          # shellcheck disable=SC2086
-          gh release upload "$SLUG" $FILENAMES --repo '${{ github.repository }}' --clobber
-          
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          slug = os.environ["SLUG"]
+          changelog = Path("CHANGELOG.md").read_text()
+          version = re.escape(slug.removeprefix("v"))
+          match = re.search(rf"(^## {version} .*?)(?=^## \d|\Z)", changelog, re.MULTILINE | re.DOTALL)
+          Path("release-notes.md").write_text(match.group(0) if match else f"OSPI-DE test firmware {slug}")
+          PY
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SLUG: ${{ needs.build.outputs.slug }}
+        run: gh release create "$SLUG" --repo "${{ github.repository }}" --target "${{ github.sha }}" --notes-file release-notes.md
+
+      - name: Upload raw firmware binary
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SLUG: ${{ needs.build.outputs.slug }}
+        run: gh release upload "$SLUG" artifact/*.bin --repo "${{ github.repository }}" --clobber

@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 bool rttyUiOpen();
 void rttyUiExit();
 bool rttyUiTick(uint32_t now);

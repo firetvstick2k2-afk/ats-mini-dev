@@ -145,3 +145,15 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Bei jeder weiteren Portierung zuerst die Implementierung im Mini_OS-Quellbranch ansehen, dann mit dem ATS-Mini-Dev-Stand vergleichen und die Integration gezielt fertigstellen.
 - Nicht annehmen, dass ein importiertes Feature automatisch vollständig integriert ist: Status pro Feature als vollständig / teilweise / offen festhalten.
 - `main` im Zielrepo und das öffentliche ATS-Mini-Repository nicht verändern, außer auf ausdrückliche Anweisung.
+
+
+## FT8-Anzeige — 20.11.2026
+- Die FT8/FT4-Decoderseite wurde optisch neu aufgebaut; **CW wurde weiterhin nicht importiert**.
+- Oben links steht die Frequenz, oben rechts `DEC n ERR n` (Nachrichtenanzahl und aufsummierte LDPC-Fehler der erfolgreich dekodierten Nachrichten).
+- Darunter läuft ein cyanfarbener Fortschrittsbalken anhand der empfangenen Decoder-Blöcke des Slots.
+- Die unteren drei großen Zeilen zeigen die letzten empfangenen Nachrichten auf abwechselnden dunklen/mittleren Blautönen. Links erscheint eine Länderflagge, wenn das Rufzeichenpräfix erkannt wird; rechts die Entfernung.
+- Entfernung: Maidenhead-Locator aus der Nachricht gegen den QTH-Locator `JO31TV`. Bei fehlendem/ungültigem Locator steht `---`. Unbekannte Rufzeichenpräfixe bekommen bewusst keine erfundene Flagge.
+- Die Präfix-/Flaggenzuordnung deckt derzeit häufige Länder ab, ist aber noch keine vollständige DXCC-Datenbank.
+- Nur `FtxUi.cpp` wurde für die Darstellung und die Anzeigehistorie geändert; Decoder-DSP, Audio-Capture und Slot-Timing blieben unverändert. Die ERR-Zahl zählt nur LDPC-Fehler, die an erfolgreich dekodierten Nachrichten gemeldet wurden, nicht alle fehlgeschlagenen Kandidaten.
+- Commits: `c2af7005bc4c70a4a7c36821a83f1fc020a1288f`, `2eac7c1ea2a11a7fc23313db7bf76a0a96bb911a`.
+- Noch kein Build und kein Hardwaretest. Als Nächstes OSPI-DE manuell auf `development` bauen und anschließend Darstellung, Locator-Distanz, Flaggen, Ladebalken sowie FT8/FT4 prüfen.

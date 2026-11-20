@@ -527,3 +527,14 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - For plans, record the agreed behavior and constraints before implementation, then update the entry as work progresses or decisions change.
 - At each handover point, record the exact repository, branch, current HEAD, completed work, in-progress work, next steps, known risks, and explicit tests not run.
 - Keep all work on `development`; leave `main` untouched. User performs firmware builds, GitHub Actions, and hardware tests.
+
+
+## Decoder frequency UI integration — in progress (2026-11-20)
+### Agreed implementation plan
+- Add a dedicated full-screen `CMD_DECODER_FREQUENCIES` screen without changing any radio layout or the TEF6686 renderer.
+- Add the Decoder Frequencies entry to the English, German, and Italian main-menu source files; keep each menu's item indices stable and append the new item.
+- First encoder click opens the eleven-category list; click on a category opens its preset list. Encoder rotation changes the highlighted category/preset. Long press backs out one level (or returns to the main menu).
+- In the preset list, a two-second idle after the last encoder movement automatically tunes the selected preset for listening. Further rotation selects another preset and restarts the two-second timer.
+- Tune using the narrowest existing non-FM band range that contains the preset frequency, changing only the selected band's mode/frequency/bandwidth as needed; keep the currently selected UI layout unchanged.
+- Ordinary presets return to the active radio layout on click. FT8/FT4 presets are reserved for the dedicated decoder entry/page and service lifecycle, which remain a separate follow-up stage; do not start CW/RTTY decoders.
+- No firmware build, GitHub Actions run, or hardware test is to be started by the assistant.

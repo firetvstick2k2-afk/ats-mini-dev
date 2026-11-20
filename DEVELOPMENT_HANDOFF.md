@@ -579,3 +579,33 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Workflow change commit: `fefad16d8f2c6ae5a8932528f1acff2cf68abc19`.
 - Future manual workflow runs on `development` will execute one matrix job only: `build ospi-de`. This workflow edit does not rebuild the current firmware; it affects subsequent runs.
 - No changes were made to `main`. Hardware flashing/testing remains the user's responsibility; the successful GitHub Actions compile is not a hardware test.
+
+
+## Release / future build-matrix restoration note (2026-11-20)
+
+- User's current testing requirement is **OSPI-DE only**. Keep the active GitHub Actions build matrix narrowed to `lang: [de]` and the single board profile `esp32s3-ospi`. Do not spend CI time building QSPI, English, or Italian for routine development/testing.
+- This is a convenience reduction for development/testing, **not a permanent deletion or abandonment** of the other targets. When preparing a future release, restore the additional targets if the user wants the full release matrix.
+- Exact previous matrix before narrowing (from the successful manual run `44690333439`):
+  ```yaml
+  matrix:
+    lang: [de, en, it]
+    board:
+      - profile: esp32s3-ospi
+        fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none
+        artifact-suffix: ospi
+        cli-compile-flags: |
+          - --profile
+          - esp32s3-ospi
+          - --export-binaries
+      - profile: esp32s3-qspi
+        fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=enabled,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none
+        artifact-suffix: qspi
+        cli-compile-flags: |
+          - --profile
+          - esp32s3-qspi
+          - --export-binaries
+  ```
+- To restore the full matrix for a release, change `lang: [de]` back to `lang: [de, en, it]` and reinsert the exact QSPI board block above. Keep the OSPI board block. This produces the six combinations OSPI/QSPI × DE/EN/IT.
+- The existing workflow file is `.github/workflows/build.yml`; its build, artifact upload, manual `workflow_dispatch` trigger, and release job logic were retained during narrowing. Restore only the matrix unless a separately reviewed release requirement calls for another change.
+- The last full-matrix run `44690333439` completed successfully: all six build jobs passed, including OSPI-DE. It produced 18 artifacts total. OSPI-DE artifacts included `ats-mini-dev-v1.30-165-g54a7d0d-ospi-de`, `ats-mini-v1.30-165-g54a7d0d-ospi-de-ota.bin`, and `sketches-report-ospi-de`.
+- Current active matrix is intentionally OSPI-DE only. This note preserves the exact prior settings for later restoration; it does not itself change the workflow.

@@ -2,12 +2,13 @@
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
-#include "../audio/AudioCaptureService.h"
 
 class RttyService {
 public:
-  bool begin(AudioCaptureService& capture);
-  bool enter(AudioCaptureService& capture);
+  static constexpr uint8_t kAudioPin=11;
+  static constexpr uint32_t kSampleRate=8000;
+  bool begin();
+  bool enter();
   void exit();
   bool active() const { return active_; }
   void update();
@@ -19,19 +20,19 @@ public:
   const char* text() const { return shownText_; }
 
 private:
-  struct AudioChunk { int16_t samples[AudioCaptureService::kBlockSamples]; uint8_t count=0; };
-  static void onAudioSamples(void* context,const int16_t* samples,size_t count,int64_t utcStartMicros);
-  static void taskEntry(void* arg);
+  struct AudioChunk { int16_t samples[64]; };
+  static void captureTaskEntry(void* arg);
+  static void workerTaskEntry(void* arg);
+  void captureTask();
   void workerTask();
   void processSamples(const int16_t* samples,size_t count);
   bool estimateTones(const float* samples,float& low,float& high);
 
-  AudioCaptureService* capture_=nullptr;
   QueueHandle_t queue_=nullptr;
-  TaskHandle_t task_=nullptr;
+  TaskHandle_t captureTask_=nullptr,workerTask_=nullptr;
   volatile bool active_=false;
-  bool initialized_=false, signal_=false;
-  float baud_=45.45f, markHz_=0, spaceHz_=0, toneLowHz_=0, toneHighHz_=0;
+  bool initialized_=false,signal_=false;
+  float baud_=45.45f,markHz_=0,spaceHz_=0,toneLowHz_=0,toneHighHz_=0;
   float dc_=2048.0f;
   float frame_[512]{};
   size_t frameCount_=0;

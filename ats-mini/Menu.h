@@ -57,6 +57,7 @@
 #define CMD_ALL_SPECTRUM_INPUT 0x3D00 // Isolated ALL Band Spectrum keypad
 #define CMD_DECODER_FREQUENCIES 0x3E00 // Decoder frequency categories and presets
 #define CMD_FTX_DECODER 0x3F00 // FT8/FT4 decoder screen
+#define CMD_RTTY_DECODER 0x4000 // RTTY decoder screen
 
 
 

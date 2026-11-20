@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <freertos/semphr.h>
 
 class RttyService {
 public:
@@ -29,6 +30,7 @@ private:
   bool estimateTones(const float* samples,float& low,float& high);
 
   QueueHandle_t queue_=nullptr;
+  SemaphoreHandle_t engineMutex_=nullptr;
   TaskHandle_t captureTask_=nullptr,workerTask_=nullptr;
   volatile bool active_=false;
   bool initialized_=false,signal_=false;

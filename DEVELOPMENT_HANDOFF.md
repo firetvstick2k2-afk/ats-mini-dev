@@ -709,3 +709,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - When a slot has zero decoded messages, `FtxDecoderService::decodeAndPublish()` now keeps the last non-empty published result set instead of replacing it with an empty array. This complements the UI's three-message rolling history so a weak/empty subsequent slot does not wipe the last successful decodes.
 - Commits: UI/audio volume `4e6d9c8caf325e336cf32ef56e36b484dc442c48`; empty-slot result retention `c0b3a3111d76410bb27bfff7dc5a1c635ee95d0d`.
 - No build or hardware verification was run for these two changes. User should manually run the OSPI-DE workflow on `development`, check audible volume during FT8, confirm volume restoration on exit, and verify that two prior messages remain visible when the next slot has no successful decode.
+
+
+## FT8/FT4 decoder display polish — 2026-11-21
+- Unknown/unmapped country flags are now displayed as a dark-blue badge with a bright cyan border and bold cyan country-code text, instead of the subdued fallback label.
+- The empty-history placeholder now reads `Waiting for FT8/FT4 decodes...` in bold cyan rather than muted gray.
+- Only `ats-mini/src/ftx/FtxUi.cpp` was changed; decoder DSP, audio capture, slot timing, and message retention are untouched.
+- Code commit: `6bec9ae62e3ef7858b6ebf513fc694e463a24c8d`. Source-only change; no build or hardware test has been run. User should run the manual OSPI-DE workflow on `development`.

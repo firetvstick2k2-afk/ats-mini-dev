@@ -137,3 +137,11 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Source finding: FT8 worker stack was 8192 bytes; `decodeSlot()` and nested FT8/LDPC decode use local stack buffers.
 - First diagnostic patch committed on `development`: worker stack raised to 16384 bytes; free stack high-water mark logged before/after each decode. Commit `21d6db3756f1d7332eb4f48d7da2c83dd541ba21`.
 - Build/device test pending. Do not call this fixed until several slots have been tested. Watch `[FTX][STACK]` serial lines.
+
+## Verbindliche Portierungsquelle — Mini_OS → ATS Mini Dev (2026-11-20)
+- Alle relevanten übernommenen Funktionen und Layouts portieren wir aus `firetvstick2k2-afk/Mini_OS`, Branch **`dev/first-build-preparation`** (exakter Branchname; der Nutzer bezeichnete ihn versehentlich als „first-build-reparation“).
+- Ziel ist `firetvstick2k2-afk/ats-mini-dev`, Branch **`development`**. Ausschließlich dort Änderungen vornehmen.
+- Beispiele bereits portierter Mini_OS-Bestandteile: **DAB Style**, **FT8-Decoder** und weitere importierte Funktionen. Mini_OS ist die Quell- und Referenzbasis.
+- Bei jeder weiteren Portierung zuerst die Implementierung im Mini_OS-Quellbranch ansehen, dann mit dem ATS-Mini-Dev-Stand vergleichen und die Integration gezielt fertigstellen.
+- Nicht annehmen, dass ein importiertes Feature automatisch vollständig integriert ist: Status pro Feature als vollständig / teilweise / offen festhalten.
+- `main` im Zielrepo und das öffentliche ATS-Mini-Repository nicht verändern, außer auf ausdrückliche Anweisung.

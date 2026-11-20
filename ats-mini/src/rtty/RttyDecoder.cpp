@@ -1,4 +1,4 @@
-#include "rtty_decoder.h"
+#include "RttyDecoder.h"
 
 // The project builds with -Og; this DSP runs on every sample of the analysis.
 #pragma GCC optimize("O2")

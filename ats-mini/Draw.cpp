@@ -590,6 +590,13 @@ void drawScreen()
     return;
   }
 
+  if(currentCmd == CMD_DECODER_FREQUENCIES)
+  {
+    drawDecoderFrequencyMenu();
+    spr.pushSprite(0, 0);
+    return;
+  }
+
   // Dedicated scanner keypad; independent from radio/Dual RX keypad.
   if(currentCmd == CMD_ALL_SPECTRUM_INPUT)
   {

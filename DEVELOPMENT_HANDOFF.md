@@ -501,3 +501,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Offline UTC synchronization still needs source-level review. The capture service timestamps samples using `gettimeofday()`; before enabling slot processing, confirm the ATS Mini Dev system clock is set accurately without Wi-Fi, preferably from the existing RDS CT path if that path can safely set system UTC.
 - Preserve all upstream FT8/KISS FFT license files.
 - Keep the imported decoder isolated from existing radio layouts and scanner features.
+
+
+### UTC clock review — completed 2026-11-20
+- Reviewed `Station.cpp`: when a valid RDS CT epoch arrives, `showRdsTime()` marks RDS CT valid. If NTP is unavailable and the system clock is not already set, it calls `clockSetEpoch(epoch)`.
+- Therefore the existing RDS CT path can establish the system epoch offline; the decoder must still wait until `clockAvailable()` is true before entering its UTC slot scheduler.
+- NTP remains optional. Do not require Wi-Fi for offline FT8/FT4 when a valid RDS CT time has set the clock.
+- This is source-level confirmation only. Validate the actual UTC offset/epoch behavior on the user's device before claiming slot timing is hardware-confirmed.

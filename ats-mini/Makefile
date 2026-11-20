@@ -44,7 +44,7 @@ SRC = \
 	Network.cpp Patches.cpp Ota.cpp Splash.cpp EIBI.cpp Scan.cpp About.cpp BleMode.cpp TcpMode.cpp \
 	BlePeripheral.cpp BleUartPeripheral.cpp \
 	BleCentral.cpp BleHidCentral.cpp \
-	Layout-Default.cpp Layout-SMeter.cpp \
+	Layout-Default.cpp Layout-SMeter.cpp Layout-DABStyle.cpp \
 	$(wildcard src/audio/*.cpp src/ftx/*.cpp src/ftx/ft8_lib/common/*.c src/ftx/ft8_lib/fft/*.c src/ftx/ft8_lib/ft8/*.c)
 
 all: build

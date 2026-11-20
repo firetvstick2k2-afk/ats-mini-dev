@@ -130,3 +130,10 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - NAVTEX needs a dedicated SITOR-B decoder with FEC; ordinary RTTY decoding is not sufficient to assume NAVTEX support.
 - Future investigation: reuse the existing internal audio/DSP path, isolate a SITOR-B/FEC decoder from the existing CW/RTTY/FT8 functions, and display received NAVTEX messages on-screen. Start by investigating 518 kHz; other NAVTEX frequencies can be considered later.
 - This is backlog only, not implemented or build-tested. Do not begin until the user reopens the topic and the agreed core stability/storage priorities are addressed. If firmware-only decoding proves impractical on stock hardware, stop without proposing hardware modifications.
+
+## 11. FT8 reset diagnosis (2026-11-20)
+- Android USB serial capture works at 115200 8N1; PC is not required.
+- Exact crash: `Stack canary watchpoint triggered (ftx-decoder)` on Core 1. Latest run completed two 93/93 FT8 slots, then reset during the third. User recalls an earlier reset around block 91/95 on the first pass.
+- Source finding: FT8 worker stack was 8192 bytes; `decodeSlot()` and nested FT8/LDPC decode use local stack buffers.
+- First diagnostic patch committed on `development`: worker stack raised to 16384 bytes; free stack high-water mark logged before/after each decode. Commit `21d6db3756f1d7332eb4f48d7da2c83dd541ba21`.
+- Build/device test pending. Do not call this fixed until several slots have been tested. Watch `[FTX][STACK]` serial lines.

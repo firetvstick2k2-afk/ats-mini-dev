@@ -181,3 +181,11 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - **Noch nicht fertig / nicht als funktionierend bezeichnen:** FSK-Tonpaar-Erkennung und -Tracking, Audio-Service-Anbindung, RTTY-Seite mit CW-Stil und vier Textzeilen, Frequenz links oben / Empfangsstatus rechts oben, Menüintegration.
 - **FT8/FT4 bleibt strikt eingefroren.** Keine Änderungen unter `ats-mini/src/ftx/`; keinerlei Änderung an FT8/FT4-DSP, Audio-Capture, Slot-Timing, UI oder Einstellungen. RTTY getrennt halten.
 - Ziel ausschließlich `firetvstick2k2-afk/ats-mini-dev` Branch `development`. Mini_OS und Joaquim-Repository nur als Quelle lesen. Nutzer führt Builds und Hardwaretests selbst aus; für den aktuellen Import wurde kein Build/Actions-Run/Flash durchgeführt.
+
+
+## RTTY decoder — current continuation status (2026-11-21)
+- Imported RTTY engine is present under `ats-mini/src/rtty/`; corrected its include to the actual case-sensitive filename `RttyDecoder.h` in commit `bb2e9cfff95596d6c4f00a4c0e140639c7b3a11d`.
+- Still not a usable on-air decoder: two-tone FSK detection/tracking, isolated audio consumer/service, menu wiring and CW-style four-row UI remain outstanding.
+- Preserve FT8/FT4 completely. No files under `ats-mini/src/ftx/` may be changed for this work.
+- The exact CW reference UI has not yet been found in the available Mini_OS branches and guessed paths. Locate the true source before implementing the matching RTTY UI; do not approximate it with the generic decoder layout.
+- No build or device test has been run.

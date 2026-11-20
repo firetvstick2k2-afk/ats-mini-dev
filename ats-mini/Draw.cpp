@@ -5,6 +5,7 @@
 #include "Menu.h"
 #include "BleMode.h"
 #include "Draw.h"
+#include "src/ftx/FtxUi.h"
 #include "FreqKeypad.h" // <--- Eingebundenes Keypad-Modul
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
@@ -586,6 +587,13 @@ void drawScreen()
   if(currentCmd == CMD_MENU || currentCmd == CMD_SETTINGS || currentCmd == CMD_SPECTRUM_MENU)
   {
     drawFullScreenMenu(currentCmd);
+    spr.pushSprite(0, 0);
+    return;
+  }
+
+  if(currentCmd == CMD_FTX_DECODER)
+  {
+    drawFtxDecoderPage();
     spr.pushSprite(0, 0);
     return;
   }

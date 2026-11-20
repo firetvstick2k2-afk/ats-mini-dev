@@ -20,6 +20,7 @@ bool prefsAreWritten();
 bool nvsErase();
 
 bool diskInit(bool force = false);
+bool logosInit();
 
 void prefsRequestSave(uint32_t what, bool now = false);
 void prefsSave(uint32_t items = SAVE_ALL);

@@ -753,7 +753,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
 
 ### Decoder Frequency presets
 - `DecoderKind::RTTY` is now assigned to all five dedicated amateur RTTY presets (80/40/20/15/10 m).
-- Also assigned to the Pinneberg DDH/DDK entries and the explicit DWD RTTY 3.855 MHz entry.
+- Also assigned to the Pinneberg DDH/DDK entries and the DWD RTTY entries (3.855 MHz is weather fax, not RTTY).
 - DWD weather-fax presets (7.880 and 13.882 MHz) remain listen-only and are deliberately not sent to the RTTY decoder.
 - The decoder-frequency menu opens the RTTY screen for entries tagged `DecoderKind::RTTY`; frequency preview/tuning remains the existing mechanism.
 
@@ -762,3 +762,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Static source review only; no compiler build, GitHub Actions run, flash or on-air RF validation has been performed. The current GitHub integration exposes read operations and repository file commits but no workflow-dispatch action, so the OSPI-DE workflow was not started from this session.
 - The Goertzel pair estimator and real RF decoding still require validation with an actual RTTY signal. The selected baud is manual (45.45 / 50 / 75); tone pair and polarity are automatic. The current implementation is a first build candidate, not yet a hardware-verified decoder.
 - Next: user starts the manual OSPI-DE workflow on `development`; fix any compiler errors from its log before hardware reception testing.
+
+
+## Correction: Pinneberg weather fax vs RTTY (2026-11-21)
+- Corrected `DecoderFrequencyList.h`: 3.855 MHz (DDH3) is FAX, not RTTY. The preset is now `DWD FAX 3.855` with no RTTY decoder route.
+- 7.880 MHz (DDK3) and 13.8825 MHz (DDK6) are also FAX and remain outside the RTTY decoder.
+- Pinneberg RTTY presets are the text services: 147.3, 4583, 7646, 10100.8, 11039 and 14467.3 kHz. RTTY 147.3 kHz uses a narrower 85 Hz shift and needs a suitable detector configuration/test.
+- Source checked: DWD maritime weather service frequency table and DWD RTTY transmission plan. Keep weather fax and RTTY as distinct decoder types.

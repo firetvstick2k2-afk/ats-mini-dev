@@ -8,7 +8,7 @@ enum class DecoderKind : uint8_t { None, FT8, FT4 };
 struct DecoderFrequencyPreset {
   const char* label;
   uint32_t frequencyKHz;
-  RadioModulation modulation;
+  uint8_t modulation;
   uint8_t bandwidthChoice;
   DecoderKind decoder = DecoderKind::None;
 };

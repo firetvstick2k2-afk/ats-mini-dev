@@ -165,3 +165,10 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Empty decode slots no longer overwrite the last successful published result set with an empty array. The three-message UI history therefore retains prior successful messages while later slots fail to decode.
 - Commits: `4e6d9c8caf325e336cf32ef56e36b484dc442c48` and `c0b3a3111d76410bb27bfff7dc5a1c635ee95d0d`.
 - Not yet built or hardware-tested; user starts OSPI-DE manually on `development`. Verify louder monitoring, restore of previous volume, and message persistence after an empty slot.
+
+
+## FT8/FT4 decoder display polish — 21.11.2026
+- Unmapped country flags now appear as dark-blue badges with cyan borders and bold cyan country-code text (e.g. `CN`) instead of subdued gray-looking labels.
+- The empty message-history placeholder is now bold cyan: `Waiting for FT8/FT4 decodes...`.
+- UI-only change in `ats-mini/src/ftx/FtxUi.cpp`; decoder/audio/timing logic unchanged.
+- Commit: `6bec9ae62e3ef7858b6ebf513fc694e463a24c8d`. Build and device test pending; user runs OSPI-DE manually on `development`.

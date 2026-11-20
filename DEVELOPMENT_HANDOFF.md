@@ -689,3 +689,15 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Mini_OS ist damit die maßgebliche Herkunfts-/Referenzbasis für diese Portierungen. Bei Änderungen oder Fehleranalysen zuerst den entsprechenden Stand im Quellbranch prüfen und dann die ATS-Mini-Dev-Integration auf `development` abgleichen.
 - Die Portierung bedeutet nicht, dass jede Mini_OS-Funktion automatisch vollständig oder identisch integriert ist: den jeweiligen Integrationsstatus weiterhin einzeln prüfen und als vollständig / teilweise / offen dokumentieren.
 - **Branch-Schutz bleibt verbindlich:** Mini_OS-Quellbranch nur als Quelle lesen; ATS Mini Dev ausschließlich auf `development` ändern. `main` und das öffentliche Repository bleiben unangetastet, sofern der Nutzer nichts anderes ausdrücklich verlangt.
+
+
+## FT8 decoder display redesign — 2026-11-20
+- The FT8/FT4 decoder page was visually redesigned in `ats-mini/src/ftx/FtxUi.cpp`; no CW decoder files or CW integration were added.
+- Top row: tuned frequency on the left; cumulative decoded-message count and summed LDPC error count on the right (`DEC n ERR n`).
+- A cyan slot-progress bar shows collected decoder blocks against the slot maximum.
+- Three alternating dark/medium-blue message rows show the most recent decoded messages in larger bold text. Each row has a small country flag when its callsign prefix is recognized, the message text, and the distance on the right.
+- Grid locator distance is calculated from the configured QTH locator `JO31TV` to a 4- or 6-character Maidenhead locator found in the decoded message. Missing/invalid locator displays `---`; unknown callsign prefix does not invent a flag.
+- Current country-prefix/flag mapping is intentionally a starter set of common DXCC prefixes, not a complete DXCC database. Expand only with a reliable prefix dataset if broader coverage is required.
+- UI keeps the latest three messages across slots; the decoder DSP/audio/slot logic was not changed. The displayed error counter sums `ldpcErrors` reported on successfully decoded messages; it is not a count of every failed decode attempt.
+- Source commits: `c2af7005bc4c70a4a7c36821a83f1fc020a1288f` (initial UI) and `2eac7c1ea2a11a7fc23313db7bf76a0a96bb911a` (slot-history fix).
+- Source review only; no build or hardware test has been run. Next: manual OSPI-DE build on `development`, then verify actual flag glyph/graphics, row readability, QTH distance, progress bar, and FT8/FT4 behavior.

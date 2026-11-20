@@ -54,14 +54,14 @@ static void findStationLogo(uint16_t pi)
 
 void drawLayoutDABStyle()
 {
-  constexpr uint16_t BG=0x0000, WHITE=0xFFFF, GREEN=0x07E0;
+  constexpr uint16_t BG=0x0000, WHITE=0xFFFF, BLUE=0x07FF;
   constexpr uint16_t CYAN=0x07FF, MUTED=0x7BEF, GRID=0x4208;
   const int w=spr.width();
   spr.fillSprite(BG);
 
   // Header: band, RDS clock, Wi-Fi and battery indicators.
   spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(GREEN);
+  spr.setTextColor(BLUE);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   spr.drawString(getCurrentBand()->bandName, 8, 3);
   if(rdsTimeAvailable())
@@ -73,7 +73,7 @@ void drawLayoutDABStyle()
   }
   bool hasVoltage=drawBattery(w-43, 3);
   drawWiFiIndicator(hasVoltage ? w-73 : w-43, 3);
-  spr.drawFastHLine(8,25,w-16,GRID);
+  spr.drawFastHLine(8,25,w-16,BLUE);
 
   // Sender name, with a reserved logo column on the left.
   const int stationX=124;
@@ -112,7 +112,7 @@ void drawLayoutDABStyle()
     static_cast<unsigned>(currentFrequency/100),
     static_cast<unsigned>(currentFrequency%100));
   spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(GREEN);
+  spr.setTextColor(WHITE);
   spr.setFont(&lgfx::fonts::Font7);
   spr.setTextSize(0.78f);
   spr.drawString(frequency,124,56);
@@ -123,9 +123,9 @@ void drawLayoutDABStyle()
 
   // Stereo/mono and programme type.
   constexpr int badgeY=104;
-  spr.drawRoundRect(124,badgeY,78,20,4,GREEN);
+  spr.drawRoundRect(124,badgeY,78,20,4,BLUE);
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(GREEN);
+  spr.setTextColor(BLUE);
   spr.setFont(&lgfx::fonts::Font0);
   spr.drawString("FM",163,badgeY+6);
   spr.drawRoundRect(210,badgeY,w-218,20,4,WHITE);
@@ -135,7 +135,7 @@ void drawLayoutDABStyle()
 
   // RDS RadioText in a dedicated green ticker frame.
   constexpr int rtX=8,rtY=143,rtW=304,rtH=24;
-  spr.drawRoundRect(rtX,rtY,rtW,rtH,6,GREEN);
+  spr.drawRoundRect(rtX,rtY,rtW,rtH,6,BLUE);
   const char *rt=getRadioText();
   spr.setTextDatum(ML_DATUM);
   spr.setTextColor(WHITE);

@@ -208,8 +208,13 @@ void drawFlag(const char* country, int x, int y)
   } else if(!strcmp(country,"CH")) {
     spr.fillRect(x+1,y+1,20,12,red); spr.fillRect(x+9,y+3,4,8,white); spr.fillRect(x+7,y+5,8,4,white);
   } else {
-    spr.setTextDatum(MC_DATUM); spr.setTextColor(0xFFFF);
-    spr.drawString(country,x+11,y+7,FONT_SMALL);
+    // Unknown/unmapped flag: show the country code as a deliberate cyan badge.
+    spr.fillRect(x+1,y+1,20,12,0x1036);
+    spr.drawRect(x,y,22,14,0x07FF);
+    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    spr.setTextDatum(MC_DATUM);
+    spr.setTextColor(0x07FF);
+    spr.drawString(country,x+11,y+7);
   }
 }
 
@@ -351,9 +356,10 @@ void drawFtxDecoderPage()
     spr.drawRect(7,y,306,34,0x0359);
     if(!recentMessages[i].text[0]) {
       if(i==0) {
+        spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
         spr.setTextDatum(ML_DATUM);
-        spr.setTextColor(0x7BEF);
-        spr.drawString("Waiting for decoded messages...",14,y+10,FONT_SMALL);
+        spr.setTextColor(cyan);
+        spr.drawString("Waiting for FT8/FT4 decodes...",14,y+10);
       }
       continue;
     }

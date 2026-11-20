@@ -65,9 +65,16 @@ bool RttyService::enter() {
 void RttyService::exit() {
   active_=false;
   if(queue_) xQueueReset(queue_);
-  frameCount_=0; signal_=false;
-  markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
-  if(engineMutex_) { xSemaphoreTake(engineMutex_,portMAX_DELAY); rtty_set_tones(0,0); xSemaphoreGive(engineMutex_); }
+  if(engineMutex_) {
+    xSemaphoreTake(engineMutex_,portMAX_DELAY);
+    frameCount_=0; signal_=false;
+    markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
+    rtty_set_tones(0,0);
+    xSemaphoreGive(engineMutex_);
+  } else {
+    frameCount_=0; signal_=false;
+    markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
+  }
 }
 
 void RttyService::setBaud(float value) {

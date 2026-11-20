@@ -662,7 +662,7 @@ void drawScreen()
   if(uiLayoutIdx == 8)
   {
     if(currentMode == FM) drawLayoutDABStyle();
-    else drawLayoutClean(); // DAB Style is FM-only; Clean is the universal fallback.
+    else drawLayoutTinyRadio(); // DAB Style is FM-only; TinyRadio is the selected alternative for non-FM bands.
   }
   else switch(uiLayoutIdx)
   {

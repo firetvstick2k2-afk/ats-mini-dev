@@ -7,7 +7,7 @@
 #include <math.h>
 
 // ATS Mini Dev adaptation: the existing GPIO11 capture stream is 4 kHz.
-constexpr int DSP_SAMPLE_RATE = 4000;
+constexpr int DSP_SAMPLE_RATE = 8000;
 constexpr float RTTY_DEFAULT_BAUD = 45.45f;
 constexpr float RTTY_RETUNE_HZ = 15.0f;
 constexpr int RTTY_TEXT_MAX = 64;

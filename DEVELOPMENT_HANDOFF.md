@@ -1,6 +1,6 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-10-30 (V1.31 release preparation; Web ALL Band scanner range validation and click-to-tune behavior documented)
+Last updated: 2026-11-20 (DAB Style TinyRadio fallback and cyan-blue color refinement; clean-chat handover prepared)
 Repository: https://github.com/13HN2709/ats-mini-dev (private development workspace); public release repository: https://github.com/13HN2709/ats-mini
 Active work branch: `development` (never modify `main` unless explicitly requested)
 
@@ -635,3 +635,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Updated `ats-mini/Layout-DABStyle.cpp`: all former green accent elements (header accent, divider, badge frame/text and RadioText frame) now use bright cyan-blue RGB565 `0x07FF`, matching the vivid blue menu frame. The large frequency digits now use white `0xFFFF`, matching the menu text. The MHz label remains cyan-blue and the other white elements remain unchanged.
 - Commits: `63354f1c598fc6ad35e14a6676e6e2095011a455` (TinyRadio fallback); `87a9c04ad1ff0710e68712f659c3e28a0ac5ac68` (DAB Style colors).
 - Source changes committed on `development` only. No firmware build, GitHub Actions run, or hardware test was performed. User should test DAB Style on FM, switch to a non-FM band to confirm TinyRadio, then return to FM and confirm DAB Style is restored.
+
+
+## Current handoff checkpoint — 2026-11-20 evening
+- Repository: private `firetvstick2k2-afk/ats-mini-dev`; active branch: `development`; latest verified commit: `5d6aa64953f890707a9f3090b46e3d353a42c606` (handoff documentation commit). Keep `main` and the public release repository untouched.
+- Latest code changes: `ats-mini/Draw.cpp` routes DAB Style (layout index 8) to DAB Style on FM and TinyRadio on non-FM bands; returning to FM restores DAB Style. `ats-mini/Layout-DABStyle.cpp` replaces green accents with RGB565 `0x07FF`, matching the bright cyan-blue used by the main-menu frame; frequency digits are white `0xFFFF`. Relevant code commits: `63354f1c598fc6ad35e14a6676e6e2095011a455` and `87a9c04ad1ff0710e68712f659c3e28a0ac5ac68`.
+- `DEVELOPMENT_HANDOFF.md` has been updated with those changes. A separate `NEW_CHAT_HANDOVER.md` contains the concise startup brief for the next conversation.
+- Build status for these latest DAB Style changes is **pending user confirmation**. User said they were starting the manual build; no run result has been reported in this chat. Do not assume success. If the build fails, request the exact failing log/error and fix only the affected source. If it passes, ask for device verification of FM → non-FM/All Band → FM, station logo, and the updated colors.
+- Routine build target remains **OSPI-DE only** via manual `workflow_dispatch`. User starts builds and flashes/tests the ATS Mini V4; assistant must not trigger or claim a build/device test without evidence.
+- No changes to TEF6686 layout, default layout index (5), main branch, or public release repo.
+- Next broader development priorities already agreed: (1) Speicher-/Speichermanagement review, especially LittleFS/logo storage safety; (2) review and correctly complete half-finished ports/features instead of adding more features; (3) stabilize core functions before resuming optional decoder/waterfall polish. Preserve working LittleFS mount/format behavior; do not format or erase user data.

@@ -23,6 +23,7 @@
 #include "FreqKeypad.h"
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
+#include "src/ftx/FtxUi.h"
 
 
 // SI473/5 and UI
@@ -860,6 +861,12 @@ void loop()
         currentCmd = CMD_NONE;
       needRedraw = true;
     }
+    else if(pb1st.isLongPressed && currentCmd == CMD_FTX_DECODER)
+    {
+      ftxUiExit();
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+    }
     else if(pb1st.isLongPressed && currentCmd == CMD_DECODER_FREQUENCIES)
     {
       needRedraw |= decoderFrequencyBack();
@@ -986,12 +993,15 @@ void loop()
     pb1st.wasClicked = pb1st.wasShortPressed = false;
   }
 
+  if(currentCmd == CMD_FTX_DECODER && ftxUiTick(currentTime))
+    needRedraw = true;
+
   if(currentCmd == CMD_DECODER_FREQUENCIES && decoderFrequencyTick(currentTime))
     needRedraw = true;
 
   if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
   {
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES)
+    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER)
     {
       currentCmd = CMD_NONE;
       needRedraw = true;

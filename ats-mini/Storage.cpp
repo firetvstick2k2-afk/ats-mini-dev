@@ -1,5 +1,7 @@
 #include "Common.h"
 #include "Storage.h"
+#include "Splash.h"
+#include <vector>
 #include "Themes.h"
 #include "Menu.h"
 #include "Memories.h"
@@ -407,6 +409,74 @@ bool diskInit(bool force)
   prefs.end();
 
   return(true);
+}
+
+
+/*
+ * Keep station logos in one directory without touching the existing splash
+ * image or changing the LittleFS mount/format lifecycle.
+ *
+ * Files are renamed within LittleFS (no copy/delete cycle). Existing files in
+ * /Logos are never overwritten; a same-name root file is left in place.
+ */
+bool logosInit()
+{
+  static const char *LOGO_DIR = "/Logos";
+
+  if(!LittleFS.exists(LOGO_DIR))
+  {
+    if(!LittleFS.mkdir(LOGO_DIR)) return(false);
+  }
+  else
+  {
+    File logoDir = LittleFS.open(LOGO_DIR, "r");
+    bool isDirectory = logoDir && logoDir.isDirectory();
+    if(logoDir) logoDir.close();
+    if(!isDirectory) return(false);
+  }
+
+  // Collect first: renaming while iterating the root directory can skip entries.
+  std::vector<String> rootPngs;
+  File root = LittleFS.open("/");
+  if(!root || !root.isDirectory())
+  {
+    if(root) root.close();
+    return(false);
+  }
+
+  File entry = root.openNextFile();
+  while(entry)
+  {
+    if(!entry.isDirectory())
+    {
+      String path = entry.name();
+      String lowerPath = path;
+      lowerPath.toLowerCase();
+
+      if(lowerPath.endsWith(".png") && path != SPLASH_PATH)
+        rootPngs.push_back(path);
+    }
+
+    entry.close();
+    entry = root.openNextFile();
+  }
+  root.close();
+
+  bool success = true;
+  for(const String &source : rootPngs)
+  {
+    int slash = source.lastIndexOf('/');
+    String filename = slash >= 0 ? source.substring(slash + 1) : source;
+    String destination = String(LOGO_DIR) + "/" + filename;
+
+    // Never overwrite a logo already present in the destination directory.
+    if(LittleFS.exists(destination)) continue;
+
+    if(!LittleFS.rename(source, destination))
+      success = false;
+  }
+
+  return(success);
 }
 
 bool nvsErase()

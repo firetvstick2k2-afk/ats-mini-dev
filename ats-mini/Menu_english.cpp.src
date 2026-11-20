@@ -12,6 +12,7 @@
 #include "FreqKeypad.h"
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
+#include "src/radio/DecoderFrequencyList.h"
 #include "Storage.h"
 
 #include <time.h>
@@ -120,8 +121,27 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_SETTINGS    17
 #define MENU_SPECTRUM    18
 #define MENU_ALL_SPECTRUM 19
+#define MENU_DECODER_FREQUENCIES 20
 
 int8_t menuIdx = MENU_KEYPAD;
+static const char *decoderCategoryLabels[] = {
+  "CW",
+  "FT8",
+  "FT4",
+  "RTTY",
+  "DWD / Pinneberg",
+  "NCDXF Beacons",
+  "Time Signals",
+  "Shortwave Broadcast",
+  "SSB QSO",
+  "Signal / Data",
+  "CB",
+};
+static uint8_t decoderCategoryIndex = 0;
+static uint8_t decoderPresetIndex = 0;
+static bool decoderPresetView = false;
+static uint32_t decoderSelectionChangedAt = 0;
+static int16_t decoderLastTunedPreset = -1;
 int8_t spectrumMenuIdx = 0;
 static const char *spectrumMenu[] = { "VHF SPECTRUM", "ALL Band Spectrum" };
 
@@ -129,7 +149,7 @@ static const char *menu[] =
 {
   "Mode", "Bands", "Volume", "Keypad", "DUAL RX", "VFO A/B",
   "Frequency", "BFO", "Steps", "Seek", "Scan", "Memory", "Squelch",
-  "Bandwidth", "AGC/ATTN", "AVC", "SoftMute", "Settings", "VHF Spectrum", "ALL Band Spectrum",
+  "Bandwidth", "AGC/ATTN", "AVC", "SoftMute", "Settings", "VHF Spectrum", "ALL Band Spectrum", "Decoder Frequencies",
 };
 
 #define MENU_BRIGHTNESS   0
@@ -916,6 +936,7 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_DUAL_RX: dualRxStart(); break;
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
+    case MENU_DECODER_FREQUENCIES: decoderFrequencyOpen(); break;
   }
 }
 
@@ -1011,6 +1032,7 @@ bool clickHandler(uint16_t cmd, bool shortPress)
   switch(cmd)
   {
     case CMD_MENU:     clickMenu(menuIdx, shortPress);break;
+    case CMD_DECODER_FREQUENCIES: decoderFrequencyClick(); break;
     case CMD_SPECTRUM_MENU:
       if(spectrumMenuIdx == 0) spectrumScannerStart();
       else currentCmd = CMD_SPECTRUM_MENU; // All-band scanner is reserved for a later feature.
@@ -1842,4 +1864,158 @@ void drawSideBar(uint16_t cmd, int x, int y, int sx)
     case CMD_SQUELCH:    drawSquelch(x, y, sx);    break;
     default:             drawInfo(x, y, sx);       break;
   }
+}
+
+
+static bool tuneDecoderFrequencyPreset(uint8_t presetIndex)
+{
+  if(presetIndex >= kDecoderFrequencyPresetCount) return false;
+  const DecoderFrequencyPreset &preset = kDecoderFrequencyPresets[presetIndex];
+  int bestBand = -1;
+  uint32_t bestWidth = UINT32_MAX;
+  for(int i = 0; i < getTotalBands(); ++i)
+  {
+    const Band &candidate = bands[i];
+    if(candidate.bandType == FM_BAND_TYPE || preset.frequencyKHz < candidate.minimumFreq ||
+       preset.frequencyKHz > candidate.maximumFreq) continue;
+    const uint32_t width = candidate.maximumFreq - candidate.minimumFreq;
+    if(width < bestWidth) { bestWidth = width; bestBand = i; }
+  }
+  if(bestBand < 0) return false;
+  Band &target = bands[bestBand];
+  target.bandMode = preset.modulation;
+  target.currentFreq = static_cast<uint16_t>(preset.frequencyKHz);
+  if(preset.bandwidthChoice <= getLastBandwidth(preset.modulation))
+    target.bandwidthIdx = preset.bandwidthChoice;
+  target.currentStepIdx = 0;
+  selectBand(static_cast<uint8_t>(bestBand), false);
+  clearStationInfo();
+  identifyFrequency(currentFrequency + currentBFO / 1000);
+  prefsRequestSave(SAVE_CUR_BAND | SAVE_BANDS);
+  return true;
+}
+
+void decoderFrequencyOpen()
+{
+  decoderCategoryIndex = 0;
+  decoderPresetIndex = 0;
+  decoderPresetView = false;
+  decoderLastTunedPreset = -1;
+  decoderSelectionChangedAt = millis();
+  currentCmd = CMD_DECODER_FREQUENCIES;
+}
+
+bool decoderFrequencyRotate(int16_t enc)
+{
+  if(!enc) return false;
+  if(decoderPresetView)
+  {
+    const auto &category = kDecoderFrequencyCategories[decoderCategoryIndex];
+    decoderPresetIndex = wrap_range(decoderPresetIndex, enc, 0, category.presetCount - 1);
+    decoderLastTunedPreset = -1;
+    decoderSelectionChangedAt = millis();
+  }
+  else
+    decoderCategoryIndex = wrap_range(decoderCategoryIndex, enc, 0, kDecoderFrequencyCategoryCount - 1);
+  return true;
+}
+
+bool decoderFrequencyClick()
+{
+  if(!decoderPresetView)
+  {
+    decoderPresetView = true;
+    decoderPresetIndex = 0;
+    decoderLastTunedPreset = -1;
+    decoderSelectionChangedAt = millis();
+    return true;
+  }
+  const uint8_t presetIndex = kDecoderFrequencyCategories[decoderCategoryIndex].firstPreset + decoderPresetIndex;
+  const DecoderKind decoder = kDecoderFrequencyPresets[presetIndex].decoder;
+  if(decoder == DecoderKind::FT8 || decoder == DecoderKind::FT4)
+  {
+    // FT8/FT4 page and service lifecycle are the next integration stage.
+    statusShow(decoder == DecoderKind::FT8 ? "FT8 decoder page pending" : "FT4 decoder page pending",
+               "Frequency is tuned for monitoring");
+    return true;
+  }
+  currentCmd = CMD_NONE;
+  return true;
+}
+
+bool decoderFrequencyBack()
+{
+  if(decoderPresetView)
+  {
+    decoderPresetView = false;
+    return true;
+  }
+  currentCmd = CMD_MENU;
+  return true;
+}
+
+bool decoderFrequencyTick(uint32_t now)
+{
+  if(!decoderPresetView || decoderLastTunedPreset == decoderPresetIndex ||
+     static_cast<uint32_t>(now - decoderSelectionChangedAt) < 2000) return false;
+  decoderLastTunedPreset = decoderPresetIndex;
+  const uint8_t presetIndex = kDecoderFrequencyCategories[decoderCategoryIndex].firstPreset + decoderPresetIndex;
+  const bool tuned = tuneDecoderFrequencyPreset(presetIndex);
+  if(!tuned) statusShow("Preset cannot be tuned", "No matching receiver band");
+  return tuned;
+}
+
+void drawDecoderFrequencyMenu()
+{
+  const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF, green = 0x07E0;
+  spr.fillSprite(bg);
+  spr.drawRoundRect(3, 3, 314, 164, 5, blue);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(cyan);
+  spr.drawString("Decoder Frequencies", 12, 8, &lgfx::fonts::Orbitron_Light_24);
+  spr.setTextDatum(TR_DATUM);
+  char counter[16];
+  if(decoderPresetView)
+    snprintf(counter, sizeof(counter), "%u / %u", decoderPresetIndex + 1, kDecoderFrequencyCategories[decoderCategoryIndex].presetCount);
+  else snprintf(counter, sizeof(counter), "%u / %u", decoderCategoryIndex + 1, kDecoderFrequencyCategoryCount);
+  spr.drawString(counter, 307, 12, FONT_SMALL);
+  spr.setFont(FONT_SMALL);
+  for(int row = -2; row <= 2; ++row)
+  {
+    const int selected = decoderPresetView ? decoderPresetIndex : decoderCategoryIndex;
+    const int count = decoderPresetView ? kDecoderFrequencyCategories[decoderCategoryIndex].presetCount : kDecoderFrequencyCategoryCount;
+    const int index = (selected + row + count) % count;
+    const int y = 43 + (row + 2) * 20;
+    if(row == 0) spr.fillRoundRect(8, y - 9, 304, 19, 3, 0x001F);
+    spr.setTextColor(row == 0 ? green : cyan);
+    if(!decoderPresetView)
+    {
+      spr.setTextDatum(MC_DATUM);
+      spr.drawString(decoderCategoryLabels[index], 160, y, FONT_SMALL);
+    }
+    else
+    {
+      const uint8_t presetIndex = kDecoderFrequencyCategories[decoderCategoryIndex].firstPreset + index;
+      const DecoderFrequencyPreset &preset = kDecoderFrequencyPresets[presetIndex];
+      char frequency[28];
+      snprintf(frequency, sizeof(frequency), "%lu.%03lu %s",
+        static_cast<unsigned long>(preset.frequencyKHz / 1000),
+        static_cast<unsigned long>(preset.frequencyKHz % 1000),
+        preset.modulation == USB ? "USB" : preset.modulation == LSB ? "LSB" : "AM");
+      spr.setTextDatum(TL_DATUM);
+      spr.drawString(preset.label, 13, y - 7, FONT_SMALL);
+      spr.setTextDatum(TR_DATUM);
+      spr.drawString(frequency, 306, y - 7, FONT_SMALL);
+    }
+  }
+  spr.setTextColor(cyan);
+  spr.setTextDatum(TL_DATUM); spr.drawString("ROTATE: SELECT", 10, 151, FONT_SMALL);
+  spr.setTextDatum(TR_DATUM); spr.drawString("HOLD: BACK", 310, 151, FONT_SMALL);
+  spr.setTextDatum(MC_DATUM);
+  if(decoderPresetView)
+  {
+    spr.setTextColor(decoderLastTunedPreset == decoderPresetIndex ? green : cyan);
+    spr.drawString(decoderLastTunedPreset == decoderPresetIndex ? "TUNED" : "AUTO TUNE IN 2 SECONDS", 160, 137, FONT_SMALL);
+  }
+  else { spr.setTextColor(cyan); spr.drawString("CLICK: OPEN", 160, 137, FONT_SMALL); }
 }

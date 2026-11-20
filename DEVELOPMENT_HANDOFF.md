@@ -560,3 +560,17 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Preset tuning now applies the modulation-specific default step and the preset bandwidth (falling back to the mode's default bandwidth if needed). Clicking a preset before the two-second preview completes also tunes it immediately, so a quick confirm cannot leave the radio on the previous frequency.
 - Relevant commits: `82689d682a2d26b219ce65319e5ec31e28f5e50f` (FTX UI header); `d80cc1c47556ceaa571e90085a3be4f89d78d79f` (FTX page and Wi-Fi/UTC/service lifecycle); `2f5f9091f17da2b1eb8f98597870c72e58b20e31` (decoder command); `fee72b19fb756e88255ceb7c03e28a13154b7789` (display dispatch); `b7242ee353219b9966f58d7ce775044a0add344c` (main-loop lifecycle/refresh/exit); `883c8271e7bd277a3cb1ab524209cc8af5f15bdb`, `e4400645a0d66cba97907deca630a7192e35e5bb`, `63785d0bc664c96c33017875cabc71a4d1d3fb63` (EN/DE/IT decoder start/stop routing); `17151c67ba3488278f094f23f5ae485624175956`, `c5629ac3f481aa9d993de55ccd450b02b6aff4a6`, `afe5272974f5855a2a66087dd46be7401447d437` (click-time tune and preview retry); `7adbe9ce9317810000c78b4f1daf6871052ee5e3`, `3cb47cedcb284490ad748d15ee5932c977057572`, `5d63cbb5f83fce343e2d23302436dfa747ca5177` (mode-specific band step/bandwidth defaults); `ef4867f7f0b7406920ba4407cf60028ba780af61` (show tuned frequency on decoder page).
 - Known limitations / verification: the decoder page currently shows decoded text and service/audio diagnostics but does not yet render the decoder waterfall. Wi-Fi restoration follows the configured network mode, not a snapshot of transient AP client/connection state. Source-level review only; no firmware build, GitHub Actions run, or hardware test was performed. First FT8/FT4 hardware decoding remains unconfirmed.
+
+
+### Decoder-menu long-press edge case — fixed (2026-11-20)
+- Source review found that `ButtonTracker::isLongPressed` remains asserted while the physical button is held. Exiting the decoder screen/category list could therefore allow the generic long-press handler to toggle display sleep on the next loop iteration.
+- Added a one-shot `decoderMenuLongPressHandled` latch in `ats-mini.ino`, reset only after button release. The same held press now performs exactly one back/exit action and cannot fall through into the generic sleep toggle.
+- Commit: `6c56ae0adefcb54ffa69c517b4f07dcb8187a7b9`.
+
+### Latest source review checkpoint
+- Current `development` HEAD: `6c56ae0adefcb54ffa69c517b4f07dcb8187a7b9`.
+- Verified the three localized main-menu source arrays contain 21 entries (the new decoder-frequency item is appended at index 20); the English, German, and Italian sources all route FT8/FT4 into the new page and route exit back to the radio screen.
+- Verified all 11 catalog categories and all 75 source presets remain present.
+- Compared `ats-mini/Layout-TEF6686.cpp` against the pre-integration tree at `f7667fc79d6f9a565c3ad0013676a21f27cefc86`: identical blob SHA `fe31d4fe0a3621334eda1aca08bde214712dcc2f`. No TEF6686 layout file was modified.
+- `main` was not written to; all commits were made with branch explicitly set to `development`.
+- No firmware build, GitHub Actions run, or hardware test was performed. The next useful development step is source-reviewing the decoder timing/audio path and adding a waterfall view to the decoder page if desired; then the user can perform their own build/hardware validation.

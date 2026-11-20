@@ -1931,9 +1931,9 @@ static bool tuneDecoderFrequencyPreset(uint8_t presetIndex)
   Band &target = bands[bestBand];
   target.bandMode = preset.modulation;
   target.currentFreq = static_cast<uint16_t>(preset.frequencyKHz);
-  if(preset.bandwidthChoice <= getLastBandwidth(preset.modulation))
-    target.bandwidthIdx = preset.bandwidthChoice;
-  target.currentStepIdx = 0;
+  target.bandwidthIdx = preset.bandwidthChoice <= getLastBandwidth(preset.modulation)
+    ? preset.bandwidthChoice : defaultBwIdx[preset.modulation];
+  target.currentStepIdx = defaultStepIdx[preset.modulation];
   selectBand(static_cast<uint8_t>(bestBand), false);
   clearStationInfo();
   identifyFrequency(currentFrequency + currentBFO / 1000);

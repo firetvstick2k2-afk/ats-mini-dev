@@ -81,17 +81,24 @@ void drawFtxDecoderPage()
   spr.setTextColor(cyan);
   spr.drawString(timeText, 308, 12, FONT_SMALL);
 
+  char frequencyText[40];
+  snprintf(frequencyText, sizeof(frequencyText), "%u.%03u MHz  %s",
+    currentFrequency / 1000, currentFrequency % 1000,
+    currentMode == USB ? "USB" : currentMode == LSB ? "LSB" : "AM");
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(green);
+  spr.drawString(frequencyText, 12, 31, FONT_SMALL);
+
   const uint16_t level = decoderService.audioLevel();
   const int barWidth = level > 1800 ? 180 : static_cast<int>(level) / 10;
-  spr.setTextDatum(TL_DATUM);
   spr.setTextColor(grey);
-  spr.drawString("AUDIO", 12, 39, FONT_SMALL);
-  spr.drawRoundRect(66, 39, 240, 12, 3, blue);
-  if(barWidth > 0) spr.fillRoundRect(68, 41, barWidth > 236 ? 236 : barWidth, 8, 2, green);
+  spr.drawString("AUDIO", 12, 49, FONT_SMALL);
+  spr.drawRoundRect(66, 49, 240, 12, 3, blue);
+  if(barWidth > 0) spr.fillRoundRect(68, 51, barWidth > 236 ? 236 : barWidth, 8, 2, green);
 
   spr.setTextColor(cyan);
   spr.drawString(decoderService.decoderCollecting() ? "RECEIVING SLOT" : "WAITING FOR UTC SLOT",
-                 12, 58, FONT_SMALL);
+                 12, 68, FONT_SMALL);
   char stats[64];
   snprintf(stats, sizeof(stats), "BLOCKS %lu/%lu  DECODES %lu  DROP %lu",
     static_cast<unsigned long>(decoderService.decoderBlocks()),
@@ -99,20 +106,20 @@ void drawFtxDecoderPage()
     static_cast<unsigned long>(decoderService.decodedSlots()),
     static_cast<unsigned long>(decoderService.droppedBlocks()));
   spr.setTextColor(grey);
-  spr.drawString(stats, 12, 75, FONT_SMALL);
+  spr.drawString(stats, 12, 85, FONT_SMALL);
 
   FtxDecodedMessage messages[FtxDecoderService::kResultCapacity]{};
   const size_t count = decoderService.copyResults(messages, FtxDecoderService::kResultCapacity);
   spr.setTextColor(green);
   if(!count)
-    spr.drawString("No decoded messages yet", 12, 105, FONT_SMALL);
+    spr.drawString("No decoded messages yet", 12, 110, FONT_SMALL);
   else
   {
     for(size_t i = 0; i < count && i < 4; ++i)
     {
       char line[FTX_MAX_MESSAGE_LENGTH + 20];
       snprintf(line, sizeof(line), "%+.0f dB  %s", messages[i].snrDb, messages[i].text);
-      spr.drawString(line, 12, 96 + static_cast<int>(i) * 14, FONT_SMALL);
+      spr.drawString(line, 12, 104 + static_cast<int>(i) * 12, FONT_SMALL);
     }
   }
 

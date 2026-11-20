@@ -508,3 +508,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Therefore the existing RDS CT path can establish the system epoch offline; the decoder must still wait until `clockAvailable()` is true before entering its UTC slot scheduler.
 - NTP remains optional. Do not require Wi-Fi for offline FT8/FT4 when a valid RDS CT time has set the clock.
 - This is source-level confirmation only. Validate the actual UTC offset/epoch behavior on the user's device before claiming slot timing is hardware-confirmed.
+
+
+## Decoder frequency catalog — imported (2026-11-20)
+- Confirmed the current `development` HEAD before editing: `334d66e6083cd965f22376937aa65ad3e8c31cd9` (the FT8/FT4 foundation commit).
+- Imported the original Mini_OS `DecoderFrequencyList.h` into `ats-mini/src/radio/DecoderFrequencyList.h`, adapted to ATS Mini Dev's existing `Common.h` modulation constants and directory structure.
+- Added the eleven contiguous category ranges and German/English category labels; added `src/radio/*.h` to the Makefile header dependencies.
+- Source count check found **75** preset rows, not 74: CW 9, FT8 10, FT4 8, RTTY 5, DWD/Pinneberg 9, NCDXF 5, time signals 6, shortwave broadcast 8, SSB QSO 7, signal/data 6, CB 2. Preserve all 75 source rows unless a specific duplicate/incorrect preset is identified; do not silently drop one to force the handoff's stated count.
+- The source header marked CW rows as `DecoderKind::CW`; ATS Mini Dev's catalog now uses only `None`, `FT8`, and `FT4`. CW remains a normal listening preset, in accordance with the user's requirement that only FT8 and FT4 open a decoder page.
+- Commits: `07bccfdbe84b9f67b8157a2a033deb6758b0d274` (catalog); `561ccdcd718115356f913d00aba931a9989cd1e0` (Makefile dependency).
+- Still pending: native menu integration, 2-second tune preview, FT8/FT4-only click routing, decoder page/lifecycle, Wi-Fi restore, UTC readiness gate, documentation/changelog, source review. No build, Actions run, or hardware test was started.

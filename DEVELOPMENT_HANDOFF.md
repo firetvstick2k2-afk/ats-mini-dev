@@ -716,3 +716,15 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The empty-history placeholder now reads `Waiting for FT8/FT4 decodes...` in bold cyan rather than muted gray.
 - Only `ats-mini/src/ftx/FtxUi.cpp` was changed; decoder DSP, audio capture, slot timing, and message retention are untouched.
 - Code commit: `6bec9ae62e3ef7858b6ebf513fc694e463a24c8d`. Source-only change; no build or hardware test has been run. User should run the manual OSPI-DE workflow on `development`.
+
+
+## RTTY decoder port — upstream engine imported (2026-11-21)
+- User explicitly rejected the previous ATS Mini Dev RTTY decoder because it did not work and instructed a clean import from `https://github.com/joaquimorg/ham_decoder`, starting from zero. The prior RTTY implementation is not being reused.
+- Imported the upstream MIT-licensed Baudot/ITA2 DSP engine into `ats-mini/src/rtty/RttyDecoder.cpp` and its public API into `ats-mini/src/rtty/RttyDecoder.h`. Added the upstream MIT license as `ats-mini/src/rtty/LICENSE.md`.
+- The upstream project expects `DSP_SAMPLE_RATE`; this isolated adaptation defines it as **4000 Hz**, matching the existing ATS Mini `AudioCaptureService` GPIO11 stream. The upstream default is 45.45 baud, with its own configurable tone pair, baud rate (30–300), polarity auto/normal/reverse, squelch and ITA2 shift handling. No resampling was added.
+- Added `src/rtty/*.cpp` and `src/rtty/*.h` to the ATS Mini Makefile's source/header wildcards so the imported engine is compiled with the firmware.
+- This is **engine import only**, not a completed usable RTTY decoder page yet. Still required: integrate a reliable two-tone FSK detector / tone-pair tracking with the 4 kHz stream; create an isolated RTTY capture/service and connect it to the decoder; add the requested CW-style RTTY UI with four text rows, frequency upper-left and receive/status upper-right; wire menu/navigation and cleanly release audio capture on exit.
+- The RTTY engine consumes float samples and requires a detected pair of audio tones. Do not feed raw ADC values or assume tone frequencies; normalize the existing 12-sample audio blocks and design/test a stable tone-pair estimator before claiming decode functionality.
+- **Hard isolation rule:** do not modify any file under `ats-mini/src/ftx/`, do not modify FT8/FT4 DSP, capture, slot timing, UI, settings or menu behavior as part of RTTY. FT8/FT4 is frozen and must remain untouched.
+- Target repo/branch: `firetvstick2k2-afk/ats-mini-dev`, branch `development` only. Source repo remains read-only. User starts Actions builds and hardware tests; no build, Actions run, or device test has been performed for this import.
+- Commits: engine `52632c6318c81df19a57eef037d0618ef445a6ee`; API header `e398a85f65ceeb037d82423c27adfa70a106e9e6`; MIT license `54f312dd6ee40cf254f67dc68bde6320e6c11043`; Makefile integration `e9f4c7e43d0a6d0359a8f3796808f608098ee871`.

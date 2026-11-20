@@ -172,3 +172,12 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - The empty message-history placeholder is now bold cyan: `Waiting for FT8/FT4 decodes...`.
 - UI-only change in `ats-mini/src/ftx/FtxUi.cpp`; decoder/audio/timing logic unchanged.
 - Commit: `6bec9ae62e3ef7858b6ebf513fc694e463a24c8d`. Build and device test pending; user runs OSPI-DE manually on `development`.
+
+
+## Aktueller RTTY-Port-Stand (2026-11-21)
+- Nutzer hat den bisherigen ATS-Mini-RTTY-Decoder als nicht funktionsfähig verworfen und einen sauberen Neuimport des MIT-Decoders von `joaquimorg/ham_decoder` verlangt.
+- Neu importiert nach `ats-mini/src/rtty/`: `RttyDecoder.cpp`, `RttyDecoder.h`, `LICENSE.md`. DSP-Rate isoliert auf 4 kHz gesetzt, passend zum bestehenden GPIO11-Audio-Capture. Makefile nimmt `src/rtty/*.cpp/.h` auf.
+- Commits: `52632c6318c81df19a57eef037d0618ef445a6ee`, `e398a85f65ceeb037d82423c27adfa70a106e9e6`, `54f312dd6ee40cf254f67dc68bde6320e6c11043`, Makefile `e9f4c7e43d0a6d0359a8f3796808f608098ee871`, DEVELOPMENT_HANDOFF `7ab0a523641d6db91df1b8627cd777b9548a6219`.
+- **Noch nicht fertig / nicht als funktionierend bezeichnen:** FSK-Tonpaar-Erkennung und -Tracking, Audio-Service-Anbindung, RTTY-Seite mit CW-Stil und vier Textzeilen, Frequenz links oben / Empfangsstatus rechts oben, Menüintegration.
+- **FT8/FT4 bleibt strikt eingefroren.** Keine Änderungen unter `ats-mini/src/ftx/`; keinerlei Änderung an FT8/FT4-DSP, Audio-Capture, Slot-Timing, UI oder Einstellungen. RTTY getrennt halten.
+- Ziel ausschließlich `firetvstick2k2-afk/ats-mini-dev` Branch `development`. Mini_OS und Joaquim-Repository nur als Quelle lesen. Nutzer führt Builds und Hardwaretests selbst aus; für den aktuellen Import wurde kein Build/Actions-Run/Flash durchgeführt.

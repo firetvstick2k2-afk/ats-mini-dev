@@ -19,6 +19,7 @@ void drawLayoutClean();
 void drawLayoutTEF6686();
 void drawLayoutTinyRadio();
 void drawLayoutHJB();
+void drawLayoutDABStyle();
 
 uint32_t lastTuneTime = 0;
 
@@ -658,7 +659,12 @@ void drawScreen()
   }
 
     
-  switch(uiLayoutIdx)
+  if(uiLayoutIdx == 8)
+  {
+    if(currentMode == FM) drawLayoutDABStyle();
+    else drawLayoutClean(); // DAB Style is FM-only; Clean is the universal fallback.
+  }
+  else switch(uiLayoutIdx)
   {
     case 1:
       drawLayoutSmeter();

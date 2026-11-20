@@ -618,3 +618,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The existing `diskInit()` mount/format behavior was not modified. The helper does not format, erase, or recreate LittleFS.
 - This is storage preparation for the DAB Style logo integration; it does not yet add a DAB Style layout or change the logo renderer. The MiniOS repository currently contains planning/architecture documentation for layouts and storage rather than an executable implementation of this migration, so the behavior above is implemented directly in ATS Mini Dev.
 - Source-level review only; no firmware build, Actions run, or hardware test has been performed.
+
+
+### DAB Style FM layout port — integrated (2026-11-20)
+- Ported the DAB-style FM screen structure from the user's ATS Mini OS development branch into ATS Mini Dev as the separate `ats-mini/Layout-DABStyle.cpp` renderer. The layout includes the band/header row, valid RDS clock, Wi-Fi/battery indicators, PI-matched local sender-logo viewport, station name, large FM frequency, MHz label, PTY badge and framed RadioText row.
+- Local station PNG lookup uses the migrated `/Logos/` directory and searches filenames case-insensitively for the current four-character RDS PI code. It does not initiate network logo lookup. The image is drawn from LittleFS and is not copied into firmware resources.
+- Added the layout as a new UI layout choice in English, German and Italian menu source files; existing layout indices 0–7 and the existing default (TEF6686, index 5) are unchanged. DAB Style is appended as index 8.
+- Special routing: when DAB Style (index 8) is selected, FM uses DAB Style; any non-FM mode/band uses Layout-Clean as the universal fallback. Returning to FM automatically restores DAB Style. When any other layout (including TEF6686) is selected, the existing normal system layout dispatch remains unchanged.
+- Added the new renderer to `Draw.cpp` and the Makefile source list. No TEF6686 renderer changes were made.
+- No fixed logo is needed on non-FM bands: sender PI logos are FM/RDS-specific. The Clean fallback retains its bandplan guidance and does not display a stale FM logo.
+- Source-level integration only. No firmware build, GitHub Actions run, or hardware test has been performed. User must run the manual OSPI-DE build and then test FM → non-FM/All Band → FM switching and local logo rendering.

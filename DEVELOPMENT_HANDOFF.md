@@ -736,3 +736,29 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Do not feed raw ADC samples to the engine. The capture stream is 4 kHz signed ADC data; a dedicated RTTY path must remove DC, normalize to float, estimate mark/space tone frequencies and confidence, then feed the engine. Keep this path isolated from all files and behavior under `ats-mini/src/ftx/`.
 - CW reference UI source has not yet been located in the currently available `Mini_OS` branches/paths. Do not invent a substitute layout or copy the generic `Layout-Decoder.cpp` as if it were the CW reference. Need locate the exact existing CW layout in the correct Mini_OS source location before building the RTTY four-row screen.
 - No build, GitHub Actions run, flash, or hardware test was performed for this correction.
+
+
+## RTTY decoder — implementation update 2026-11-21
+
+### CW reference recovered
+- Exact reference found read-only in `firetvstick2k2-afk/Mini_OS`, branch `dev/first-build-preparation`, file `firmware/ats-mini-os/src/display/DisplayDriver.cpp`, function `drawLegacyCWPage()`.
+- RTTY screen follows that visual layout: black/navy background, upper frequency/status bar, four alternating deep-blue text rows, RX indicator and bottom encoder hint. FT8/FT4 display is not changed.
+
+### RTTY implementation on `development`
+- Imported ITA2/Baudot engine remains in `ats-mini/src/rtty/RttyDecoder.cpp/.h`.
+- Added `RttyService.cpp/.h`: separate GPIO11 ADC capture task at 8 kHz, independent of the shared 4 kHz FT8/FT4 audio capture; queue/worker separation; DC removal; Goertzel tone-pair search from 300–3500 Hz; automatic polarity; engine input normalization.
+- 8 kHz is intentional: standard 2125/2295 Hz audio tones cannot both be represented by a 4 kHz sample stream. Do not change `AudioCaptureService` or any FTX files to accommodate RTTY.
+- Added `RttyUi.cpp/.h`: four-row CW-style screen, receive indication, 45.45 / 50 / 75 baud selection by encoder rotation, click or long-press exit. Wi-Fi is paused while the decoder runs and restored on exit; playback volume is temporarily raised and restored.
+- The RTTY decoder screen is a dedicated command and is not routed through the FT8/FT4 screen.
+
+### Decoder Frequency presets
+- `DecoderKind::RTTY` is now assigned to all five dedicated amateur RTTY presets (80/40/20/15/10 m).
+- Also assigned to the Pinneberg DDH/DDK entries and the explicit DWD RTTY 3.855 MHz entry.
+- DWD weather-fax presets (7.880 and 13.882 MHz) remain listen-only and are deliberately not sent to the RTTY decoder.
+- The decoder-frequency menu opens the RTTY screen for entries tagged `DecoderKind::RTTY`; frequency preview/tuning remains the existing mechanism.
+
+### Verification and limitations
+- FT8/FT4 source files and existing capture implementation were not edited for RTTY. TEF6686 layout and LittleFS/storage code were not edited.
+- Static source review only; no compiler build, GitHub Actions run, flash or on-air RF validation has been performed. The current GitHub integration exposes read operations and repository file commits but no workflow-dispatch action, so the OSPI-DE workflow was not started from this session.
+- The Goertzel pair estimator and real RF decoding still require validation with an actual RTTY signal. The selected baud is manual (45.45 / 50 / 75); tone pair and polarity are automatic. The current implementation is a first build candidate, not yet a hardware-verified decoder.
+- Next: user starts the manual OSPI-DE workflow on `development`; fix any compiler errors from its log before hardware reception testing.

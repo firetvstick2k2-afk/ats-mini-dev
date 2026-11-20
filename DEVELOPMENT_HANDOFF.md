@@ -518,3 +518,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The source header marked CW rows as `DecoderKind::CW`; ATS Mini Dev's catalog now uses only `None`, `FT8`, and `FT4`. CW remains a normal listening preset, in accordance with the user's requirement that only FT8 and FT4 open a decoder page.
 - Commits: `07bccfdbe84b9f67b8157a2a033deb6758b0d274` (catalog); `561ccdcd718115356f913d00aba931a9989cd1e0` (Makefile dependency); `f4fa722fdd0b264d6f5d75ac978cf4a1523c30ee` (use ATS Mini's `uint8_t` modulation representation).
 - Still pending: native menu integration, 2-second tune preview, FT8/FT4-only click routing, decoder page/lifecycle, Wi-Fi restore, UTC readiness gate, documentation/changelog, source review. No build, Actions run, or hardware test was started.
+
+
+## Permanent handover/documentation rule
+- Keep this handover document current throughout all ATS Mini Dev work. It is the continuity source for future chats; do not rely on chat history alone.
+- Document every meaningful change, investigation result, decision, planned task, discovered issue, correction, and remaining limitation as soon as it is made or agreed. Do not defer documentation until a feature is finished.
+- For code changes, record the affected paths, behavior/change summary, commit SHA, and whether it is implemented, source-reviewed, built, or hardware-verified. Never imply a stronger verification level than actually completed.
+- For plans, record the agreed behavior and constraints before implementation, then update the entry as work progresses or decisions change.
+- At each handover point, record the exact repository, branch, current HEAD, completed work, in-progress work, next steps, known risks, and explicit tests not run.
+- Keep all work on `development`; leave `main` untouched. User performs firmware builds, GitHub Actions, and hardware tests.

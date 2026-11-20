@@ -105,12 +105,21 @@ Keine größere neue Funktion anfangen, bevor diese Basis mit dem Nutzer abgesti
 
 ## 8. Unmittelbare nächste Schritte im neuen Chat
 
-1. Nutzer fragen: **Wie ist der OSPI-DE-Build ausgegangen?** Bei Fehler um den vollständigen relevanten Compiler-Log bitten.
+1. Nutzer führt den korrigierten manuellen OSPI-DE-Build auf `development` aus und meldet das Ergebnis.
 2. Bei erfolgreichem Build: Hardwaretest DAB Style FM → Nicht-FM/TinyRadio → FM sowie Logo-/Farbprüfung abwarten.
 3. Anschließend `DEVELOPMENT_HANDOFF.md` mit echtem Build-/Hardware-Ergebnis ergänzen.
 4. Danach mit dem Nutzer den ersten Schritt der Grundfunktionen beginnen: strukturierte Bestandsaufnahme des Speichermanagements und LittleFS, ohne Änderungen an funktionierender Format-/Mount-Logik.
-5. Bei jeder Codeänderung nur `development` verwenden und das ausführliche Handover aktualisieren.
+5. Bei jeder Codeänderung ausschließlich `development` verwenden; `main` bleibt unangetastet und das ausführliche Handover wird aktualisiert.
 
 ## 9. Ton und Zusammenarbeit
 
 Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet auf dem ATS Mini V4. Er erwartet konkrete Änderungen im Repo, wenn er „übernehmen“ oder „bauen“ sagt, sowie eine ehrliche Aussage dazu, was wirklich committed, gebaut oder auf Hardware geprüft wurde. Antworten auf Deutsch, freundlich und direkt. Vorhandene Informationen aus diesem Dokument nicht erneut abfragen.
+
+
+## 10. Build-Fehlerbehebung und Workflow — 2026-11-20
+- Nutzer bestätigt ausdrücklich: gearbeitet wird ausschließlich auf Branch `development`; nicht auf `main`.
+- Fehlgeschlagener Run #3 (Run-ID `44800260714`) wurde auf `development` ausgeführt. Compilerfehler: `Layout-DABStyle.cpp` kann `getCurrentBand`, `CMD_NONE`, `CMD_SCAN`, `CMD_FREQ` und `drawSideBar` nicht auflösen; außerdem LovyanGFX `drawPngFile(LittleFS,...)` in Sprite wegen abstrakter `DataWrapperT<LittleFSFS>`.
+- Fix committed: `ats-mini/Layout-DABStyle.cpp` bindet `LittleFS.h` vor LovyanGFX-/Projekt-Headern ein, inkludiert `Menu.h` für Band-/Command-/Sidebar-Deklarationen und decodiert PNG-Logos über einen geöffneten LittleFS-`File`-Stream mit `spr.drawPng(&logoFile,...)`, statt der nicht kompatiblen FS-Überladung.
+- Workflow `.github/workflows/build.yml` auf `development` vereinfacht: nur OSPI-DE + Deutsch; keine OTA-Metadatenprüfung, keine OTA-Datei, keine Partitions-/Bootloader-Uploads, kein Sketch-Report und kein ZIP-Archiv. Ein Firmware-Artefakt `Mini_OS_#${{ github.run_number }}.bin`; bei explizitem Release-Tag wird die rohe BIN als GitHub-Release-Asset hochgeladen.
+- Commits: Code `188f0cb7ba75b99b8cb6c7a7cc160d0396f04d1c`; Workflow `9b38c9c954999269e00cb16a59014975a6e0c4a4`.
+- Nach dem Commit wurden beide Dateien auf `development` erneut abgerufen und die Änderungen verifiziert. Kein Build, keine Actions und kein Flash durch den Assistant. Der korrigierte Code ist noch nicht compiler-verifiziert; Nutzer soll den nächsten Build manuell starten.

@@ -1,6 +1,5 @@
 #include "RttyUi.h"
 #include "RttyService.h"
-#include "../audio/AudioCaptureService.h"
 #include "Common.h"
 #include "Menu.h"
 #include "Utils.h"
@@ -8,7 +7,6 @@
 #include <stdio.h>
 
 namespace {
-AudioCaptureService audioCapture;
 RttyService service;
 bool pageActive=false;
 uint8_t restoreNetworkMode=NET_OFF;
@@ -23,7 +21,7 @@ constexpr uint8_t kPlaybackVolume=50;
 bool rttyUiOpen() {
   restoreNetworkMode=wifiModeIdx;
   netStop();
-  if(getWiFiStatus()!=0 || !service.enter(audioCapture)) {
+  if(getWiFiStatus()!=0 || !service.enter()) {
     service.exit();
     netInit(restoreNetworkMode);
     statusShow("RTTY decoder start failed","Check Wi-Fi and audio input");
@@ -72,7 +70,7 @@ void drawRttyDecoderPage() {
   spr.setTextColor(0xFFFF,blueA);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   char freq[40];
-  snprintf(freq,sizeof(freq),"%lu kHz  USB",static_cast<unsigned long>(currentFrequency));
+  snprintf(freq,sizeof(freq),"%lu kHz  %s",static_cast<unsigned long>(currentFrequency),currentMode==USB?"USB":currentMode==LSB?"LSB":"AM");
   spr.drawString(freq,16,13);
   const bool active=service.signal();
   spr.setTextDatum(TR_DATUM);

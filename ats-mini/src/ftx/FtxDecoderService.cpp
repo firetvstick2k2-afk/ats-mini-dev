@@ -7,7 +7,9 @@
 
 namespace {
 constexpr size_t kAudioQueueDepth = 160;
-// The FT8 LDPC/candidate decode path exceeded the original 8 KiB task stack.\n// Start with 16 KiB and log the remaining high-water mark around each decode.\nconstexpr uint32_t kWorkerStackBytes = 16384;
+// The FT8 LDPC/candidate decode path exceeded the original 8 KiB task stack.
+// Start with 16 KiB and log the remaining high-water mark around each decode.
+constexpr uint32_t kWorkerStackBytes = 16384;
 constexpr UBaseType_t kWorkerPriority = 2;
 constexpr BaseType_t kWorkerCore = 1;
 constexpr int64_t kBlockDurationUs =
@@ -280,7 +282,15 @@ void FtxDecoderService::decodeAndPublish() {
   const int blocksBeforeDecode = decoder_.symbolsCollected();
   const int maxBlocksBeforeDecode = decoder_.waterfallMaxBlocks();
   const int64_t slotStart = activeSlotStartUs_;
+  const UBaseType_t stackBeforeWords = uxTaskGetStackHighWaterMark(nullptr);
+  BootDiagnostics::printf("[FTX][STACK][BEFORE_DECODE] slot=%lld free_words=%u free_bytes=%u",
+    static_cast<long long>(slotStart), static_cast<unsigned>(stackBeforeWords),
+    static_cast<unsigned>(stackBeforeWords * sizeof(StackType_t)));
   decoder_.decodeSlot();
+  const UBaseType_t stackAfterWords = uxTaskGetStackHighWaterMark(nullptr);
+  BootDiagnostics::printf("[FTX][STACK][AFTER_DECODE] slot=%lld free_words=%u free_bytes=%u",
+    static_cast<long long>(slotStart), static_cast<unsigned>(stackAfterWords),
+    static_cast<unsigned>(stackAfterWords * sizeof(StackType_t)));
   BootDiagnostics::printf("[FTX][DECODE] mode=%s slot_start=%lld wf_blocks=%d/%d results=%u",
     mode_ == FtxMode::FT4 ? "FT4" : "FT8", static_cast<long long>(slotStart),
     blocksBeforeDecode, maxBlocksBeforeDecode, static_cast<unsigned>(decoder_.resultCount()));

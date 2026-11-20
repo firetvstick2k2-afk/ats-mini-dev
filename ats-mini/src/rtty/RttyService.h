@@ -33,7 +33,8 @@ private:
   SemaphoreHandle_t engineMutex_=nullptr;
   TaskHandle_t captureTask_=nullptr,workerTask_=nullptr;
   volatile bool active_=false;
-  bool initialized_=false,signal_=false;
+  bool initialized_=false;
+  volatile bool signal_=false;
   float baud_=45.45f,markHz_=0,spaceHz_=0,toneLowHz_=0,toneHighHz_=0;
   float dc_=2048.0f;
   float frame_[512]{};

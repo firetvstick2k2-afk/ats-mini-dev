@@ -212,6 +212,7 @@ void setup()
   }
 
   diskInit();
+  logosInit();  // Prepare /Logos and migrate legacy root-level PNG logos.
 
   if(!ESP.getPsramSize() || !memoriesInit()) {
     ledcWrite(PIN_LCD_BL, 255);

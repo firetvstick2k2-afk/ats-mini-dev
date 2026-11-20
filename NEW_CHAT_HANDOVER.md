@@ -123,3 +123,10 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Workflow `.github/workflows/build.yml` auf `development` vereinfacht: nur OSPI-DE + Deutsch; keine OTA-Metadatenprüfung, keine OTA-Datei, keine Partitions-/Bootloader-Uploads, kein Sketch-Report und kein ZIP-Archiv. Ein einzelnes, nicht archiviertes Firmware-Artefakt `Mini_OS_#${{ github.run_number }}.bin` (`archive: false`, direkter BIN-Download); bei explizitem Release-Tag wird die rohe BIN zusätzlich als GitHub-Release-Asset hochgeladen.
 - Commits: Code `188f0cb7ba75b99b8cb6c7a7cc160d0396f04d1c`; Workflow `9b38c9c954999269e00cb16a59014975a6e0c4a4`.
 - Nach dem Commit wurden beide Dateien auf `development` erneut abgerufen und die Änderungen verifiziert. Kein Build, keine Actions und kein Flash durch den Assistant. Der korrigierte Code ist noch nicht compiler-verifiziert; Nutzer soll den nächsten Build manuell starten.
+
+## 10. Future idea: NAVTEX — firmware only, no hardware mods
+- User wants NAVTEX support explored later only if it works on the stock ATS Mini V4. No soldering, extra microphone, external sound card, or board modification.
+- User has successfully tested CW, RTTY, and FT8 decoding on the unmodified V4 using HJ Berndt and Diamond Radio firmware. This confirms the existing digital-audio path is available, but does not by itself prove SITOR-B compatibility.
+- NAVTEX needs a dedicated SITOR-B decoder with FEC; ordinary RTTY decoding is not sufficient to assume NAVTEX support.
+- Future investigation: reuse the existing internal audio/DSP path, isolate a SITOR-B/FEC decoder from the existing CW/RTTY/FT8 functions, and display received NAVTEX messages on-screen. Start by investigating 518 kHz; other NAVTEX frequencies can be considered later.
+- This is backlog only, not implemented or build-tested. Do not begin until the user reopens the topic and the agreed core stability/storage priorities are addressed. If firmware-only decoding proves impractical on stock hardware, stop without proposing hardware modifications.

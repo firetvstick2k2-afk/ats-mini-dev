@@ -300,9 +300,14 @@ void FtxDecoderService::decodeAndPublish() {
     decoder_.resultCount() : kResultCapacity;
   for (size_t i = 0; i < count; ++i) fresh[i] = decoder_.result(i);
 
-  xSemaphoreTake(resultMutex_, portMAX_DELAY);
-  memcpy(published_, fresh, sizeof(published_));
-  xSemaphoreGive(resultMutex_);
+  // Keep the last successful slot published when the current slot has
+  // no decodes. This prevents an empty/weak slot from erasing the last
+  // usable results for the UI or other readers.
+  if(count > 0) {
+    xSemaphoreTake(resultMutex_, portMAX_DELAY);
+    memcpy(published_, fresh, sizeof(published_));
+    xSemaphoreGive(resultMutex_);
+  }
 }
 
 bool FtxDecoderService::copyWaterfall(uint8_t* out, uint16_t maxRows, uint16_t outBins,

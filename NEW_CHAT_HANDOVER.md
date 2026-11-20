@@ -195,7 +195,14 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Exact CW visual reference recovered: `Mini_OS/firmware/ats-mini-os/src/display/DisplayDriver.cpp`, `drawLegacyCWPage()`, branch `dev/first-build-preparation`.
 - RTTY screen now uses the same top frequency/status bar and four deep-blue text rows. Encoder rotates baud 45.45 / 50 / 75; click or long press exits.
 - RTTY uses its own GPIO11 capture at 8 kHz and a separate worker/tone estimator. This is deliberately separate from the 4 kHz shared FT8/FT4 capture. No files under `ats-mini/src/ftx/` were changed for RTTY.
-- Five amateur RTTY presets plus Pinneberg DDH/DDK and DWD RTTY 3.855 are routed to RTTY. Weather-fax entries remain listen-only.
+- Five amateur RTTY presets plus Pinneberg DDH/DDK and DWD FAX 3.855 are routed to RTTY. Weather-fax entries remain listen-only.
 - RTTY frequency routing, UI, and service are committed on `development`. No build, Actions run, flash, or RF test has been completed. Workflow dispatch was not available through the connected GitHub actions in this session; user should manually start OSPI-DE build on `development`.
 - First build candidate: Goertzel FSK tone pair detection (300–3500 Hz), automatic polarity, manually selectable 45.45/50/75 baud. Hardware/RF validation remains essential; do not describe decoding as proven until tested.
 - Preserve FT8/FT4, TEF6686, LittleFS and all other protected areas.
+
+
+## Correction: Pinneberg weather fax vs RTTY (2026-11-21)
+- Corrected `DecoderFrequencyList.h`: 3.855 MHz (DDH3) is FAX, not RTTY. The preset is now `DWD FAX 3.855` with no RTTY decoder route.
+- 7.880 MHz (DDK3) and 13.8825 MHz (DDK6) are also FAX and remain outside the RTTY decoder.
+- Pinneberg RTTY presets are the text services: 147.3, 4583, 7646, 10100.8, 11039 and 14467.3 kHz. RTTY 147.3 kHz uses a narrower 85 Hz shift and needs a suitable detector configuration/test.
+- Source checked: DWD maritime weather service frequency table and DWD RTTY transmission plan. Keep weather fax and RTTY as distinct decoder types.

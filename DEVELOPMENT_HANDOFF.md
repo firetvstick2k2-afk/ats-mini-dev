@@ -118,7 +118,6 @@ Active work branch: `development` (never modify `main` unless explicitly request
 - Commits: `8eca92ce3358c38ebf60950a06836a1de3a746e8` (English default/label), `0adefb7ac7154f7bd627de7d6c562d472e45dc80` (German default/label), `ffb2b1cc284564090e306f0419591db3afabc195` (render fallback).
 - Existing devices with a saved `UILayout` preference will keep that saved choice; fresh installs/reset preferences should initialize to TEF6686. Build and hardware confirmation pending.
 
-
 ## VHF scanner keypad hang fix (2026-10-29)
 - User reported the ATS Mini V4 hung while rotating the native VHF Spectrum keypad from the MHz key toward CLOSE (photo showed the input screen stuck at `--- MHz`).
 - Root cause found in `spectrumScannerInputRotate()`: when the next key index was the intentionally blank slot 14, a `do/while(next == 14)` loop never changed `next`, causing an infinite loop and a hard UI freeze.
@@ -236,7 +235,6 @@ Active work branch: `development` (never modify `main` unless explicitly request
 - Input uses kHz and a dedicated MODE key cycling AM / USB / LSB. Start and end are validated before selecting the broad ALL tuner band or starting a scan. End must exceed start, width must be <= 1000 kHz, and the span must align to 5 kHz steps; larger ranges show a red invalid-input/scan-width hint and do not start scanning.
 - Scanner uses its own 201-point RSSI/SNR buffers, 5 kHz steps, and separate graph/input rendering. Web Spectrum and the existing VHF Spectrum source were not edited in this feature.
 - Source implementation is committed on `development`; it has **not been compiled or hardware-tested**. Before the manual build, review encoder click routing, tuner mode setup/restore behavior, and verify `AllBandSpectrum.cpp` compiles under all four OSPI/QSPI × German/English matrix targets. Test 2000–3000 kHz accepted and 2000–3100 kHz rejected, plus AM/USB/LSB selection and VHF/Web/Dual RX regression.
-
 
 ### ALL Band Spectrum source review update (2026-10-29)
 - Reviewed the native VHF sweep lifecycle and the ALL Band input/graph routing.
@@ -358,7 +356,6 @@ Approved English feature summary for the release notes:
 - This `DEVELOPMENT_HANDOFF.md` belongs **only** in the private repository `13HN2709/ats-mini-dev`, branch `development`.
 - Never copy this handoff/protocol into the official public repository `13HN2709/ats-mini`. The public repository must not contain `DEVELOPMENT_HANDOFF.md` or another internal development handoff document.
 - Public `main` is for official firmware source, public-facing README/changelog, workflows, and release assets only. Keep internal test notes, pending work, and handoff details private.
-
 ### Official public repository snapshot
 - Repository: https://github.com/13HN2709/ats-mini
 - Branch: `main`
@@ -478,7 +475,6 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - First device checks after a successful build: FM with and without PS/RT/PTY, FM frequency/unit alignment, SW/AM frequency and ruler, marker movement, date placement, RSSI/SNR indicators, and stereo/mono behavior.
 - HJB remains private and must not be copied to public `13HN2709/ats-mini` unless the user explicitly approves a future public release.
 
-
 ## FT8/FT4 decoder port — initial source import (2026-11-20)
 
 ### Scope and branch
@@ -574,3 +570,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Compared `ats-mini/Layout-TEF6686.cpp` against the pre-integration tree at `f7667fc79d6f9a565c3ad0013676a21f27cefc86`: identical blob SHA `fe31d4fe0a3621334eda1aca08bde214712dcc2f`. No TEF6686 layout file was modified.
 - `main` was not written to; all commits were made with branch explicitly set to `development`.
 - No firmware build, GitHub Actions run, or hardware test was performed. The next useful development step is source-reviewing the decoder timing/audio path and adding a waterfall view to the decoder page if desired; then the user can perform their own build/hardware validation.
+
+## GitHub Actions build narrowed to OSPI-DE (2026-11-20)
+
+- User requested that once the currently running six-way build completed, future builds should generate only the German OSPI target. The manual run `44690333439` completed successfully before this change; all six matrix jobs succeeded, including `build ospi-de`.
+- Confirmed uploaded OSPI-DE artifacts from run `44690333439`: `ats-mini-dev-v1.30-165-g54a7d0d-ospi-de`, `ats-mini-v1.30-165-g54a7d0d-ospi-de-ota.bin`, and `sketches-report-ospi-de`. The run produced 18 artifacts total across all six targets. Artifact retention reported expiry on 2027-02-18.
+- Updated `.github/workflows/build.yml` on `development`: matrix language is now only `de`; board matrix retains only `esp32s3-ospi` with suffix `ospi`. QSPI, English and Italian matrix entries were removed. All build steps, artifact upload logic, manual trigger, and release logic were otherwise left unchanged.
+- Workflow change commit: `fefad16d8f2c6ae5a8932528f1acff2cf68abc19`.
+- Future manual workflow runs on `development` will execute one matrix job only: `build ospi-de`. This workflow edit does not rebuild the current firmware; it affects subsequent runs.
+- No changes were made to `main`. Hardware flashing/testing remains the user's responsibility; the successful GitHub Actions compile is not a hardware test.

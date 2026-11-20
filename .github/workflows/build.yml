@@ -98,7 +98,7 @@ jobs:
           from pathlib import Path
 
           image = Path("ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin").read_bytes()
-          version = image[0x30:0x30 + 32].split(b"\\0", 1)[0]
+          version = image[0x30:0x30 + 32].split(b"\0", 1)[0]
           project = image[0x50:0x50 + 32].split(b"\\0", 1)[0]
           assert version == b"1.31", f"Unexpected firmware version: {version!r}"
           assert project == b"ATS-MINI by 13HN2709", f"Unexpected project name: {project!r}"
@@ -147,7 +147,7 @@ jobs:
           slug = os.environ["SLUG"]
           changelog = Path("CHANGELOG.md").read_text()
           version = re.escape(slug.removeprefix("v"))
-          match = re.search(rf"(^## {version} .*?)(?=^## \\d|\\Z)", changelog, re.MULTILINE | re.DOTALL)
+          match = re.search(rf"(^## {version} .*?)(?=^## \d|\Z)", changelog, re.MULTILINE | re.DOTALL)
           print(match.group(0) if match else "")
           PY
           gh release create "$SLUG" --repo '${{ github.repository }}' --target '${{ github.sha }}' --notes-file release-notes.md

@@ -728,3 +728,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - **Hard isolation rule:** do not modify any file under `ats-mini/src/ftx/`, do not modify FT8/FT4 DSP, capture, slot timing, UI, settings or menu behavior as part of RTTY. FT8/FT4 is frozen and must remain untouched.
 - Target repo/branch: `firetvstick2k2-afk/ats-mini-dev`, branch `development` only. Source repo remains read-only. User starts Actions builds and hardware tests; no build, Actions run, or device test has been performed for this import.
 - Commits: engine `52632c6318c81df19a57eef037d0618ef445a6ee`; API header `e398a85f65ceeb037d82423c27adfa70a106e9e6`; MIT license `54f312dd6ee40cf254f67dc68bde6320e6c11043`; Makefile integration `e9f4c7e43d0a6d0359a8f3796808f608098ee871`.
+
+
+## RTTY decoder integration — 2026-11-21
+- Corrected the case-sensitive include in `ats-mini/src/rtty/RttyDecoder.cpp` to `#include "RttyDecoder.h"` (commit `bb2e9cfff95596d6c4f00a4c0e140639c7b3a11d`). This matches the actual header filename and avoids a guaranteed include lookup failure on case-sensitive build environments.
+- The RTTY engine remains an imported, standalone module only. It is not yet connected to `AudioCaptureService`, because it requires a robust two-tone FSK estimator/tracker before `rtty_process()` can be called with valid tones.
+- Do not feed raw ADC samples to the engine. The capture stream is 4 kHz signed ADC data; a dedicated RTTY path must remove DC, normalize to float, estimate mark/space tone frequencies and confidence, then feed the engine. Keep this path isolated from all files and behavior under `ats-mini/src/ftx/`.
+- CW reference UI source has not yet been located in the currently available `Mini_OS` branches/paths. Do not invent a substitute layout or copy the generic `Layout-Decoder.cpp` as if it were the CW reference. Need locate the exact existing CW layout in the correct Mini_OS source location before building the RTTY four-row screen.
+- No build, GitHub Actions run, flash, or hardware test was performed for this correction.

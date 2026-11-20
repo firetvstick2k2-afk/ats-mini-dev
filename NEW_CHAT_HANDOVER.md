@@ -157,3 +157,11 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Nur `FtxUi.cpp` wurde für die Darstellung und die Anzeigehistorie geändert; Decoder-DSP, Audio-Capture und Slot-Timing blieben unverändert. Die ERR-Zahl zählt nur LDPC-Fehler, die an erfolgreich dekodierten Nachrichten gemeldet wurden, nicht alle fehlgeschlagenen Kandidaten.
 - Commits: `c2af7005bc4c70a4a7c36821a83f1fc020a1288f`, `2eac7c1ea2a11a7fc23313db7bf76a0a96bb911a`.
 - Noch kein Build und kein Hardwaretest. Als Nächstes OSPI-DE manuell auf `development` bauen und anschließend Darstellung, Locator-Distanz, Flaggen, Ladebalken sowie FT8/FT4 prüfen.
+
+
+## FT8: Audio boost and persistent messages — 20.11.2026
+- User reports the decoder has now successfully decoded two FT8 messages on hardware.
+- On entry to FT8/FT4, receiver volume is temporarily raised to at least 50/63 (unless already louder) so monitoring is audible; the original volume is restored when leaving the decoder. No digital gain is applied to the captured samples or decoder DSP.
+- Empty decode slots no longer overwrite the last successful published result set with an empty array. The three-message UI history therefore retains prior successful messages while later slots fail to decode.
+- Commits: `4e6d9c8caf325e336cf32ef56e36b484dc442c48` and `c0b3a3111d76410bb27bfff7dc5a1c635ee95d0d`.
+- Not yet built or hardware-tested; user starts OSPI-DE manually on `development`. Verify louder monitoring, restore of previous volume, and message persistence after an empty slot.

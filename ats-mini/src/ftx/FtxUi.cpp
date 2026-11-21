@@ -776,6 +776,12 @@ void drawFtxDecoderPage()
         if(index==ftxPresetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x0359);
         spr.setTextColor(index==ftxPresetSelection?0xFFFF:0xBDF7);
         spr.drawString(label,menuX+13,y);
+        if(index==ftxPresetSelection && (ftxPresetPreviewPending || ftxPresetPreviewActive)) {
+          spr.setTextDatum(TR_DATUM);
+          spr.setTextColor(ftxPresetPreviewActive ? 0x07E0 : 0xFFE0);
+          spr.drawString(ftxPresetPreviewActive ? "LISTEN" : "WAIT",menuX+menuW-12,y);
+          spr.setTextDatum(TL_DATUM);
+        }
       }
       char page[12];
       snprintf(page,sizeof(page),"%02u/%02u",static_cast<unsigned>(ftxPresetSelection+1),static_cast<unsigned>(count));

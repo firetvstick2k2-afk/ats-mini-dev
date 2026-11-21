@@ -41,9 +41,10 @@ bool ftxActionsOpen = false;
 bool ftxPresetMenuOpen = false;
 uint8_t ftxPresetSelection = 0;
 uint8_t ftxPresetScroll = 0;
+DecoderKind ftxPresetDecoder = DecoderKind::FT8;
 bool ftxAutoScroll = true;
 uint8_t ftxMenuSelection = 0;
-constexpr uint8_t kFtxMenuItems = 7;
+constexpr uint8_t kFtxMenuItems = 8;
 bool ftxLogEnabled = false;
 char ftxLogPath[40] = {};
 
@@ -237,7 +238,10 @@ uint8_t ftxPresetCount()
 {
   uint8_t count = 0;
   for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i)
-    if(kDecoderFrequencyPresets[i].decoder == DecoderKind::FT8) ++count;
+    if(kDecoderFrequencyPresets[i].decoder == ftxPresetDecoder) ++count;
+  // The two 11-metre CB channel entries belong only to the FT8 quick-preset
+  // submenu; keep the shared Decoder Frequencies list unchanged.
+  if(ftxPresetDecoder == DecoderKind::FT8) count += 2;
   return count;
 }
 
@@ -245,8 +249,18 @@ const DecoderFrequencyPreset* ftxPresetAt(uint8_t wanted)
 {
   uint8_t index = 0;
   for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) {
-    if(kDecoderFrequencyPresets[i].decoder != DecoderKind::FT8) continue;
+    if(kDecoderFrequencyPresets[i].decoder != ftxPresetDecoder) continue;
     if(index++ == wanted) return &kDecoderFrequencyPresets[i];
+  }
+
+  if(ftxPresetDecoder == DecoderKind::FT8) {
+    static const DecoderFrequencyPreset cbPresets[] = {
+      {"FT8 11m CH24", 27235, USB, 4, DecoderKind::FT8},
+      {"FT8 11m CH25", 27245, USB, 4, DecoderKind::FT8}
+    };
+    const uint8_t cbIndex = wanted - index;
+    if(cbIndex < sizeof(cbPresets) / sizeof(cbPresets[0]))
+      return &cbPresets[cbIndex];
   }
   return nullptr;
 }
@@ -281,7 +295,7 @@ bool applyFtxPreset(const DecoderFrequencyPreset& preset)
 
 uint8_t ftxActionCount()
 {
-  return pageMode == FtxMode::FT8 ? kFtxMenuItems : kFtxMenuItems - 1;
+  return pageMode == FtxMode::FT8 ? kFtxMenuItems : kFtxMenuItems - 2;
 }
 
 bool ftxLogStart()
@@ -400,6 +414,7 @@ bool ftxUiOpen(FtxMode mode)
   ftxActionsOpen = false;
   ftxPresetMenuOpen = false;
   ftxPresetSelection = ftxPresetScroll = 0;
+  ftxPresetDecoder = DecoderKind::FT8;
   ftxMenuSelection = 0;
   ftxAutoScroll = true;
   ftxLogEnabled = false;
@@ -498,32 +513,34 @@ void ftxUiClick()
   if(pageMode == FtxMode::FT8) {
     switch(ftxMenuSelection) {
       case 0: // FT8 presets
+      case 1: // FT4 presets
+        ftxPresetDecoder = ftxMenuSelection == 0 ? DecoderKind::FT8 : DecoderKind::FT4;
         ftxPresetMenuOpen = true;
         ftxPresetSelection = ftxPresetScroll = 0;
         break;
-      case 1: // Speaker
+      case 2: // Speaker
         if(PIN_AMP_EN >= 0) {
           ftxSpeakerEnabled = !ftxSpeakerEnabled;
           // Keep the receiver and GPIO11 decoder audio tap alive.
           digitalWrite(PIN_AMP_EN, ftxSpeakerEnabled ? HIGH : LOW);
         }
         break;
-      case 2: // Auto-scroll
+      case 3: // Auto-scroll
         ftxAutoScroll = !ftxAutoScroll;
         break;
-      case 3: // Clear displayed station history/counters
+      case 4: // Clear displayed station history/counters
         memset(recentMessages, 0, sizeof(recentMessages));
         decodedMessageCount = 0;
         ldpcErrorCount = 0;
         break;
-      case 4: // Toggle per-session log
+      case 5: // Toggle per-session log
         if(ftxLogEnabled) ftxLogStop();
         else ftxLogStart();
         break;
-      case 5: // Back
+      case 6: // Back
         ftxActionsOpen = false;
         break;
-      case 6: // Exit decoder
+      case 7: // Exit decoder
         ftxUiExit();
         break;
     }
@@ -638,7 +655,7 @@ void drawFtxDecoderPage()
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);
     if(ftxPresetMenuOpen) {
-      spr.drawString("FT8 PRESETS",menuX+12,menuY+7);
+      spr.drawString(ftxPresetDecoder==DecoderKind::FT4 ? "FT4 PRESETS" : "FT8 PRESETS",menuX+12,menuY+7);
       const uint8_t count=ftxPresetCount();
       for(uint8_t row=0;row<6;++row) {
         const uint8_t index=ftxPresetScroll+row;
@@ -663,6 +680,7 @@ void drawFtxDecoderPage()
     } else {
       const char* labels[kFtxMenuItems] = {
         "FT8 PRESETS",
+        "FT4 PRESETS",
         ftxSpeakerEnabled ? "SPEAKER       ON" : "SPEAKER       OFF",
         ftxAutoScroll ? "AUTO SCROLL   ON" : "AUTO SCROLL   OFF",
         "CLEAR STATIONS",
@@ -676,7 +694,7 @@ void drawFtxDecoderPage()
         const int y=menuY+27+i*17;
         if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,18,0x0359);
         spr.setTextColor(i==ftxMenuSelection?0xFFFF:0xBDF7);
-        spr.drawString(labels[i+(pageMode==FtxMode::FT4?1:0)],menuX+14,y);
+        spr.drawString(labels[i+(pageMode==FtxMode::FT4?2:0)],menuX+14,y);
       }
     }
   }

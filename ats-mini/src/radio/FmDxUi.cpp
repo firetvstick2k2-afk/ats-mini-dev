@@ -211,30 +211,16 @@ void drawFmDxPage() {
   const char *pty = getProgramInfo();
   drawValueOrDash(pty, 101, 97);
 
-  // RadioText gets a fixed two-line area; blank RDS data remains visibly unavailable.
+  // RadioText is left-aligned and vertically centered in its dedicated text field.
   spr.drawFastHLine(7, 112, 306, LINE);
   drawLabel("RADIO TEXT", 7, 116);
   const char *radioText = getRadioText();
-  if(radioText && radioText[0]) {
-    char line1[48];
-    char line2[48];
-    size_t len = strlen(radioText);
-    size_t split = len > 47 ? 47 : len;
-    memcpy(line1, radioText, split);
-    line1[split] = '\0';
-    size_t remaining = len > split ? len - split : 0;
-    if(remaining > 47) remaining = 47;
-    if(remaining) memcpy(line2, radioText + split, remaining);
-    line2[remaining] = '\0';
-    spr.setTextDatum(TL_DATUM);
-    spr.setTextColor(WHITE, BLACK);
-    spr.drawString(line1, 7, 128, FONT_DEFAULT);
-    if(line2[0]) spr.drawString(line2, 7, 139, FONT_DEFAULT);
-  } else {
-    spr.setTextDatum(TL_DATUM);
-    spr.setTextColor(GREY, BLACK);
-    spr.drawString("--", 7, 128, FONT_DEFAULT);
-  }
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(radioText && radioText[0] ? WHITE : GREY, BLACK);
+  // Keep the larger 16 px font inside the 306 px text field without spilling into the footer.
+  spr.setClipRect(7, 126, 306, 22);
+  spr.drawString(radioText && radioText[0] ? radioText : "--", 7, 129, FONT_SMALL);
+  spr.clearClipRect();
 
   // Footer: selected filter and operation hint.
   spr.drawFastHLine(7, 150, 306, LINE);

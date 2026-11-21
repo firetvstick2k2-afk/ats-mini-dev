@@ -76,7 +76,7 @@ void drawJs8MonitorPage() {
   spr.drawString(value, 304, 48);
 
   const int rowsY[] = {67, 86, 105, 124};
-  const char* labels[] = {"SAMPLE RATE", "BLOCK INTERVAL", "ADC MIN / MAX", "DC MEAN / AC RMS"};
+  const char* labels[] = {"PROC. RATE EST.", "BLOCK INTERVAL", "ADC MIN / MAX", "DC MEAN / AC RMS"};
   char values[4][48]{};
   if (valid) {
     snprintf(values[0], sizeof(values[0]), "%.1f Hz", m.callbackRateHz);

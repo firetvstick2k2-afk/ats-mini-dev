@@ -20,7 +20,7 @@ void* logoAllocate(size_t bytes) {
 void logoFree(void* p) { if (p) heap_caps_free(p); }
 constexpr size_t kMaxLogoBytes = 220000;
 constexpr size_t kMaxSearchBytes = 45000;
-struct LookupJob { StationLogoClient* self; RadioSnapshot state; };
+struct LookupJob { StationLogoClient* self; StationLogoState state; };
 String httpGet(const String& url, size_t maxBytes, int& status) {
   status = -1;
   WiFiClientSecure secure;
@@ -79,7 +79,7 @@ String normalizeName(String s) {
   s.replace("!", ""); s.replace(".", ""); s.replace("radio", "");
   return s;
 }
-String expectedName(const RadioSnapshot& s) {
+String expectedName(const StationLogoState& s) {
   String pi = String(s.piCode, HEX); pi.toUpperCase();
   if (pi == "D391") return "1LIVE";
   if (pi == "D392") return "WDR 3";
@@ -126,13 +126,13 @@ bool StationLogoClient::storeLogoInRam(const String& logo, const char* key, cons
     return false;
   }
   uint8_t* copy=static_cast<uint8_t*>(logoAllocate(logo.length()));
-  if (!copy) copy=static_cast<uint8_t*>(logoAllocate(logo.length()));
+  if (!copy) { Serial.println("[LOGO] not enough RAM for image"); return false; }
   if (!copy) { Serial.println("[LOGO] not enough RAM for image"); return false; }
   memcpy(copy, logo.c_str(), logo.length());
   if (!logoMutex_ || xSemaphoreTake(logoMutex_, pdMS_TO_TICKS(100)) != pdTRUE) {
     logoFree(copy); return false;
   }
-  if (logoData_) MemoryManager::deallocate(logoData_);
+  if (logoData_) logoFree(logoData_);
   logoData_=copy; logoLength_=logo.length(); logoIsJpg_=jpg;
   strncpy(logoKey_,key,sizeof(logoKey_)-1); logoKey_[sizeof(logoKey_)-1]=0;
   xSemaphoreGive(logoMutex_);
@@ -157,8 +157,8 @@ bool StationLogoClient::storeLogoInRam(const String& logo, const char* key, cons
   Serial.printf("[LOGO] RAM logo loaded from %s (%u bytes)\n",source?source:"unknown",static_cast<unsigned>(logo.length()));
   return true;
 }
-bool StationLogoClient::hasLocalLogo(const RadioSnapshot& state) {
-  if (!state.piCode || !StorageDiscovery::ready()) return false;
+bool StationLogoClient::hasLocalLogo(const StationLogoState& state) {
+  if (!state.piCode || !logoStorageReady) return false;
   char pi[5];
   snprintf(pi, sizeof(pi), "%04X", static_cast<unsigned>(state.piCode));
   const char* directories[] = {"/logos"};
@@ -192,7 +192,7 @@ bool StationLogoClient::hasLocalLogo(const RadioSnapshot& state) {
   return false;
 }
 
-void StationLogoClient::update(const RadioSnapshot& state, bool wifiConnected) {
+void StationLogoClient::update(const StationLogoState& state, bool wifiConnected) {
   (void)wifiConnected;
   if (!state.piCode || busy_) return;
   char key[40];
@@ -202,7 +202,7 @@ void StationLogoClient::update(const RadioSnapshot& state, bool wifiConnected) {
   haveRequested_=true; lastAttemptMs_=millis();
   Serial.printf("[LOGO] lookup requested: PI=%04X frequency=%lu kHz LittleFS=%s\\n",
     static_cast<unsigned>(state.piCode), static_cast<unsigned long>(state.frequencyKHz),
-    StorageDiscovery::ready() ? "ready" : "not-ready");
+    logoStorageReady ? "ready" : "not-ready");
   LookupJob* job=new(std::nothrow) LookupJob{this,state};
   if (!job) return;
   busy_=true;
@@ -212,10 +212,10 @@ void StationLogoClient::update(const RadioSnapshot& state, bool wifiConnected) {
 }
 void StationLogoClient::taskEntry(void* arg) {
   LookupJob* job=static_cast<LookupJob*>(arg);
-  StationLogoClient* self=job->self; RadioSnapshot state=job->state; delete job;
+  StationLogoClient* self=job->self; StationLogoState state=job->state; delete job;
   self->runLookup(state); self->busy_=false; vTaskDelete(nullptr);
 }
-void StationLogoClient::runLookup(const RadioSnapshot& state) {
+void StationLogoClient::runLookup(const StationLogoState& state) {
   char key[40];
   snprintf(key,sizeof(key),"%04X_%lu",static_cast<unsigned>(state.piCode),static_cast<unsigned long>(state.frequencyKHz));
   const String pi=String(state.piCode,HEX); String piUpper=pi; piUpper.toUpperCase();
@@ -322,3 +322,11 @@ void StationLogoClient::runLookup(const RadioSnapshot& state) {
   }
   Serial.printf("[LOGO] no exact PNG/JPEG favicon found for '%s' in Radio Browser\n",station.c_str());
 }
+
+
+namespace {
+StationLogoClient globalDabLogoClient;
+}
+
+bool dabLogoBegin() { return globalDabLogoClient.begin(); }
+StationLogoClient& dabLogoClient() { return globalDabLogoClient; }

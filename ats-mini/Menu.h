@@ -61,6 +61,7 @@
 #define CMD_CW_DECODER   0x4100 // CW decoder screen
 #define CMD_JS8_MONITOR  0x4200 // Independent JS8 RX audio monitor
 #define CMD_DECODER_MENU 0x4300 // Scrolling decoder submenu
+#define CMD_FM_DX       0x4400 // FM adaptive DX reception screen
 
 
 

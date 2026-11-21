@@ -1136,3 +1136,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The short-click waveform remains a generic 8-FSK pipeline stimulus, not a valid JS8 frame and not a decoder test.
 - Next engineering gate: independently generate and validate a protocol-correct JS8 NORMAL golden frame with a known payload, then implement a JS8-only decoder sample path (sync, soft tone decisions, LDPC and CRC) and route that exact vector through it as an on-device self-test. Only show decoded text after the decoder recovers and validates the payload.
 - Keep all work on development; do not touch main. No compile, Actions run, flash or hardware test was performed for the UI change. User starts any build manually.
+
+
+## JS8 clean-room license decision — 2026-11-21
+- Project owner confirmed: preserve the repository's MIT license and develop the JS8 receiver independently. No GPL JS8Call source, direct ports, or parity/generator/permutation tables copied or mechanically extracted from JS8Call may be imported.
+- Protocol research confirmed the public NORMAL frame dimensions, but the official user guide does not publish the complete LDPC construction. A third-party write-up was found whose numeric LDPC tables are explicitly machine-generated from JS8Call reference source; those tables are not an acceptable independent source and were not copied.
+- Do not generate an arbitrary LDPC(174,87) matrix and claim JS8Call compatibility: a different matrix is a different code and will not decode normal JS8Call traffic.
+- Documented next path in JS8CALL_RECEIVE_DECODER.md section 10: independently implement/test the 4 kHz front end, timing/frequency candidate search, NORMAL Costas sync and eight-tone soft decisions using a clearly labeled non-LDPC synthetic fixture. Keep actual payload decode blocked until a lawful independent source for the exact interoperable LDPC construction is established.
+- No firmware code, build, GitHub Actions run, flash or hardware test was performed in this research step. Work remains on development; main untouched.
+- Documentation commit: 746dac66148af67abd18e196d08afc66924c70de.

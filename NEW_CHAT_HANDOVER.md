@@ -476,3 +476,14 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 **Schutzregeln:** keinen zweiten ADC-Sampler; gemeinsamen Audiopfad nicht vor Messung verändern; FT8/FT4, CW, RTTY und bestehende Layouts nicht beeinträchtigen; LILYGO GPIO11/SPI-Guard erhalten. Keine GPLv3-Übernahme aus JS8Call in MIT-Repo ohne Lizenzentscheidung. Kein Build/Actions/Flash ohne ausdrückliche Bitte; Nutzer baut und testet Hardware.
 
 **Letzte Commits:** Plan 2c `3de3b88495ddfde2d52d6f763a1392054f28e108`; vorherige Handoff-Updates `29f6ed05530332acfbf305e91aaef273e064fe64` und `4a96910b5c75ca9e0c1c711e6dca10f4cb38aa1b`. Details: `JS8CALL_RECEIVE_DECODER.md`, Abschnitt 2c.
+
+
+## JS8 – Audiomessdienst erster Implementierungsschritt (21.11.2026)
+- Auf development wurden ats-mini/src/js8/Js8AudioMonitor.h/.cpp angelegt. Das ist ein JS8-eigener Subscriber für den bestehenden AudioCaptureService, kein zweiter Sampler.
+- Der Callback kopiert nur den 24-Sample-Block in eine begrenzte 96-Block-FreeRTOS-Queue, erfasst esp_timer_get_time() bei Callback-Eintritt und zählt Callback-/Queue-Drops. Er wertet keine Audiosamples aus und ignoriert den Wall-Clock-Zeitstempel für die Taktmessung.
+- Ein separater Worker ermittelt Callback-Abstands-Min/Max/Mittelwert, eine aus Blockabständen geschätzte effektive Ausgaberate, längere Lücken/fehlende Blöcke sowie ADC-Min/Max, DC/Mittelwert, AC-RMS und Near-Rail-Clipping. Ein Ringpuffer hält die letzten 4.096 Samples (nominal ca. 1,024 s) für spätere Spektralanalyse bereit.
+- API: begin(AudioCaptureService&), stop(), copyMetrics() und copyRecentSamples(). Die Makefile-Wildcards berücksichtigen src/js8.
+- Noch nicht in Menü/UI oder Decoder-Lifecycle eingebunden; keine JS8-Demodulation/Decodierung implementiert. Die Messwerte beschreiben die Callback-/Blockausgabe des Software-Schedulers und können keine intra-Block-analogRead-Jittermessung ersetzen.
+- LILYGO GPIO11/SPI-Ausschluss bleibt erhalten. Bestehende FT8/FT4-, CW-, RTTY- und Layout-Dateien wurden nicht geändert.
+- Noch kein Build, kein prek, keine GitHub Actions, kein Flash und keine Hardwaremessung. Code ist nicht compiler-verifiziert.
+- Nächster Schritt: Source-Review des Monitor-Moduls und isolierte Lifecycle-Anbindung für eine JS8-Diagnoseansicht; erst danach kontrollierte Tonmessungen/Spektralanalyse und reale JS8-NORMAL-Aufnahmen. Noch kein JS8-NORMAL-Decoder.

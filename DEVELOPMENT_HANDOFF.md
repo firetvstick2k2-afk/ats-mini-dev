@@ -822,3 +822,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Added authenticated web log listing at `/radio/ft8-logs` and individual downloads at `/radio/ft8-log?name=...`. The list only exposes FT8_/FT4_ .txt files; download names are validated to prevent path traversal. This uses existing LittleFS and existing web-server authentication; no formatting, erasing, or reinitialization of LittleFS was added.
 - The logger opens/appends/closes the file per decoded message and flushes each line. No decoder DSP, slot timing, audio capture, RTTY, TEF6686, or existing storage preferences were changed.
 - Source-only implementation on `development`; no build, Actions run, flash, or hardware test. Verify green row is gone, logging toggles, repeated same-day sessions get numbered files, decoded rows contain metadata, files persist after reboot, and downloads work while Wi-Fi/web server is active.
+
+
+## FT8 log behavior clarification — 2026-11-21
+- Log filenames use the configured local calendar date via `clockGetDate()`; each message line is timestamped in UTC. A new logging session on the same date receives the next available suffix (`_1`, `_2`, ...).
+- Auto-scroll only controls the visible three-message history. The periodic result poll always runs, and successful decoded messages are appended to the active log even while AUTO SCROLL is OFF.
+- The decoder intentionally shuts Wi-Fi down while active to protect timing/CPU headroom. Therefore log files are stored during reception and can be listed/downloaded after leaving FT8/FT4 and restoring the configured Wi-Fi mode, at `/radio/ft8-logs` (or `http://atsmini.local/radio/ft8-logs` when mDNS is available).
+- No LittleFS format/erase/mount behavior was changed. No build or hardware test performed.

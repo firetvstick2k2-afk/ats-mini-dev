@@ -322,3 +322,24 @@ Next engineering gates:
 4. Keep LDPC/CRC and message output blocked until the exact interoperable LDPC construction is available from a legally independent source.
 
 No Makefile changes are required because the existing wildcard includes `src/js8/*.h/.cpp`. No build, GitHub Actions run, flash or hardware test was started. Source has not been compiler-verified on the ESP32 toolchain.
+
+
+## 12. Host-side test harness for NORMAL Costas metric (2026-11-21)
+
+Added `tests/js8_normal_sync_test.cpp`, a standalone host test that compiles directly with `ats-mini/src/js8/Js8NormalSync.cpp`. It covers:
+- Correct NORMAL pilot sequence with a 17-sample frame-start offset and +1.25 Hz common carrier offset (provided as the test hypothesis); all 21 pilots must match.
+- Deliberately altered Costas pilot sequence must be rejected by the metric.
+- An incomplete 12.64-second frame window must be rejected.
+
+Executed locally with:
+
+```sh
+g++ -std=c++17 -Wall -Wextra -Werror \\
+  ats-mini/src/js8/Js8NormalSync.cpp tests/js8_normal_sync_test.cpp \\
+  -o /tmp/js8_normal_sync_test -lm
+/tmp/js8_normal_sync_test
+```
+
+Observed result: `PASS: NORMAL Costas metric offset, pilot count, wrong sequence, bounds`.
+
+This is a host compile/test of the standalone metric, not an ESP32 firmware compile. The test fixture has a JS8-shaped NORMAL pilot layout and arbitrary non-pilot data tones; it is not a valid LDPC/CRC-encoded JS8 message. The current metric also evaluates a caller-proposed frame start/frequency; no automatic time/frequency search or receive-window integration exists yet. The build workflow will be configured to run on pushes to `development` as well as manual dispatch, so the next development push can produce the OSPI-DE firmware artifact. It will not create a release for ordinary development-branch pushes.

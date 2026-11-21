@@ -1196,3 +1196,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Full-screen menu labels and German text use the explicit UTF-8 umlaut renderer (Ä/Ö/Ü/ä/ö/ü and ß rendered as ss).
 - Removed the unexplained "DR /" placeholder from the header; the small product subtitle now reads "ATS MINI".
 - Brightness now opens a dedicated full-screen slider popup. Encoder rotation adjusts the existing brightness value; encoder click returns to Settings.
+
+
+## FT8/FT4 hardware display refinement — 2026-11-21
+- Removed the three inner message boxes; only the outer display frame remains.
+- Expanded the recent-message buffer and display to four newest-first decoded-message rows.
+- Recolored the 37-block receive progress meter: green for blocks 0–24, yellow for 25–31, red for 32–36; inactive blocks remain dim.
+- Preserved the frequency/speaker/counter header and message metadata layout.
+- Build #19 (run 44939322581) completed successfully on development at commit 968585b3b1e241321c9ab463165d8be0d77754aa.
+- This change is committed for OSPI-DE Build #20; hardware validation is pending.

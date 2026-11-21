@@ -23,7 +23,7 @@ uint8_t restoreNetworkMode = NET_OFF;
 uint32_t lastPageRefresh = 0;
 FtxMode pageMode = FtxMode::FT8;
 
-FtxDecodedMessage recentMessages[3]{};
+FtxDecodedMessage recentMessages[4]{};
 uint32_t decodedMessageCount = 0;
 uint64_t lastProcessedSlot = 0;
 bool haveProcessedSlot = false;
@@ -502,7 +502,7 @@ void ftxLogMessage(const FtxDecodedMessage& message)
 void addRecentMessage(const FtxDecodedMessage& message)
 {
   if(!message.text[0]) return;
-  for(int i=2;i>0;--i) recentMessages[i]=recentMessages[i-1];
+  for(int i=3;i>0;--i) recentMessages[i]=recentMessages[i-1];
   recentMessages[0]=message;
   ++decodedMessageCount;
 }
@@ -776,83 +776,52 @@ bool ftxUiTick(uint32_t now)
 
 void drawFtxDecoderPage()
 {
-  const uint16_t bg=0x0000, boxBg=0x0000, blue=0x001F, cyan=0x07FF;
+  const uint16_t bg=0x0000, blue=0x001F, cyan=0x07FF;
   spr.fillSprite(bg);
-  spr.drawRect(2,2,316,166,0x001F);
-
-  // Compact top row: frequency and unit on the left, speaker centered, OK count on the right.
+  // Keep only the display's outer frame; message rows are borderless.
   char frequencyText[24];
-  snprintf(frequencyText,sizeof(frequencyText),"%u.%03u",
-    currentFrequency/1000,currentFrequency%1000);
-  spr.setTextColor(0xFFFF);
-  spr.setTextDatum(TL_DATUM);
+  snprintf(frequencyText,sizeof(frequencyText),"%u.%03u", currentFrequency/1000,currentFrequency%1000);
+  spr.setTextColor(0xFFFF); spr.setTextDatum(TL_DATUM);
   const int frequencyWidth = spr.drawString(frequencyText,8,5,&lgfx::fonts::Orbitron_Light_24);
-  spr.setTextDatum(ML_DATUM);
-  spr.setTextColor(cyan);
+  spr.setTextDatum(ML_DATUM); spr.setTextColor(cyan);
   spr.drawString("kHz",8+frequencyWidth+7,19,FONT_SMALL);
-
-  spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(cyan);
+  spr.setTextDatum(MC_DATUM); spr.setTextColor(cyan);
   spr.drawString(ftxSpeakerEnabled?"SPK ON":"SPK OFF",205,19,FONT_SMALL);
-
   char counters[16];
-  snprintf(counters,sizeof(counters),"OK %03lu",
-    static_cast<unsigned long>(decodedMessageCount));
-  spr.setTextDatum(TR_DATUM);
-  spr.drawString(counters,311,10,FONT_SMALL);
-
-  // FT8 slot meter: separated blue blocks, equalizer-style (not a solid line).
+  snprintf(counters,sizeof(counters),"OK %03lu", static_cast<unsigned long>(decodedMessageCount));
+  spr.setTextDatum(TR_DATUM); spr.drawString(counters,311,10,FONT_SMALL);
+  // Separated receive-progress blocks in green, yellow and red EQ zones.
   const uint32_t maxBlocks=decoderService.decoderMaxBlocks();
   const uint32_t blocks=decoderService.decoderBlocks();
-  constexpr int meterSegments=37;
+  constexpr int meterSegments=37, yellowStart=25, redStart=32;
   const int activeSegments=maxBlocks ? static_cast<int>((blocks>maxBlocks?maxBlocks:blocks)*meterSegments/maxBlocks) : 0;
-  spr.drawRect(8,34,304,12,blue);
-  spr.fillRect(10,36,300,8,bg);
+  spr.drawRect(8,34,304,12,blue); spr.fillRect(10,36,300,8,bg);
   for(int segment=0;segment<meterSegments;++segment) {
     const int x=10+segment*8;
-    if(segment<activeSegments) spr.fillRect(x,36,6,8,blue);
+    const uint16_t zoneColor=segment<yellowStart?0x07E0:(segment<redStart?0xFFE0:0xF800);
+    spr.fillRect(x,36,6,8,segment<activeSegments?zoneColor:0x2104);
   }
-  // Three black message rows with the blue outlines retained.
-  for(int i=0;i<3;++i) {
-    const int y=52+i*37;
-    spr.fillRect(7,y,306,34,boxBg);
-    spr.drawRect(7,y,306,34,blue);
+  // Four borderless message rows use the space freed by the removed boxes.
+  for(int i=0;i<4;++i) {
+    const int y=51+i*28;
     if(!recentMessages[i].text[0]) {
-      if(i==0) {
-        spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-        spr.setTextDatum(ML_DATUM);
-        spr.setTextColor(cyan);
-        spr.drawString("Waiting for FT8/FT4 decodes...",14,y+10);
-      }
+      if(i==0) { spr.setFont(&lgfx::fonts::FreeSansBold9pt7b); spr.setTextDatum(ML_DATUM); spr.setTextColor(cyan); spr.drawString("Waiting for FT8/FT4 decodes...",14,y+8); }
       continue;
     }
-
-    char country[4]={}, locator[8]={};
-    int distanceKm=-1;
+    char country[4]={}, locator[8]={}; int distanceKm=-1;
     extractMetadata(recentMessages[i].text,country,sizeof(country),locator,sizeof(locator),distanceKm);
-    if(country[0]) drawFlag(country,12,y+10);
-
-    const int messageX=country[0]?40:14;
-    const int distanceWidth=64;
+    if(country[0]) drawFlag(country,12,y+5);
+    const int messageX=country[0]?40:14, distanceWidth=64;
     const int messageWidth=306-(messageX-7)-distanceWidth-8;
-    drawClippedText(recentMessages[i].text,messageX,y+9,messageWidth,0xFFFF);
-
+    drawClippedText(recentMessages[i].text,messageX,y+7,messageWidth,0xFFFF);
+    char distanceText[16];
     if(distanceKm>=0) {
-      char distanceText[16];
       if(distanceKm>=10000) snprintf(distanceText,sizeof(distanceText),">9999 km");
       else snprintf(distanceText,sizeof(distanceText),"%d km",distanceKm);
-      spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-      spr.setTextDatum(TR_DATUM);
-      spr.setTextColor(cyan);
-      spr.drawString(distanceText,306,y+9);
-    } else {
-      spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-      spr.setTextDatum(TR_DATUM);
-      spr.setTextColor(0x7BEF);
-      spr.drawString("---",306,y+9);
-    }
+    } else snprintf(distanceText,sizeof(distanceText),"---");
+    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b); spr.setTextDatum(TR_DATUM);
+    spr.setTextColor(distanceKm>=0?cyan:0x7BEF); spr.drawString(distanceText,306,y+7);
   }
-
   if(ftxActionsOpen) {
     const int menuX=20, menuY=8, menuW=280, menuH=154;
     spr.fillRect(menuX,menuY,menuW,menuH,bg);

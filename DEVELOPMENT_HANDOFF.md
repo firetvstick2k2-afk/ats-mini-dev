@@ -1327,3 +1327,16 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Controller lifecycle now distinguishes pausing adaptive AUTO from ending the FM-DX session. The originally active FM bandwidth is captured once and restored on page exit; manual filter selection and AUTO pause/resume do not lose the saved bandwidth. External mode changes still avoid applying an FM filter while in AM/SSB.
 - Display refinements: bandwidth indicator moved upward; MHz baseline adjusted lower alongside the frequency; PI/PTY values aligned to their labels; RadioText remains left-aligned and is positioned within the text panel using the larger default font; footer spacing added between FILTER and the bandwidth value.
 - Scope is development only. No build, GitHub Actions, flash or hardware test was run. Static source review only; user will run the OSPI-DE build manually. Main untouched.
+
+
+## FM-DX Abschluss der Encoder-/Actions-/Layoutkorrekturen — 2026-11-22
+- Encoder-Drehung stimmt die FM-Frequenz über den aktiven Bandschritt und `updateFrequency(..., true)`; kurzer Klick öffnet das Actions-Overlay, Encoder-Drehung navigiert darin, Klick wählt AUTO Start/Pause, manuellen Filterwechsel oder Back. Long-Press beendet FM-DX.
+- Manueller Filterwechsel nutzt `fmDxSetManualBandwidth()`; AUTO-Pause und manuelle Auswahl beenden nicht die FM-DX-Session. Die beim Eintritt gespeicherte Hardware-Bandbreite wird erst beim Verlassen wiederhergestellt.
+- RadioText wird nun linksbündig mit FONT_SMALL (16 px) in einem begrenzten Textfeld vertikal mittig dargestellt; Clip-Grenze verhindert Überlauf in den Footer. PI/PTY, MHz-/Bandbreitenpositionen und Footer-Abstand sind ebenfalls angepasst.
+- Geänderte Quelldatei: `ats-mini/src/radio/FmDxUi.cpp`, Commit `5c7fe1d5d0cbfa58a3021a563c1bf251a35610c1` (RadioText-Feld); vorausgehender FM-DX-Funktions-/Layoutstand ist bereits auf `development`.
+- Nur Source-Review, kein Compilerlauf. Kein GitHub Actions Build, kein Flash und kein Hardwaretest durch den Assistant. Der Nutzer startet den OSPI-DE Build selbst über `Run workflow`.
+
+## Verbindliche Arbeits- und Buildregel — Klarstellung 2026-11-22
+- Ausschließlich Branch `development` bearbeiten; `main` bleibt unangetastet.
+- Fertige und source-geprüfte Änderungen dürfen direkt nach `development` gepusht werden.
+- Der Firmware-Workflow läuft nur über `workflow_dispatch`; Pushes lösen keinen Build aus. Der Nutzer startet den Build selbst über GitHub Actions. Assistant startet keine Actions/Builds ohne ausdrückliche Aufforderung.

@@ -1,7 +1,7 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-11-21 (DAB layout selection and menu label fix)
-Repository: https://github.com/13HN2709/ats-mini-dev (private development workspace); public release repository: https://github.com/13HN2709/ats-mini
+Last updated: 2026-11-21 (CW decoder port)
+Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
 Active work branch: `development` (never modify `main` unless explicitly requested)
 
 ## Working agreement
@@ -917,3 +917,15 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Startup initializes the logo client after LittleFS migration. The initial offline lookup can still load a local logo; if Wi-Fi becomes available afterward, the same station key is retried immediately rather than waiting for the 60-second online retry interval.
 - Changed: `ats-mini/StationLogoClient.cpp/.h`, `ats-mini/Layout-DABStyle.cpp`, `ats-mini/Storage.cpp`, `ats-mini/ats-mini.ino`.
 - Source-only port. No GitHub Actions build, flash, or hardware/network test was started. User should manually run the OSPI-DE build on `development`, then test local PNG/JPG/JPEG display, root PNG migration (including splash exclusion and duplicate handling), online FM-DX lookup, Radio Browser fallback, offline behavior, cache persistence and station changes.
+
+
+## CW decoder port — 2026-11-21
+- Ported the Mini_OS CW Goertzel DSP core from `firetvstick2k2-afk/Mini_OS`, branch `dev/first-build-preparation`, reference SHA `924bc6c6c38bf6eaa9eccc738b159b921cac7ab6`, into `ats-mini/src/cw/CwDecoder.h`.
+- Ported `CwDecoderService` from Mini_OS reference SHAs `30af4436dc8ef5705db17d9848014885b2886b73` (header) and `8a2c29ae72cf38473fe214bd5a26d2fce9093dc9` (implementation). Added a mutex-protected tone-frequency setter and decoder reset.
+- Added `CwUi.h/.cpp`: dedicated 320×170 decoder page, live text, RX/no-RX state, WPM, ADC level, default 700 Hz tone, selectable tone choices (400–900 Hz), actions for tone, clear text, reset, back and exit.
+- The CW service subscribes to the existing 4 kSamples/s `AudioCaptureService`; it creates no additional ADC sampler. A singleton accessor was added and FT8/FT4 now use that same capture instance, allowing CW and FT8/FT4 to share the one GPIO11 capture task without running simultaneously.
+- Added `DecoderKind::CW`, tagged all nine existing CW presets, routed CW preset selection into the CW page, and added direct CW Decoder menu entries in German and English. Added `CMD_CW_DECODER` and encoder rotate/click/long-press/tick/display dispatch.
+- **Existing architecture discrepancy found during source review:** current `RttyService.cpp` still owns a separate 8 kSamples/s ADC capture task; it does not subscribe to the 4 kSamples/s `AudioCaptureService` despite the earlier handoff description. RTTY was deliberately left unchanged to avoid risking its working demodulator. CW itself adds no new sampler; CW and FT8/FT4 share the 4 kSamples/s singleton.
+- Changed files: `ats-mini/src/cw/CwDecoder.h`, `CwDecoderService.h/.cpp`, `CwUi.h/.cpp`, `ats-mini/src/audio/AudioCaptureService.h/.cpp`, `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/radio/DecoderFrequencyList.h`, `ats-mini/Menu.h`, `ats-mini/Menu_german.cpp.src`, `ats-mini/Menu_english.cpp.src`, `ats-mini/Draw.cpp`, `ats-mini/ats-mini.ino`.
+- Source-only implementation. No GitHub Actions build, local firmware build, flash or hardware test was run. User must build OSPI-DE and test CW reception, tone selection, WPM/level display, clear/reset, CW preset launch, direct menu launch, long-press exit, and restoration of configured Wi-Fi. Also regression-test FT8/FT4 and RTTY separately.
+- Commits: `25775d1dfba9519ce04be67e05903340a5b4a54d`, `401eb98d99d5f2219e57496d8d64f9f4b9e44ab3`, `3dbdad4d9925ddd737aa6a18c2f1b55ebb5a965d`, `2d917e58a06943fcf39c68941a6ee169658da470`, `a764c87925b5e0387e234de4ebc5e962ad5f83fb`, `9ac9dc1633ff2c21c73b1d92802a64a2dc239a25`, `965adc959e29ddacf222934c4a6883fd01d3b4d8`, `bbed86448b7b99f61ca02df08d0cef07f32d312c`, `2559340c50e8444459ebc7346da96131a089222d`, `e970b9cf5a71e8e85e5a01ca687bfce9967e3ac2`, `cbda87aa0f2b404b69e34be4bae752644916f09f`, `cdbff5f06915a8934237464aa67b1f1da6dc5a92`, `9b98c518ce01848e2922f3ae69af4b4dad5b1538`, `04d595c9c5205d0dadf5e99a8dc438ff72ef911a`, `9de4ceda973e6e25c1060eaf74670a3bedfddd97`, `faff7cd6ff8695ae5511935d6a9240388d7f4a09f`, `256098b22d8572f5a1d4f309971f816f113f2610`.

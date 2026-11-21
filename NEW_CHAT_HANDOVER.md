@@ -213,3 +213,10 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Updated only `ats-mini/src/rtty/RttyUi.cpp`: header frequency vertically centered; RX/baud text white and shifted left with a smaller font; activity dot moved to the upper-right corner so it no longer covers the text; decoded rows and the waiting placeholder vertically centered inside their blue panels; waiting text and footer changed to white for contrast.
 - Four decoded message rows retain their existing panel geometry and white bold text. No RTTY DSP/service, baud presets, FT8/FT4, shared audio, TEF6686, or LittleFS changes.
 - Source-only visual adjustment. No build, Actions run, flash, or hardware test performed; user will inspect the next OSPI-DE build on device.
+
+
+## RTTY long-press exit reliability — 2026-11-21
+- User reported that holding the encoder while the RTTY screen was open did not exit; device required a restart.
+- Moved the RTTY-specific long-press handling to immediately after the physical ButtonTracker sample in `ats-mini/ats-mini.ino`, before serial/BLE/TCP and encoder event handling. The handler is one-shot per physical press, clears pending short-click flags, calls `rttyUiExit()`, and refreshes the main screen/timers. The existing later generic RTTY long-press branch remains guarded by the same one-shot flag and therefore cannot double-exit.
+- Scope is limited to RTTY exit dispatch; decoder DSP/service, baud presets, FT8/FT4, shared audio, TEF6686 and LittleFS are unchanged.
+- Source-only fix; no build, Actions run, flash or hardware verification. On next device test, verify long press exits RTTY, restores BFO/volume/Wi-Fi, and returns to the normal radio screen; short click must still cycle BAUD/BFO modes.

@@ -530,3 +530,11 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Hardened lifecycle for external/remote band changes: the FM-DX page exits when the mode is no longer FM, and the controller no longer attempts to restore an FM filter while the receiver is in AM/SSB. Also made new UI variadic format arguments explicitly unsigned.
 - Remaining validation limits: no compilation, GitHub Actions, flash or hardware test was run. Stereo indication is not implemented because no verified live stereo/pilot getter was found in the checked `SI4735-fixed.h` wrapper. RSSI/SNR thresholds and filter decisions still require real receiver testing/calibration; they are not validated performance thresholds.
 - Work remains on `development` only; `main` was not targeted. User starts the build manually.
+
+
+## FM-DX live stereo indication — 2026-11-21
+- Research confirmed that the inherited PU2CLR SI4735 API exposes `getCurrentReceivedSignalQuality()`, `getCurrentPilot()` and `getCurrentStereoBlend()`. The SI4735 FM_RSQ_STATUS response reports the detected 19 kHz stereo pilot and blend percentage; this is a live receiver measurement, not the configured `fmStereoIdx` setting.
+- `ats-mini/src/radio/FmDxUi.cpp` now polls FM_RSQ_STATUS on the existing 500 ms FM-DX refresh and displays `STEREO xx%`, `MONO`, or `MONO LOCK` when forced-mono mode is selected.
+- The forced-mono setting is respected in the display even if a pilot is detected. In automatic mode, pilot presence and the chip's blend percentage are shown.
+- Source change committed on `development`: `7898b6999726e7644c03688f7207c91b87171fcc`.
+- No build, GitHub Actions run, flash or hardware test was performed. User should verify on a known mono station, a strong stereo station, a weak/blended station, and with forced mono enabled. No change to `main`.

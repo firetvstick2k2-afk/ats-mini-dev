@@ -70,9 +70,6 @@ bool Js8AudioMonitor::copyMetrics(Metrics& out) const {
   out = published_;
   out.callbackBlocks = callbackBlocks_;
   out.queueDrops = queueDrops_;
-  out.processedBlocks = processedBlocks_;
-  out.discontinuities = discontinuities_;
-  out.estimatedMissingBlocks = estimatedMissingBlocks_;
   portEXIT_CRITICAL(&metricsMux_);
   return out.valid;
 }

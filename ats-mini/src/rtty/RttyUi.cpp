@@ -219,8 +219,8 @@ void drawRttyDecoderPage() {
   const uint16_t led=active?green:red;
   if((millis()/350)&1) spr.fillCircle(300,10,3,led); else spr.drawCircle(300,10,3,led);
   char footer[80];
-  snprintf(footer,sizeof(footer),"ROTATE: %s  BFO %+d Hz  CLICK: ACTIONS  LONG: EXIT",
-           bfoAuto?"BFO AUTO":"BFO MANUAL",static_cast<int>(currentBFO));
+  if(bfoAuto) snprintf(footer,sizeof(footer),"BFO AUTO  CLICK: ACTIONS  LONG: EXIT");
+  else snprintf(footer,sizeof(footer),"ROTATE: BFO  CLICK: ACTIONS  LONG: EXIT  %+d Hz",static_cast<int>(currentBFO));
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(0xFFFF,navy);
   spr.setFont(FONT_SMALL);

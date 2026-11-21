@@ -294,7 +294,7 @@ void clearFtxPresetPreviewState()
   restoreFtxPresetPreviewSpeaker();
 }
 
-void restoreFtxPresetOriginal()
+void restoreFtxPresetOriginal(bool clearSnapshot = true)
 {
   if(ftxPresetOriginalValid && ftxPresetPreviewActive) {
     Band& savedBand = bands[ftxPresetOriginalState.band];
@@ -306,7 +306,14 @@ void restoreFtxPresetOriginal()
     if(currentBFO != ftxPresetOriginalBfo)
       updateBFO(ftxPresetOriginalBfo, true);
   }
-  clearFtxPresetPreviewState();
+  if(clearSnapshot) {
+    clearFtxPresetPreviewState();
+  } else {
+    ftxPresetPreviewPending = false;
+    ftxPresetPreviewActive = false;
+    ftxPresetPreviewStartedAt = 0;
+    restoreFtxPresetPreviewSpeaker();
+  }
 }
 
 void scheduleFtxPresetPreview(uint32_t now)
@@ -333,7 +340,7 @@ void startFtxPresetPreview()
   // failed/partial tune must be rolled back to the saved VFO state.
   ftxPresetPreviewActive = true;
   if(!applyFtxPreset(*preset)) {
-    restoreFtxPresetOriginal();
+    restoreFtxPresetOriginal(false);
     return;
   }
 

@@ -784,3 +784,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - When the user opens an RTTY preset, the selected preset's baud rate is passed into the RTTY UI, selected in the encoder's BAUD mode, applied to the decoder service immediately, and shown in the top-right RX/NO RX status (e.g. `NO RX 50.00Bd`). Encoder selection remains available for manual override.
 - The RTTY decoder API retains a 45.45 baud default for any non-preset entry. No FT8/FT4 files, DSP, audio capture, TEF6686 layout, or LittleFS/storage code changed.
 - Source-only change on `development`; no build, Actions run, flash, or hardware test performed. User starts the manual OSPI-DE workflow.
+
+
+## RTTY display alignment and contrast — 2026-11-21
+- User reviewed the first on-device RTTY screen and supplied a photo. The baud/RX label was red and overlapped the activity dot; frequency glyphs sat too high in the header; the waiting placeholder was gray and too high in its row.
+- Updated only `ats-mini/src/rtty/RttyUi.cpp`: header frequency vertically centered; RX/baud text white and shifted left with a smaller font; activity dot moved to the upper-right corner so it no longer covers the text; decoded rows and the waiting placeholder vertically centered inside their blue panels; waiting text and footer changed to white for contrast.
+- Four decoded message rows retain their existing panel geometry and white bold text. No RTTY DSP/service, baud presets, FT8/FT4, shared audio, TEF6686, or LittleFS changes.
+- Source-only visual adjustment. No build, Actions run, flash, or hardware test performed; user will inspect the next OSPI-DE build on device.

@@ -969,3 +969,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Code commits: cb05e59bdbe85d5a95997f3341c1da0b2eeefc38, f4f8e85ac25d485610b6208f783a23fda5c2f35f, 7d0e62a1760e4ffa1074712ea46de3508150df76, 01b9b03b440e22455ef46357f7e9d5447829f96a, 236328d3b0008d71556175c5cb18534361013ffb, 8029b9a3c0cf6a21cf88306defce9d881180cc9e, b589bc7b3be69ee051ff26effb38d08ba87838c2, 88e5dec419bcc7af42d5c8453854308fa2626895, d9cd59c4911826b6c86b52afe7d3831d2477fce0, 0a4bd171c345d33150d5139f492e97ab63e59892, 7842c9dcc80387dcb52ba6ae8e76757c2a674ce7. Additional diagnostics and audio-gap recovery commits: b7e5ab7cea0435140dc4ac8f0fced0c17aa453c0, 44f5eb6c05c334cac318333450217fec823630e7.
 
 - FT8 UI follow-up: moved the SPK ON/OFF indicator left from x=151 to x=126, closer to the frequency, and removed the SIG SCAN/SIG LOCK status text from the top row to avoid overlap. Offline synchronization remains active and selectable; only its redundant on-screen status label was removed. Code commit: 3f58403a146ae9232ab7ea18f5ecafd01edaabcb.
+
+
+## RTTY 147 kHz removal and audio frame buffer fix (21.11.2026)
+- User confirmed both Pinneberg DDH47 147 kHz RTTY presets (AM and the local USB variant) must be removed from the running RTTY decoder preset menu because neither starts/works on the receiver.
+- Removed the local-only `PINNEBERG DDH 47 USB` entry and removed the shared 147 kHz AM preset's `DecoderKind::RTTY` classification. The 147 kHz AM receiver preset remains available in the general Decoder Frequencies browser as a receiver-only preset; it is no longer offered as an RTTY preset. Other Pinneberg RTTY presets remain unchanged.
+- Removed the experimental 147 kHz band-floor override and USB-first/AM reinitialization workaround from `RttyUi.cpp`; all remaining RTTY presets now use the normal supported-band selection path.
+- Corrected `RttyService.h` audio frame storage from 512 to 1024 floats, matching `kFrameSamples=1024` in `RttyService.cpp` and preventing out-of-bounds writes during tone analysis/decoding.
+- Changed: `ats-mini/src/rtty/RttyUi.cpp`, `ats-mini/src/rtty/RttyService.h`, `ats-mini/src/radio/DecoderFrequencyList.h`.
+- Source-only changes on `development`. No build, GitHub Actions run, flash, or hardware test was performed. User should run the OSPI-DE build and verify RTTY decoder startup plus all remaining amateur/DWD presets. The 147 kHz AM entry remains only as a general receiver preset and is not an RTTY decoder option.
+- Code commits: c97847a6db4baf845934aa86689c453882238305, 2ea3ef75564f1b759f5f5d45e9da4c9b691a9b91, 2b8d510446b777511e1425f82cbe911f67978c75.

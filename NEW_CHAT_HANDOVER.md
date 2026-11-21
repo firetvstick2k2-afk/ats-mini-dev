@@ -259,3 +259,11 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Selecting a preset chooses the narrowest existing receiver band covering that frequency, applies its preset frequency, USB mode and bandwidth index, and returns to the FT8 decoder screen. The FT8 decoder/audio worker remains active; no decoder/DSP/slot logic was edited. The broad ALL-SW band is deliberately avoided when a dedicated narrower band matches.
 - No extra 6m/2m frequencies were invented because the receiver's current bands stop at 30 MHz. Generic HF data-hunt, beacon, broadcast, RTTY, FAX and FT4 entries are not FT8 presets and were not imported. No changes to the main Decoder Frequencies menu.
 - Only `ats-mini/src/ftx/FtxUi.cpp` changed for this feature. No build, Actions run, flash or hardware test performed. Verify preset scrolling, band selection/tuning, USB mode, return to active FT8 decoder and subsequent decoding.
+
+
+## FT8/FT4 preset menu extension — 2026-11-21
+- Extended the FT8 actions overlay with a second submenu entry, `FT4 PRESETS`, directly below `FT8 PRESETS`. FT4 items are sourced dynamically from the existing `DecoderFrequencyList.h` entries tagged `DecoderKind::FT4` (8 entries: 80m 3.575, 40m 7.048, 30m 10.140, 20m 14.080, 17m 18.104, 15m 21.140, 12m 24.919 and 10m 28.180 MHz; all USB).
+- Added two FT8 quick-preset-only 11m CB channels: channel 24 at 27.235 MHz USB and channel 25 at 27.245 MHz USB. They are local to the FT8 submenu and deliberately do not alter the shared `DecoderFrequencyList.h` or the main `DECODER FREQUENCIES` menu.
+- Both submenus use the existing preset application path: select the narrowest receiver band containing the frequency, apply USB and bandwidth index 4, and return to the active decoder screen. The decoder worker remains active; no FT8/FT4 DSP, audio capture, or slot-timing code changed.
+- Changed only `ats-mini/src/ftx/FtxUi.cpp` for the implementation. Handoff documents updated. No build, Actions run, or flash was started; user performs the OSPI-DE build and hardware tests.
+- Hardware checks: confirm the two new 11m entries tune to 27.235/27.245 MHz; test all 10 FT8 amateur-band presets and all 8 FT4 presets; verify USB/bandwidth and that reception continues after selecting any preset.

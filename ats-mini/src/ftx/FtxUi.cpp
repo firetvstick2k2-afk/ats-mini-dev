@@ -294,7 +294,6 @@ void addRecentMessage(const FtxDecodedMessage& message)
   if(!message.text[0]) return;
   for(int i=2;i>0;--i) recentMessages[i]=recentMessages[i-1];
   recentMessages[0]=message;
-  ftxLogMessage(message);
   ++decodedMessageCount;
   if(message.ldpcErrors>0) ldpcErrorCount += static_cast<uint32_t>(message.ldpcErrors);
 }
@@ -308,8 +307,12 @@ void refreshRecentMessages()
   for(size_t i=0;i<count;++i)
     if(messages[i].slotUtc>newestSlot) newestSlot=messages[i].slotUtc;
   if(!haveProcessedSlot || newestSlot>lastProcessedSlot) {
-    for(size_t i=0;i<count;++i)
-      if(messages[i].slotUtc==newestSlot) addRecentMessage(messages[i]);
+    for(size_t i=0;i<count;++i) {
+      if(messages[i].slotUtc != newestSlot) continue;
+      // Logging is independent of the visible auto-scroll setting.
+      ftxLogMessage(messages[i]);
+      if(ftxAutoScroll) addRecentMessage(messages[i]);
+    }
     lastProcessedSlot=newestSlot;
     haveProcessedSlot=true;
   }
@@ -448,7 +451,7 @@ bool ftxUiTick(uint32_t now)
 {
   if(!pageActive || static_cast<uint32_t>(now - lastPageRefresh) < 500) return false;
   lastPageRefresh = now;
-  if(ftxAutoScroll) refreshRecentMessages();
+  refreshRecentMessages();
   return true;
 }
 

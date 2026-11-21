@@ -16,6 +16,11 @@ namespace {
   bool actionsOpen = false;
   uint8_t actionSelection = 0;
   uint8_t manualFilter = 3;
+  // SI4735 frequency units are 1 kHz; currentFrequency is displayed as /100.
+  // One unit therefore produces the requested 0.01 MHz mini-step (100.00 -> 100.01).
+  constexpr uint8_t FM_DX_STEP_COUNT = 6;
+  constexpr uint8_t fmDxSteps[FM_DX_STEP_COUNT] = { 1, 5, 10, 20, 50, 100 };
+  uint8_t fmDxStepSelection = 0;
 
   constexpr uint16_t BLACK  = 0x0000;
   constexpr uint16_t WHITE  = 0xFFFF;
@@ -105,13 +110,12 @@ void fmDxUiRotate(int16_t delta) {
   if(!pageActive || !delta) return;
   if(actionsOpen) {
     int next = static_cast<int>(actionSelection) + (delta > 0 ? 1 : -1);
-    if(next < 0) next = 2;
-    if(next > 2) next = 0;
+    if(next < 0) next = 3;
+    if(next > 3) next = 0;
     actionSelection = static_cast<uint8_t>(next);
     return;
   }
-  const Step *step = getCurrentStep();
-  int stepKHz = step && step->step > 0 ? step->step : 10;
+  const int stepKHz = fmDxSteps[fmDxStepSelection];
   updateFrequency(static_cast<int>(currentFrequency) + delta * stepKHz, true);
 }
 
@@ -133,6 +137,9 @@ void fmDxUiClick() {
       fmDxSetManualBandwidth(manualFilter);
       break;
     case 2:
+      fmDxStepSelection = static_cast<uint8_t>((fmDxStepSelection + 1) % FM_DX_STEP_COUNT);
+      break;
+    case 3:
       actionsOpen = false;
       break;
   }
@@ -234,14 +241,19 @@ void drawFmDxPage() {
   spr.drawString("CLICK: ACTIONS  HOLD: EXIT", 313, 155, FONT_DEFAULT);
 
   if(actionsOpen) {
-    spr.fillRoundRect(65, 35, 190, 104, 5, 0x0841);
-    spr.drawRoundRect(65, 35, 190, 104, 5, CYAN);
+    spr.fillRoundRect(65, 23, 190, 124, 5, 0x0841);
+    spr.drawRoundRect(65, 23, 190, 124, 5, CYAN);
     spr.setTextDatum(TC_DATUM);
     spr.setTextColor(CYAN, 0x0841);
-    spr.drawString("FM-DX ACTIONS", 160, 41, FONT_DEFAULT);
-    const char *items[] = { fmDxActive() ? "PAUSE AUTO" : "START AUTO", "FILTER: CHANGE", "BACK" };
-    for(uint8_t n=0;n<3;++n) {
-      int y=65+n*22;
+    spr.drawString("FM-DX ACTIONS", 160, 27, FONT_DEFAULT);
+    char stepText[32];
+    const uint16_t stepValue = fmDxSteps[fmDxStepSelection];
+    snprintf(stepText, sizeof(stepText), "STEP: %u.%02u MHz",
+             static_cast<unsigned>(stepValue / 100),
+             static_cast<unsigned>(stepValue % 100));
+    const char *items[] = { fmDxActive() ? "PAUSE AUTO" : "START AUTO", "FILTER: CHANGE", stepText, "BACK" };
+    for(uint8_t n=0;n<4;++n) {
+      int y=47+n*22;
       if(n==actionSelection) {
         spr.fillRoundRect(75,y-2,170,19,3,0x2104);
         spr.setTextColor(GREEN,0x2104);

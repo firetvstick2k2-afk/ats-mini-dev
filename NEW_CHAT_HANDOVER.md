@@ -574,3 +574,11 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Encoder rotation outside the Actions overlay uses the selected FM-DX step directly and the existing `updateFrequency(..., true)` band-wrap/retune path. This selection is local to the FM-DX page and does not change the saved band step.
 - Source change: `ats-mini/src/radio/FmDxUi.cpp`, commit `96adba5730789f2fe16033711cabb7dad7e465c3`.
 - Source-only review; no compilation, Actions build, flash or hardware test. User starts OSPI-DE build manually; `main` untouched.
+
+
+## FM-DX Short Scan (2026-11-22)
+- **SHORT SCAN** is now the first entry in FM-DX Actions. The remaining order is START/PAUSE AUTO, FILTER: CHANGE, STEP, BACK.
+- It invokes the SI4735's existing forward FM seek routine, updates/adopts the resulting frequency and refreshes station identification. Existing abort polling is reused.
+- Seek currently runs synchronously; a live animated scanning banner is not implemented. Hardware verification is still required for found-station behavior, band-edge/no-station behavior, abort, audio unmute and AUTO bandwidth interaction.
+- Commits: 11160e7113cb80bb83ff6b14033c8f20c689621b, 489ceaa85886a4638a7fccd2b8dc48a3d6c3159f, b4ae6d45bc04f165c7759b13a2b2c7280df94714.
+- Source reviewed only; no compile, Actions run or device test. User starts the build manually.

@@ -232,13 +232,14 @@ void drawFlag(const char* country, int x, int y)
 bool ftxLogStart()
 {
   if(!clockAvailable()) return false;
-  const time_t now = time(nullptr);
-  struct tm dateTime = {};
-  if(!gmtime_r(&now, &dateTime)) return false;
+  uint16_t year = 0;
+  uint8_t month = 0, day = 0;
+  if(!clockGetDate(&year, &month, &day, nullptr)) return false;
   char base[32] = {};
-  snprintf(base, sizeof(base), "%s_%02d.%02d.%02d",
+  snprintf(base, sizeof(base), "%s_%02u.%02u.%02u",
            pageMode == FtxMode::FT4 ? "FT4" : "FT8",
-           dateTime.tm_mday, dateTime.tm_mon + 1, (dateTime.tm_year + 1900) % 100);
+           static_cast<unsigned>(day), static_cast<unsigned>(month),
+           static_cast<unsigned>(year % 100));
   for(uint16_t suffix = 0; suffix < 1000; ++suffix) {
     if(suffix == 0) snprintf(ftxLogPath, sizeof(ftxLogPath), "/%s.txt", base);
     else snprintf(ftxLogPath, sizeof(ftxLogPath), "/%s_%u.txt", base, suffix);
@@ -453,7 +454,7 @@ bool ftxUiTick(uint32_t now)
 
 void drawFtxDecoderPage()
 {
-  const uint16_t bg=0x0000, blueDark=0x1036, blueLight=0x1647, cyan=0x07FF;
+  const uint16_t bg=0x0000, blueDark=0x1036, cyan=0x07FF;
   spr.fillSprite(bg);
   spr.drawRect(2,2,316,166,0x001F);
 

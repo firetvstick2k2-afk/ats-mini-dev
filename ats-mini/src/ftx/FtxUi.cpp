@@ -36,6 +36,7 @@ uint8_t volumeBeforeFtx = 0;
 bool ftxVolumeBoostActive = false;
 // Toggle only the external speaker amplifier; keep SI473x audio and GPIO11 ADC capture alive.
 bool ftxSpeakerAmpBefore = true;
+bool ftxAudioMuteBefore = true;
 bool ftxSpeakerEnabled = true;
 bool ftxActionsOpen = false;
 bool ftxPresetMenuOpen = false;
@@ -282,8 +283,9 @@ bool applyFtxPreset(const DecoderFrequencyPreset& preset);
 void restoreFtxPresetPreviewSpeaker()
 {
   if(!ftxPresetPreviewSpeakerForced) return;
-  if(PIN_AMP_EN >= 0)
-    digitalWrite(PIN_AMP_EN, ftxPresetPreviewSpeakerWasEnabled ? HIGH : LOW);
+  // GPIO3 (AUDIO_MUTE) mutes only the L/R speaker path. Keep the external
+  // amplifier powered because GPIO11 is the independent FT8 ADC audio tap.
+  digitalWrite(AUDIO_MUTE, ftxPresetPreviewSpeakerWasEnabled ? LOW : HIGH);
   ftxSpeakerEnabled = ftxPresetPreviewSpeakerWasEnabled;
   ftxPresetPreviewSpeakerForced = false;
 }
@@ -353,11 +355,11 @@ void startFtxPresetPreview()
   }
 
   ftxPresetPreviewPending = false;
-  if(PIN_AMP_EN >= 0 && !ftxSpeakerEnabled) {
+  if(!ftxSpeakerEnabled) {
     ftxPresetPreviewSpeakerWasEnabled = ftxSpeakerEnabled;
     ftxPresetPreviewSpeakerForced = true;
     ftxSpeakerEnabled = true;
-    digitalWrite(PIN_AMP_EN, HIGH);
+    digitalWrite(AUDIO_MUTE, LOW);
   }
 }
 
@@ -553,9 +555,13 @@ bool ftxUiOpen(FtxMode mode)
   }
   ftxVolumeBoostActive = true;
 
-  // Preserve the amplifier state and default to audible monitoring on entry.
+  // Keep the amplifier powered for the GPIO11 decoder tap. Speaker ON/OFF
+  // uses the separate active-high L/R mute line (GPIO3), not AMP_EN.
   ftxSpeakerAmpBefore = PIN_AMP_EN < 0 || digitalRead(PIN_AMP_EN) == HIGH;
-  ftxSpeakerEnabled = ftxSpeakerAmpBefore;
+  ftxAudioMuteBefore = digitalRead(AUDIO_MUTE) == HIGH;
+  ftxSpeakerEnabled = ftxSpeakerAmpBefore && !ftxAudioMuteBefore;
+  if(PIN_AMP_EN >= 0) digitalWrite(PIN_AMP_EN, HIGH);
+  digitalWrite(AUDIO_MUTE, ftxSpeakerEnabled ? LOW : HIGH);
 
   memset(recentMessages,0,sizeof(recentMessages));
   decodedMessageCount=ldpcErrorCount=0;
@@ -575,8 +581,9 @@ void ftxUiExit()
   ftxPresetMenuOpen = false;
   ftxLogStop();
   decoderService.exit();
+  digitalWrite(AUDIO_MUTE, ftxAudioMuteBefore ? HIGH : LOW);
   if(PIN_AMP_EN >= 0) digitalWrite(PIN_AMP_EN, ftxSpeakerAmpBefore ? HIGH : LOW);
-  ftxSpeakerEnabled = ftxSpeakerAmpBefore;
+  ftxSpeakerEnabled = ftxSpeakerAmpBefore && !ftxAudioMuteBefore;
   if(ftxVolumeBoostActive) {
     volume = volumeBeforeFtx;
     rx.setVolume(volume);
@@ -645,11 +652,9 @@ void ftxUiClick()
         scheduleFtxPresetPreview(millis());
         break;
       case 2: // Speaker
-        if(PIN_AMP_EN >= 0) {
-          ftxSpeakerEnabled = !ftxSpeakerEnabled;
-          // Keep the receiver and GPIO11 decoder audio tap alive.
-          digitalWrite(PIN_AMP_EN, ftxSpeakerEnabled ? HIGH : LOW);
-        }
+        ftxSpeakerEnabled = !ftxSpeakerEnabled;
+        // Mute only the L/R speaker output; leave AMP_EN and GPIO11 capture live.
+        digitalWrite(AUDIO_MUTE, ftxSpeakerEnabled ? LOW : HIGH);
         break;
       case 3: // Auto-scroll
         ftxAutoScroll = !ftxAutoScroll;
@@ -673,10 +678,8 @@ void ftxUiClick()
   } else {
     switch(ftxMenuSelection) {
       case 0: // Speaker
-        if(PIN_AMP_EN >= 0) {
-          ftxSpeakerEnabled = !ftxSpeakerEnabled;
-          digitalWrite(PIN_AMP_EN, ftxSpeakerEnabled ? HIGH : LOW);
-        }
+        ftxSpeakerEnabled = !ftxSpeakerEnabled;
+        digitalWrite(AUDIO_MUTE, ftxSpeakerEnabled ? LOW : HIGH);
         break;
       case 1: ftxAutoScroll = !ftxAutoScroll; break;
       case 2:

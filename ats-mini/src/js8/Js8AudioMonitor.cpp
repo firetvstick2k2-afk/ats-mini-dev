@@ -161,7 +161,7 @@ void Js8AudioMonitor::makeTestBlock(AudioBlock& block) {
       const float frequency = kTestBaseHz + tone * kTestToneSpacingHz;
       testPhase_ += 2.0f * kPi * frequency / AudioCaptureService::kSampleRate;
       if (testPhase_ >= 2.0f * kPi) testPhase_ -= 2.0f * kPi;
-      block.samples[i] = static_cast<int16_t>(sinf(testPhase_) * 12000.0f);
+      block.samples[i] = static_cast<int16_t>(2048.0f + sinf(testPhase_) * 1200.0f);
       ++testSampleIndex_;
     } else {
       block.samples[i] = 0;

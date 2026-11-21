@@ -413,15 +413,13 @@ bool diskInit(bool force)
 
 
 /*
- * Keep station logos in one directory without touching the existing splash
- * image or changing the LittleFS mount/format lifecycle.
- *
- * Files are renamed within LittleFS (no copy/delete cycle). Existing files in
- * /Logos are never overwritten; a same-name root file is left in place.
+ * Keep station logos in /logos without touching splash.png or changing the
+ * LittleFS mount/format lifecycle. New root-level PNG files are migrated on
+ * every boot; existing destination files are never overwritten.
  */
 bool logosInit()
 {
-  static const char *LOGO_DIR = "/Logos";
+  static const char *LOGO_DIR = "/logos";
 
   if(!LittleFS.exists(LOGO_DIR))
   {
@@ -450,10 +448,11 @@ bool logosInit()
     if(!entry.isDirectory())
     {
       String path = entry.name();
-      String lowerPath = path;
-      lowerPath.toLowerCase();
+      String filename = path.substring(path.lastIndexOf('/') + 1);
+      String lowerName = filename;
+      lowerName.toLowerCase();
 
-      if(lowerPath.endsWith(".png") && path != SPLASH_PATH)
+      if(lowerName.endsWith(".png") && lowerName != "splash.png")
         rootPngs.push_back(path);
     }
 

@@ -35,7 +35,9 @@ bool fmDxStart() {
 
 void fmDxStop() {
   if(!active) return;
-  rx.setFmBandwidth(savedBandwidth);
+  // The receiver may already have switched to AM/SSB through a remote action.
+  // Restore the saved FM filter only while the tuner is still in FM mode.
+  if(currentMode == FM) rx.setFmBandwidth(savedBandwidth);
   active = false;
   narrowSamples = wideSamples = normalSamples = 0;
 }

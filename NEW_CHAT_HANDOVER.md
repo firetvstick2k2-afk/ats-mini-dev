@@ -227,3 +227,11 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - The toggle controls only `PIN_AMP_EN` (external speaker amplifier). It deliberately does NOT call `muteOn()`, `rx.setAudioMute()`, alter receiver volume, or change GPIO11 ADC capture, because GPIO11 is the live FT8/FT4 decoder audio tap. This keeps the receiver volume boost at 50 and preserves the captured audio path while the speaker amp is disabled.
 - On decoder exit, the amplifier enable state present on entry is restored; the existing original receiver volume restore remains intact. Long press still exits FT8/FT4. No decoder DSP, slot timing, shared audio capture, RTTY, TEF6686, or LittleFS logic changed.
 - Source-only implementation on `development`; no build, Actions run, flash, or hardware verification. Verify that short click toggles speaker audibility without affecting decodes, and long press restores the original speaker/volume state.
+
+
+## FT8/FT4 actions overlay — 2026-11-21
+- Added an on-screen actions overlay opened by short encoder click while the FT8/FT4 decoder remains active. Encoder rotation selects items; click activates the selected item. Long press remains the decoder exit.
+- Menu deliberately has no waterfall item because the current FT8/FT4 layout does not display a waterfall. Items implemented: SPEAKER ON/OFF (external amplifier only; GPIO11 ADC path and decoder remain live), AUTO SCROLL ON/OFF (freezes/resumes the visible recent-message list), CLEAR STATIONS (clears displayed messages and counters), BACK (closes overlay only), EXIT FT8 + FT4 (ends decoder and restores original amp/volume/network state).
+- The overlay is rendered after the underlying decoder page; the decoder service and its capture/slot worker continue running. No DSP, slot timing, RTTY, TEF6686, or LittleFS changes.
+- Noise filter and volume adjustment are not exposed yet: they need safe receiver/audio-path behavior validation so they cannot disturb the FT8 ADC capture. Decoder volume remains at the existing boost level 50.
+- Source-only change on development; no build, Actions run, flash, or hardware verification. Confirm menu navigation, background decoding while open, speaker toggle, clear, auto-scroll freeze/resume, BACK, and EXIT.

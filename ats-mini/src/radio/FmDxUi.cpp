@@ -4,10 +4,50 @@
 #include "Menu.h"
 #include "Utils.h"
 #include <stdio.h>
+#include <string.h>
 
 namespace {
   bool pageActive = false;
   uint32_t lastRefresh = 0;
+
+  constexpr uint16_t BLACK  = 0x0000;
+  constexpr uint16_t WHITE  = 0xFFFF;
+  constexpr uint16_t GREY   = 0x8410;
+  constexpr uint16_t RED    = 0xF800;
+  constexpr uint16_t YELLOW = 0xFFE0;
+  constexpr uint16_t GREEN  = 0x07E0;
+  constexpr uint16_t CYAN   = 0x07FF;
+  constexpr uint16_t LINE   = 0x4208;
+
+  void drawLabel(const char *label, int x, int y) {
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(GREY, BLACK);
+    spr.drawString(label, x, y, FONT_DEFAULT);
+  }
+
+  void drawRssiMeter(int x, int y, uint8_t value) {
+    // Convert the receiver's existing FM S-level (1..17) into 20 FT8-style blocks.
+    int strength = getStrength(value);
+    int filled = (strength * 20 + 16) / 17;
+    if(filled < 0) filled = 0;
+    if(filled > 20) filled = 20;
+
+    constexpr int blockW = 7;
+    constexpr int blockH = 10;
+    constexpr int gap = 2;
+    for(int i = 0; i < 20; ++i) {
+      uint16_t color = i < 7 ? RED : (i < 14 ? YELLOW : GREEN);
+      int bx = x + i * (blockW + gap);
+      if(i < filled) spr.fillRect(bx, y, blockW, blockH, color);
+      else spr.drawRect(bx, y, blockW, blockH, 0x39E7);
+    }
+  }
+
+  void drawValueOrDash(const char *value, int x, int y, int font = FONT_DEFAULT) {
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(value && value[0] ? WHITE : GREY, BLACK);
+    spr.drawString(value && value[0] ? value : "--", x, y, font);
+  }
 }
 
 bool fmDxUiOpen() {
@@ -44,52 +84,96 @@ void fmDxUiClick() {
 }
 
 void drawFmDxPage() {
-  constexpr uint16_t black = 0x0000;
-  constexpr uint16_t navy = 0x0821;
-  constexpr uint16_t blue = 0x001F;
-  constexpr uint16_t cyan = 0x07FF;
-  constexpr uint16_t green = 0x07E0;
-  constexpr uint16_t white = 0xFFFF;
-  constexpr uint16_t muted = 0xBDF7;
+  spr.fillSprite(BLACK);
 
-  spr.fillSprite(black);
-  spr.fillRect(8, 7, 4, 22, cyan);
+  // Header: compact instrument-style status line.
   spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(white, black);
-  spr.drawString("FM DX ASSISTANT", 18, 8, FONT_SMALL);
+  spr.setTextColor(WHITE, BLACK);
+  spr.drawString("FM DX MONITOR", 7, 3, FONT_DEFAULT);
   spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(fmDxActive() ? green : muted, black);
-  spr.drawString(fmDxActive() ? "AUTO ACTIVE" : "PAUSED", 310, 8, FONT_SMALL);
-  spr.drawFastHLine(8, 31, 304, blue);
+  spr.setTextColor(fmDxActive() ? GREEN : YELLOW, BLACK);
+  spr.drawString(fmDxActive() ? "DX AUTO" : "AUTO PAUSED", 313, 3, FONT_DEFAULT);
+  spr.drawFastHLine(7, 14, 306, LINE);
 
-  spr.fillRoundRect(12, 40, 296, 48, 6, navy);
-  spr.drawRoundRect(12, 40, 296, 48, 6, cyan);
-  char frequency[24];
-  snprintf(frequency, sizeof(frequency), "%u.%02u MHz",
+  // Frequency stays left aligned; the unit is separate to preserve room on the right.
+  char frequency[16];
+  snprintf(frequency, sizeof(frequency), "%u.%02u",
            currentFrequency / 100, currentFrequency % 100);
-  spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(green, navy);
-  spr.drawString(frequency, 160, 53, FONT_LARGE);
-
   spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(muted, black);
-  spr.drawString("SIGNAL", 18, 99, FONT_SMALL);
-  spr.drawString("SNR", 174, 99, FONT_SMALL);
-  char value[20];
-  snprintf(value, sizeof(value), "%u", rssi);
-  spr.setTextColor(white, black);
-  spr.drawString(value, 18, 117, FONT_LARGE);
-  snprintf(value, sizeof(value), "%u dB", snr);
-  spr.drawString(value, 174, 117, FONT_LARGE);
+  spr.setTextColor(WHITE, BLACK);
+  spr.drawString(frequency, 7, 17, FONT_LARGE);
+  spr.setTextColor(GREY, BLACK);
+  spr.drawString("MHz", 103, 25, FONT_SMALL);
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(CYAN, BLACK);
+  spr.drawString(fmDxBandwidthLabel(), 313, 27, FONT_SMALL);
 
-  spr.fillRoundRect(12, 145, 296, 17, 3, navy);
-  spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(cyan, navy);
-  char width[32];
-  snprintf(width, sizeof(width), "FM FILTER  %s", fmDxBandwidthLabel());
-  spr.drawString(width, 160, 153, FONT_SMALL);
+  // Station identity and valid RDS clock.
+  spr.drawFastHLine(7, 49, 306, LINE);
+  drawLabel("STATION", 7, 53);
+  const char *station = getStationName();
+  drawValueOrDash(station, 57, 51, FONT_SMALL);
+  const char *rdsTime = getRdsTime();
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(rdsTime && rdsTime[0] ? GREEN : GREY, BLACK);
+  spr.drawString(rdsTime && rdsTime[0] ? rdsTime : "--:--", 313, 53, FONT_SMALL);
 
-  spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(muted, black);
-  spr.drawString("CLICK: AUTO / PAUSE     HOLD: EXIT", 160, 168, FONT_DEFAULT);
+  // FT8-inspired segmented signal meter and separate SNR value.
+  drawLabel("RSSI", 7, 76);
+  drawRssiMeter(43, 76, rssi);
+  drawLabel("SNR", 237, 73);
+  char snrText[12];
+  snprintf(snrText, sizeof(snrText), "%u dB", snr);
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(WHITE, BLACK);
+  spr.drawString(snrText, 313, 73, FONT_SMALL);
+
+  // RDS metadata.
+  spr.drawFastHLine(7, 92, 306, LINE);
+  drawLabel("PI", 7, 97);
+  uint16_t pi = getRdsPiCode();
+  char piText[8];
+  if(pi) snprintf(piText, sizeof(piText), "%04X", pi);
+  else piText[0] = '\0';
+  drawValueOrDash(piText, 25, 95);
+
+  drawLabel("PTY", 76, 97);
+  const char *pty = getProgramInfo();
+  drawValueOrDash(pty, 101, 95);
+
+  // RadioText gets a fixed two-line area; blank RDS data remains visibly unavailable.
+  spr.drawFastHLine(7, 112, 306, LINE);
+  drawLabel("RADIO TEXT", 7, 116);
+  const char *radioText = getRadioText();
+  if(radioText && radioText[0]) {
+    char line1[48];
+    char line2[48];
+    size_t len = strlen(radioText);
+    size_t split = len > 47 ? 47 : len;
+    memcpy(line1, radioText, split);
+    line1[split] = '\0';
+    size_t remaining = len > split ? len - split : 0;
+    if(remaining > 47) remaining = 47;
+    if(remaining) memcpy(line2, radioText + split, remaining);
+    line2[remaining] = '\0';
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(WHITE, BLACK);
+    spr.drawString(line1, 7, 128, FONT_DEFAULT);
+    if(line2[0]) spr.drawString(line2, 7, 137, FONT_DEFAULT);
+  } else {
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(GREY, BLACK);
+    spr.drawString("--", 7, 128, FONT_DEFAULT);
+  }
+
+  // Footer: selected filter and operation hint.
+  spr.drawFastHLine(7, 150, 306, LINE);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(CYAN, BLACK);
+  spr.drawString("FILTER", 7, 155, FONT_DEFAULT);
+  spr.setTextColor(WHITE, BLACK);
+  spr.drawString(fmDxBandwidthLabel(), 43, 155, FONT_DEFAULT);
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(GREY, BLACK);
+  spr.drawString("CLICK: AUTO / PAUSE   HOLD: EXIT", 313, 155, FONT_DEFAULT);
 }

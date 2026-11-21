@@ -19,6 +19,10 @@ bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
   (void)capture;
   return false; // GPIO11 is SPI MOSI on this profile; keep the board guard.
 #else
+  // Start/confirm the shared sampler before allocating the JS8 worker. If the
+  // hardware capture cannot start, do not leave an idle JS8 task behind.
+  if (!capture.begin()) return false;
+
   if (initialized_) {
     if (capture_ != &capture) return false;
     if (active_) return true;
@@ -55,7 +59,6 @@ bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
     initialized_ = true;
   }
 
-  if (!capture.begin()) return false;
   active_ = false;
   xQueueReset(queue_);
   resetRequested_ = true;

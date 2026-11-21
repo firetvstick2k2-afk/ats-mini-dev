@@ -56,7 +56,7 @@ static constexpr DecoderFrequencyPreset kDecoderFrequencyPresets[] = {
   {"RTTY 10m", 28080, USB, 4, DecoderKind::RTTY, 45.45f},
 
   // DWD Pinneberg: RTTY/weather data and weather fax
-  {"PINNEBERG DDH 47", 147, AM, 4, DecoderKind::RTTY, 50.0f},
+  {"PINNEBERG DDH 47", 147, AM, 4}, // Receiver-only preset; below supported RTTY tuning range.
   {"PINNEBERG DDK 2", 4583, USB, 4, DecoderKind::RTTY, 50.0f},
   {"PINNEBERG DDH 7", 7646, USB, 4, DecoderKind::RTTY, 50.0f},
   {"PINNEBERG DDK 9", 10101, USB, 4, DecoderKind::RTTY, 50.0f},

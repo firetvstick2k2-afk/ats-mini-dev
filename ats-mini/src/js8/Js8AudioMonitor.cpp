@@ -46,7 +46,9 @@ bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
   }
 
   if (!capture.begin()) return false;
+  active_ = false;
   xQueueReset(queue_);
+  resetRequested_ = true;
   active_ = true;
   if (!capture.subscribe(this, onAudioSamples)) {
     active_ = false;
@@ -118,9 +120,42 @@ void Js8AudioMonitor::taskEntry(void* arg) {
 void Js8AudioMonitor::workerTask() {
   AudioBlock block{};
   for (;;) {
-    if (xQueueReceive(queue_, &block, pdMS_TO_TICKS(100)) == pdTRUE) {
-      if (active_) processBlock(block);
+    if (resetRequested_) {
+      resetMeasurementState();
+      resetRequested_ = false;
     }
+    if (xQueueReceive(queue_, &block, pdMS_TO_TICKS(100)) == pdTRUE) {
+      if (resetRequested_) {
+        resetMeasurementState();
+        resetRequested_ = false;
+      } else if (active_) {
+        processBlock(block);
+      }
+    }
+  }
+}
+
+void Js8AudioMonitor::resetMeasurementState() {
+  windowStartUs_ = firstCallbackUs_ = lastCallbackUs_ = 0;
+  intervalSumUs_ = intervalSamples_ = 0;
+  intervalCount_ = 0;
+  minIntervalUs_ = UINT32_MAX;
+  maxIntervalUs_ = 0;
+  previousBlockCount_ = 0;
+  windowSamples_ = clippedSamples_ = 0;
+  adcMin_ = INT16_MAX;
+  adcMax_ = INT16_MIN;
+  adcSum_ = 0;
+  adcSquareSum_ = 0;
+  portENTER_CRITICAL(&metricsMux_);
+  callbackBlocks_ = queueDrops_ = processedBlocks_ = 0;
+  discontinuities_ = estimatedMissingBlocks_ = 0;
+  published_ = Metrics{};
+  portEXIT_CRITICAL(&metricsMux_);
+  if (sampleMutex_) {
+    xSemaphoreTake(sampleMutex_, portMAX_DELAY);
+    sampleWrite_ = sampleCount_ = 0;
+    xSemaphoreGive(sampleMutex_);
   }
 }
 

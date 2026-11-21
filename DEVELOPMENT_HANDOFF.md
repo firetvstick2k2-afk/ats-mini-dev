@@ -1348,3 +1348,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Encoder rotation outside the Actions overlay uses the selected FM-DX step directly and the existing `updateFrequency(..., true)` band-wrap/retune path. This selection is local to the FM-DX page and does not change the saved band step.
 - Source change: `ats-mini/src/radio/FmDxUi.cpp`, commit `96adba5730789f2fe16033711cabb7dad7e465c3`.
 - Source-only review; no compilation, Actions build, flash or hardware test. User starts OSPI-DE build manually; `main` untouched.
+
+
+## FM-DX Short Scan action (2026-11-22)
+- Added **SHORT SCAN** as the first FM-DX Actions entry, ahead of AUTO, FILTER, STEP and BACK. The overlay now renders five rows within the 320×170 display.
+- Short Scan uses the receiver's existing FM seek routine (rx.seekStationProgress) in the forward direction, updates the current frequency during seek, then adopts the receiver's final frequency, clears stale station metadata and re-identifies the frequency. The existing abort callback is reused so encoder/button and remote abort requests remain available.
+- The seek runs synchronously from the Actions click handler; the UI does not animate a live scanning banner while the SI4735 seek routine is running. Confirm seek completion, station detection, abort behavior, audio unmute and AUTO bandwidth behavior on hardware.
+- Commits: 11160e7113cb80bb83ff6b14033c8f20c689621b, 489ceaa85886a4638a7fccd2b8dc48a3d6c3159f, b4ae6d45bc04f165c7759b13a2b2c7280df94714.
+- Source reviewed only. No compile, GitHub Actions build, or hardware test performed. User starts the manual OSPI-DE workflow.

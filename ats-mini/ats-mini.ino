@@ -916,6 +916,13 @@ void loop()
     }
     // The native Spectrum keypad handles its own encoder clicks below.
     // Do not let the generic click handler clear CMD_SPECTRUM_INPUT first.
+    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_FTX_DECODER)
+    {
+      ftxUiClick();
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+      pb1st.wasClicked = pb1st.wasShortPressed = false;
+    }
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_RTTY_DECODER)
     {
       rttyUiClick();

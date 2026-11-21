@@ -397,3 +397,16 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Changed: `ats-mini/src/rtty/RttyUi.cpp`, `ats-mini/src/rtty/RttyService.h`, `ats-mini/src/radio/DecoderFrequencyList.h`.
 - Source-only changes on `development`. No build, GitHub Actions run, flash, or hardware test was performed. User should run the OSPI-DE build and verify RTTY decoder startup plus all remaining amateur/DWD presets. The 147 kHz AM entry remains only as a general receiver preset and is not an RTTY decoder option.
 - Code commits: c97847a6db4baf845934aa86689c453882238305, 2ea3ef75564f1b759f5f5d45e9da4c9b691a9b91, 2b8d510446b777511e1425f82cbe911f67978c75.
+
+
+## Future feature: NAVTEX text receiver (planned after current ATS Mini Dev ports)
+- User approved NAVTEX as a future standalone decoder feature to be ported only after the current ATS Mini Dev port work is completed. This is a handoff/planning item only; do not start implementation as part of the current ports.
+- Target hardware remains ATS Mini V4 (ESP32-S3 + SI4732), using the existing supported 150 kHz–30 MHz receive range; no hardware modification is planned.
+- UI is deliberately text-first: no waterfall or spectrum display. Show the incoming message as it is decoded, with new text appended and older text scrolling upward. Keep the page focused on readable message text and compact receiver/message status.
+- Implement a separate NAVTEX/SITOR-B decoder path. NAVTEX is not plain RTTY: it requires SITOR-B/CCIR-476 character handling, synchronization and forward-error-correction (FEC), plus message framing and validation.
+- Frequencies/presets requested: 518 kHz international NAVTEX (normally English), 490 kHz national/local-language NAVTEX, and 4209.5 kHz HF NAVTEX. Presets should be selectable from the NAVTEX Actions submenu; no separate manual Frequency item is currently required.
+- Planned NAVTEX Actions submenu: START NAVTEX, STOP NAVTEX, NAVTEX PRESETS, MESSAGE LOG, CLEAR LOG, BACK. Presets contain the supported NAVTEX frequencies and their labels.
+- Completed messages should be archived in LittleFS and remain readable after decoder exit/reboot. Live display and archive browsing are separate functions. Use message identifiers to detect duplicates; only mark a message complete after its NNNN end marker. Preserve/label incomplete receptions separately rather than presenting them as complete.
+- Reuse existing receiver/audio infrastructure only after checking its sample-rate, bandwidth, capture ownership and lifecycle constraints. Do not assume the shared 4 kHz FT8/CW audio service or the separate 8 kHz RTTY capture is automatically suitable; do not modify existing CW, FT8/FT4 or RTTY behavior to make NAVTEX work.
+- Keep the implementation isolated in NAVTEX-specific service, decoder and UI files, with localized German/English menu strings. No changes to TEF6686/Clean layouts or unrelated radio features.
+- No code has been written, no build/Actions run, no flash and no hardware test performed. User will port/test after current ATS Mini Dev ports.

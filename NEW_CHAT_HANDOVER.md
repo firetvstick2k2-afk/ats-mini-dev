@@ -497,3 +497,12 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - No compile, Actions, flash or hardware test.
 
 - UI follow-up: while the synthetic source is active, the monitor now labels it SYNTH / NOMINAL 4 kHz instead of implying GPIO11 is being sampled (commit 6f659ff205a64b6922ee772c5a882e0fe26fb927).
+
+
+## JS8 UI / next self-test update — 2026-11-21
+
+- Latest JS8 screen commit on development: 959e58308b4982fa96e3a754c7bc4f0249b55597.
+- Js8Ui.cpp now uses pure black, white primary text, muted secondary text and limited green accents. Metrics are compressed into three rows; lower half is reserved for decoded messages. It displays a waiting prompt rather than fake decoded content.
+- Existing generic 8-FSK click test is still only an audio pipeline/timing stimulus. It is not a protocol-valid JS8 NORMAL frame and cannot decode a known message.
+- Next: build an independently generated, protocol-valid JS8 NORMAL golden vector with a fixed payload; host-validate symbol/tone/timing/LDPC/CRC metadata; then implement the JS8-only sample consumer and NORMAL decoder and use the golden vector as an on-device decoder self-test. Only display text after valid sync + LDPC + CRC.
+- No build/Actions/flash/hardware test was performed. Continue only on development; main untouched.

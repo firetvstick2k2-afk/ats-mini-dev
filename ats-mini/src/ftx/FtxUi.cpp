@@ -5,6 +5,7 @@
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
+#include <LittleFS.h>
 
 #include "FtxDecoderService.h"
 #include "../audio/AudioCaptureService.h"
@@ -38,7 +39,9 @@ bool ftxSpeakerEnabled = true;
 bool ftxActionsOpen = false;
 bool ftxAutoScroll = true;
 uint8_t ftxMenuSelection = 0;
-constexpr uint8_t kFtxMenuItems = 5;
+constexpr uint8_t kFtxMenuItems = 6;
+bool ftxLogEnabled = false;
+char ftxLogPath[40] = {};
 
 const char* countryForCall(const char* call)
 {
@@ -226,11 +229,71 @@ void drawFlag(const char* country, int x, int y)
   }
 }
 
+bool ftxLogStart()
+{
+  if(!clockAvailable()) return false;
+  const time_t now = time(nullptr);
+  struct tm dateTime = {};
+  if(!gmtime_r(&now, &dateTime)) return false;
+  char base[32] = {};
+  snprintf(base, sizeof(base), "%s_%02d.%02d.%02d",
+           pageMode == FtxMode::FT4 ? "FT4" : "FT8",
+           dateTime.tm_mday, dateTime.tm_mon + 1, (dateTime.tm_year + 1900) % 100);
+  for(uint16_t suffix = 0; suffix < 1000; ++suffix) {
+    if(suffix == 0) snprintf(ftxLogPath, sizeof(ftxLogPath), "/%s.txt", base);
+    else snprintf(ftxLogPath, sizeof(ftxLogPath), "/%s_%u.txt", base, suffix);
+    if(!LittleFS.exists(ftxLogPath)) {
+      File file = LittleFS.open(ftxLogPath, "w");
+      if(!file) { ftxLogPath[0] = 0; return false; }
+      file.printf("# %s reception log\n# Date/time: UTC\n# QTH: JO31TV\n# Columns: UTC | Frequency kHz | Mode | Country | Locator | Distance km | SNR dB | Message\n",
+                  pageMode == FtxMode::FT4 ? "FT4" : "FT8");
+      file.flush();
+      file.close();
+      ftxLogEnabled = true;
+      return true;
+    }
+  }
+  ftxLogPath[0] = 0;
+  return false;
+}
+
+void ftxLogStop()
+{
+  ftxLogEnabled = false;
+}
+
+void ftxLogMessage(const FtxDecodedMessage& message)
+{
+  if(!ftxLogEnabled || !ftxLogPath[0] || !message.text[0]) return;
+  File file = LittleFS.open(ftxLogPath, "a");
+  if(!file) { ftxLogStop(); return; }
+  struct tm stamp = {};
+  const bool haveTime = gmtime_r(&message.slotUtc, &stamp) != nullptr;
+  char timeText[24] = "unknown";
+  if(haveTime) strftime(timeText, sizeof(timeText), "%Y-%m-%d %H:%M:%S", &stamp);
+  char country[4] = {}, locator[8] = {};
+  int distanceKm = -1;
+  extractMetadata(message.text, country, sizeof(country), locator, sizeof(locator), distanceKm);
+  file.printf("%s | %u.%03u | %s | %s | %s | ",
+              timeText,
+              static_cast<unsigned>(currentFrequency / 1000),
+              static_cast<unsigned>(currentFrequency % 1000),
+              pageMode == FtxMode::FT4 ? "FT4" : "FT8",
+              country[0] ? country : "Unknown",
+              locator[0] ? locator : "N/A");
+  if(distanceKm >= 0) file.printf("%d", distanceKm);
+  else file.print("N/A");
+  file.printf(" | %.1f | %s\n", message.snrDb, message.text);
+  file.flush();
+  file.close();
+}
+
 void addRecentMessage(const FtxDecodedMessage& message)
 {
   if(!message.text[0]) return;
   for(int i=2;i>0;--i) recentMessages[i]=recentMessages[i-1];
   recentMessages[0]=message;
+  ftxLogMessage(message);
   ++decodedMessageCount;
   if(message.ldpcErrors>0) ldpcErrorCount += static_cast<uint32_t>(message.ldpcErrors);
 }
@@ -278,6 +341,8 @@ bool ftxUiOpen(FtxMode mode)
   ftxActionsOpen = false;
   ftxMenuSelection = 0;
   ftxAutoScroll = true;
+  ftxLogEnabled = false;
+  ftxLogPath[0] = 0;
   restoreNetworkMode = wifiModeIdx;
   netStop();
 
@@ -318,6 +383,7 @@ void ftxUiExit()
   if(!pageActive) return;
   pageActive = false;
   ftxActionsOpen = false;
+  ftxLogStop();
   decoderService.exit();
   if(PIN_AMP_EN >= 0) digitalWrite(PIN_AMP_EN, ftxSpeakerAmpBefore ? HIGH : LOW);
   ftxSpeakerEnabled = ftxSpeakerAmpBefore;
@@ -364,10 +430,14 @@ void ftxUiClick()
       decodedMessageCount = 0;
       ldpcErrorCount = 0;
       break;
-    case 3: // Back
+    case 3: // Toggle per-session log
+      if(ftxLogEnabled) ftxLogStop();
+      else ftxLogStart();
+      break;
+    case 4: // Back
       ftxActionsOpen = false;
       break;
-    case 4: // Exit decoder
+    case 5: // Exit decoder
       ftxUiExit();
       break;
   }
@@ -455,11 +525,12 @@ void drawFtxDecoderPage()
   }
 
   if(ftxActionsOpen) {
-    const int menuX=28, menuY=27, menuW=264, menuH=128;
+    const int menuX=28, menuY=16, menuW=264, menuH=140;
     const char* labels[kFtxMenuItems] = {
       ftxSpeakerEnabled ? "SPEAKER       ON" : "SPEAKER       OFF",
       ftxAutoScroll ? "AUTO SCROLL   ON" : "AUTO SCROLL   OFF",
       "CLEAR STATIONS",
+      ftxLogEnabled ? "LOGGING       ON" : "LOGGING       OFF",
       "BACK",
       "EXIT FT8 + FT4"
     };
@@ -470,7 +541,7 @@ void drawFtxDecoderPage()
     spr.setTextColor(cyan);
     spr.drawString(pageMode==FtxMode::FT4 ? "FT4 ACTIONS" : "FT8 ACTIONS",menuX+12,menuY+8);
     for(uint8_t i=0;i<kFtxMenuItems;++i) {
-      const int y=menuY+29+i*19;
+      const int y=menuY+27+i*17;
       if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,18,0x0359);
       spr.setTextColor(i==ftxMenuSelection?0xFFFF:0xBDF7);
       spr.drawString(labels[i],menuX+14,y);

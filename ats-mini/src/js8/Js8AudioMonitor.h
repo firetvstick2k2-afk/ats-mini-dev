@@ -10,7 +10,7 @@
 // modifies the shared capture stream or another decoder's state.
 class Js8AudioMonitor {
 public:
-  static constexpr size_t kSnapshotSamples = 4096; // 1.024 s at nominal 4 kHz
+  static constexpr size_t kSnapshotSamples = 50560; // one 79-symbol NORMAL frame at 4 kHz
 
   struct Metrics {
     bool valid = false;
@@ -30,6 +30,9 @@ public:
     uint32_t minBlockIntervalUs = 0;
     uint32_t maxBlockIntervalUs = 0;
     uint32_t windowDurationUs = 0;
+    bool testFrameComplete = false;
+    bool testSyncPass = false;
+    uint8_t testMatchedPilots = 0;
   };
 
   bool begin(AudioCaptureService& capture);
@@ -81,6 +84,9 @@ private:
   bool initialized_ = false;
 
   uint32_t testSampleIndex_ = 0;
+  bool testFrameComplete_ = false;
+  bool testSyncPass_ = false;
+  uint8_t testMatchedPilots_ = 0;
   float testPhase_ = 0.0f;
   int16_t* sampleRing_ = nullptr;
   size_t sampleWrite_ = 0;

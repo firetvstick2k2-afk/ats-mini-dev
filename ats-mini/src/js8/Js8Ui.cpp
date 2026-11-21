@@ -110,17 +110,23 @@ void drawJs8MonitorPage() {
   spr.drawFastHLine(8, 99, 304, line);
   spr.setTextColor(white, black);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-  spr.drawString("DECODED MESSAGES", 8, 112);
+  spr.drawString("TEST PAYLOAD (LOCAL ONLY)", 8, 112);
 
-  // Keep the message area intentionally empty until a frame passes JS8 sync,
-  // LDPC and CRC validation. Never show a fabricated/demo decode as received text.
-  spr.setTextColor(muted, black);
+  // Fixed UI fixture only; it is not encoded in or decoded from audio.
+  spr.setTextColor(green, black);
   spr.setFont(FONT_SMALL);
-  spr.drawString("Waiting for valid JS8 NORMAL frame...", 8, 132);
-  spr.drawString("Known-text test will appear here.", 8, 146);
+  spr.drawString("CQ ATS MINI - JS8 NORMAL TEST", 8, 132);
+  spr.setTextColor(muted, black);
+  if (m.testFrameComplete) {
+    snprintf(row, sizeof(row), "LOCAL COSTAS: %s  (%u/21)",
+             m.testSyncPass ? "PASS" : "CHECK", m.testMatchedPilots);
+  } else {
+    snprintf(row, sizeof(row), "LOCAL COSTAS: waiting for 12.64 s test frame");
+  }
+  spr.drawString(row, 8, 146);
 
   spr.drawFastHLine(8, 156, 304, line);
   spr.setTextColor(white, black);
   spr.setTextDatum(MC_DATUM);
-  spr.drawString("CLICK: AUDIO TEST     HOLD: EXIT", 160, 165, FONT_SMALL);
+  spr.drawString("CLICK: 12.64s TEST     HOLD: EXIT", 160, 165, FONT_SMALL);
 }

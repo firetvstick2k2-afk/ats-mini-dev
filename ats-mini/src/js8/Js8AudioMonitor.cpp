@@ -1,4 +1,5 @@
 #include "Js8AudioMonitor.h"
+#include "Js8NormalSync.h"
 
 #include <esp_timer.h>
 #include <esp_heap_caps.h>
@@ -15,6 +16,7 @@ constexpr BaseType_t kWorkerCore = 1;
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kTestBaseHz = 1000.0f;
 constexpr float kTestToneSpacingHz = 6.25f;
+constexpr uint8_t kNormalCostas[7] = {4, 2, 5, 6, 1, 3, 0};
 }
 
 bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
@@ -30,11 +32,9 @@ bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
   } else {
     queue_ = xQueueCreate(kQueueDepth, sizeof(AudioBlock));
     sampleMutex_ = xSemaphoreCreateMutex();
+    // A full NORMAL frame is ~101 KB. Require PSRAM; never consume scarce internal heap.
     sampleRing_ = static_cast<int16_t*>(heap_caps_malloc(
       kSnapshotSamples * sizeof(int16_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
-    if (!sampleRing_)
-      sampleRing_ = static_cast<int16_t*>(heap_caps_malloc(
-        kSnapshotSamples * sizeof(int16_t), MALLOC_CAP_8BIT));
     if (!queue_ || !sampleMutex_ || !sampleRing_) {
       if (queue_) vQueueDelete(queue_);
       if (sampleMutex_) vSemaphoreDelete(sampleMutex_);
@@ -89,6 +89,9 @@ bool Js8AudioMonitor::startTestPlayback() {
   resetRequested_ = true;
   testSampleIndex_ = 0;
   testPhase_ = 0.0f;
+  testFrameComplete_ = false;
+  testSyncPass_ = false;
+  testMatchedPilots_ = 0;
   testPlayback_ = true;
   return true;
 }
@@ -165,9 +168,12 @@ void Js8AudioMonitor::makeTestBlock(AudioBlock& block) {
   for (size_t i = 0; i < block.count; ++i) {
     if (testSampleIndex_ < kTestSymbolCount * kTestSymbolSamples) {
       const uint32_t symbol = testSampleIndex_ / kTestSymbolSamples;
-      // Deterministic 8-tone sequence for repeatable DSP plumbing tests.
-      // This is deliberately NOT represented as a CRC/LDPC-valid JS8 frame.
-      const uint32_t tone = (symbol * 5U + (symbol * symbol + 3U) % 7U) & 7U;
+      // NORMAL Costas pilots plus deterministic arbitrary data tones.
+      // This synthetic frame is NOT a CRC/LDPC-valid JS8 message.
+      uint32_t tone = (symbol * 5U + (symbol * symbol + 3U) % 7U) & 7U;
+      if (symbol < 7U) tone = kNormalCostas[symbol];
+      else if (symbol >= 36U && symbol < 43U) tone = kNormalCostas[symbol - 36U];
+      else if (symbol >= 72U) tone = kNormalCostas[symbol - 72U];
       const float frequency = kTestBaseHz + tone * kTestToneSpacingHz;
       testPhase_ += 2.0f * kPi * frequency / AudioCaptureService::kSampleRate;
       if (testPhase_ >= 2.0f * kPi) testPhase_ -= 2.0f * kPi;
@@ -198,7 +204,7 @@ void Js8AudioMonitor::workerTask() {
       if (testSampleIndex_ >= kTestSymbolCount * kTestSymbolSamples) {
         testPlayback_ = false;
         advanceSourceGeneration(); // invalidate any late synthetic/live block before resubscribe
-        resetRequested_ = true;
+        // Preserve the completed local frame and its sync result for the UI.
         if (active_ && capture_) capture_->subscribe(this, onAudioSamples);
       }
       vTaskDelayUntil(&nextPlaybackTick, pdMS_TO_TICKS(6));
@@ -233,6 +239,8 @@ uint32_t Js8AudioMonitor::advanceSourceGeneration() {
 
 void Js8AudioMonitor::resetMeasurementState() {
   windowStartUs_ = firstCallbackUs_ = lastCallbackUs_ = 0;
+  testFrameComplete_ = testSyncPass_ = false;
+  testMatchedPilots_ = 0;
   intervalSumUs_ = intervalSamples_ = 0;
   intervalCount_ = 0;
   minIntervalUs_ = UINT32_MAX;
@@ -293,10 +301,17 @@ void Js8AudioMonitor::processBlock(const AudioBlock& block) {
   }
 
   xSemaphoreTake(sampleMutex_, portMAX_DELAY);
-  for (size_t i = 0; i < block.count; ++i) {
+  for (size_t i = 0; i < block.count && sampleCount_ < kSnapshotSamples; ++i) {
     sampleRing_[sampleWrite_] = block.samples[i];
     sampleWrite_ = (sampleWrite_ + 1) % kSnapshotSamples;
-    if (sampleCount_ < kSnapshotSamples) ++sampleCount_;
+    ++sampleCount_;
+  }
+  if (testPlayback_ && !testFrameComplete_ && sampleCount_ == kSnapshotSamples) {
+    Js8NormalSync::Result sync{};
+    testSyncPass_ = Js8NormalSync::evaluate(sampleRing_, sampleCount_, 0,
+                                            kTestBaseHz, 0.0f, sync);
+    testMatchedPilots_ = sync.matchedPilots;
+    testFrameComplete_ = true;
   }
   xSemaphoreGive(sampleMutex_);
 
@@ -320,6 +335,9 @@ void Js8AudioMonitor::publishWindow(int64_t endTimeUs) {
   next.adcMean = static_cast<float>(mean);
   next.adcRmsAc = static_cast<float>(sqrt(variance));
   next.windowDurationUs = static_cast<uint32_t>(endTimeUs - windowStartUs_);
+  next.testFrameComplete = testFrameComplete_;
+  next.testSyncPass = testSyncPass_;
+  next.testMatchedPilots = testMatchedPilots_;
   next.meanBlockIntervalUs = intervalCount_
     ? static_cast<float>(intervalSumUs_) / intervalCount_ : 0.0f;
   next.minBlockIntervalUs = intervalCount_ ? minIntervalUs_ : 0;

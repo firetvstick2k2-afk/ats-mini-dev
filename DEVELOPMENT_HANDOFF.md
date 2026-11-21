@@ -17,7 +17,7 @@ Active work branch: `development` (never modify `main` unless explicitly request
 - New features must be isolated from existing features wherever practical. If implementing a feature would require changing shared feature-specific logic, duplicate that logic into a new module/state/handler for the new feature rather than refactoring the established feature.
 - Preserve Dual RX, existing Web Spectrum behavior, Clean Layout and especially Layout-TEF6686 unless a change is explicitly required.
 - Shared low-level radio/scanning primitives may be reused only after checking their side effects and compatibility.
-- Build workflow is manual (`workflow_dispatch`). Do not claim a build/device test passed unless verified. User launches build and tests on ATS Mini.
+- Build workflow: pushes to `development` trigger the OSPI-DE BIN build; `workflow_dispatch` remains available. Do not claim a build/device test passed unless verified. Never modify `main` without explicit approval.
 - Keep branch hygiene simple; development first. User manages copying approved README/release changes to main unless explicitly asked.
 
 ## Previous task: native VHF Spectrum Scanner
@@ -1161,3 +1161,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Added `tests/js8_normal_sync_test.cpp` for the independent Costas metric. Host compile/run with g++17, -Wall -Wextra -Werror passed: correct 21-pilot NORMAL sequence with +1.25 Hz carrier hypothesis and 17-sample start offset; rejects deliberately altered Costas pilots; rejects incomplete frame window.
 - Test command and scope are documented in `JS8CALL_RECEIVE_DECODER.md` section 12. The fixture is not an LDPC/CRC-valid JS8 message. No ESP32 build yet.
 - Next: trigger the existing OSPI-DE workflow on a development push after the workflow trigger update. Artifact remains a single raw `Mini_OS_#<run>.bin`, with no partition files and no release on branch pushes. Then user manually flashes and follows the first monitor/firmware validation steps. Decoder remains sync-metric-only; no message decode claim.
+
+
+## JS8 NORMAL hardware-test milestone (2026-11-21)
+- The JS8 monitor retains one complete 79-symbol NORMAL window (50,560 samples / 12.64 s at 4 kHz). The ~101 KB ring is allocated from PSRAM only; if PSRAM is unavailable, startup fails safely instead of consuming scarce internal heap. The existing LILYGO GPIO11/SPI guard remains.
+- Internal test playback contains the NORMAL Costas sequence at symbols 0–6, 36–42 and 72–78, with deterministic non-protocol tones in data positions. The completed local frame is evaluated at its known start and nominal frequency using the existing independent Costas metric.
+- The UI fixture string `CQ ATS MINI - JS8 NORMAL TEST` is explicitly labelled **TEST PAYLOAD (LOCAL ONLY)**. It is a display fixture, not text encoded in or decoded from audio.
+- This milestone does not implement blind live-air acquisition, LDPC/CRC validation, or received-message decoding. GPIO11 audio quality, PSRAM, timing and display behavior still require hardware testing.

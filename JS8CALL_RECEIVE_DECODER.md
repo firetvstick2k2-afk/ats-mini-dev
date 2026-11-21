@@ -343,3 +343,7 @@ g++ -std=c++17 -Wall -Wextra -Werror \\
 Observed result: `PASS: NORMAL Costas metric offset, pilot count, wrong sequence, bounds`.
 
 This is a host compile/test of the standalone metric, not an ESP32 firmware compile. The test fixture has a JS8-shaped NORMAL pilot layout and arbitrary non-pilot data tones; it is not a valid LDPC/CRC-encoded JS8 message. The current metric also evaluates a caller-proposed frame start/frequency; no automatic time/frequency search or receive-window integration exists yet. The build workflow will be configured to run on pushes to `development` as well as manual dispatch, so the next development push can produce the OSPI-DE firmware artifact. It will not create a release for ordinary development-branch pushes.
+
+
+## 13. Local NORMAL hardware self-test
+The audio monitor now retains a complete 79-symbol NORMAL frame (50,560 samples at 4 kHz) and generates the three NORMAL Costas pilot blocks in its internal test waveform. It evaluates that known local waveform at the known frame start and nominal tone frequency; this is a deterministic self-test, not a blind acquisition search. The UI fixture text is labelled **TEST PAYLOAD (LOCAL ONLY)** and is not decoded from the waveform. PSRAM is required for the full-frame ring. LDPC/CRC and live-air text decoding remain unimplemented.

@@ -69,7 +69,7 @@ private:
   volatile bool resetRequested_ = false;
   bool initialized_ = false;
 
-  int16_t sampleRing_[kSnapshotSamples]{};
+  int16_t* sampleRing_ = nullptr;
   size_t sampleWrite_ = 0;
   size_t sampleCount_ = 0;
 

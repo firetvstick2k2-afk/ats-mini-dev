@@ -785,12 +785,7 @@ void drawFtxDecoderPage()
   spr.drawString(frequencyText,8,5,&lgfx::fonts::Orbitron_Light_24);
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(ftxSpeakerEnabled?0x07E0:0xF800);
-  spr.drawString(ftxSpeakerEnabled?"SPK ON":"SPK OFF",151,13,FONT_SMALL);
-  if(ftxOfflineSyncActive) {
-    const bool locked = decoderService.offlineSyncLocked();
-    spr.setTextColor(locked ? 0x07E0 : 0xFFE0);
-    spr.drawString(locked ? "SIG LOCK" : "SIG SCAN",218,13,FONT_SMALL);
-  }
+  spr.drawString(ftxSpeakerEnabled?"SPK ON":"SPK OFF",126,13,FONT_SMALL);
   char counters[32];
   snprintf(counters,sizeof(counters),"DEC %lu ERR %lu",
     static_cast<unsigned long>(decodedMessageCount),

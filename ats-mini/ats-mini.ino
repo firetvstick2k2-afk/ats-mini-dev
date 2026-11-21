@@ -686,7 +686,17 @@ void loop()
   ButtonTracker::State pb1st = pb1.update(digitalRead(ENCODER_PUSH_BUTTON) == LOW);
   if(!pb1st.isPressed) decoderMenuLongPressHandled = false;
 
-  // Handle FM DX screen exit immediately after sampling the physical button.\n  if(currentCmd == CMD_FM_DX && pb1st.isLongPressed && !decoderMenuLongPressHandled)\n  {\n    decoderMenuLongPressHandled = true;\n    pb1st.wasClicked = pb1st.wasShortPressed = false;\n    fmDxUiExit();\n    needRedraw = true;\n    elapsedSleep = elapsedCommand = currentTime = millis();\n  }\n\n  // Handle JS8 monitor exit immediately after sampling the physical button.
+  // Handle FM DX screen exit immediately after sampling the physical button.
+  if(currentCmd == CMD_FM_DX && pb1st.isLongPressed && !decoderMenuLongPressHandled)
+  {
+    decoderMenuLongPressHandled = true;
+    pb1st.wasClicked = pb1st.wasShortPressed = false;
+    fmDxUiExit();
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime = millis();
+  }
+
+  // Handle JS8 monitor exit immediately after sampling the physical button.
   if(currentCmd == CMD_JS8_MONITOR && pb1st.isLongPressed && !decoderMenuLongPressHandled)
   {
     decoderMenuLongPressHandled = true;
@@ -801,7 +811,15 @@ void loop()
   if(currentCmd == CMD_DUAL_RX && digitalRead(ENCODER_PUSH_BUTTON) != LOW && dualRxTick(currentTime))
     needRedraw = true;
 
-  if(currentCmd == CMD_FM_DX && encCount)\n  {\n    fmDxUiRotate(encCount);\n    needRedraw = true;\n    elapsedSleep = elapsedCommand = currentTime;\n    encCount = encCountAccel = 0;\n  }\n\n  if(currentCmd == CMD_FTX_DECODER && encCount)
+  if(currentCmd == CMD_FM_DX && encCount)
+  {
+    fmDxUiRotate(encCount);
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime;
+    encCount = encCountAccel = 0;
+  }
+
+  if(currentCmd == CMD_FTX_DECODER && encCount)
   {
     ftxUiRotate(encCount);
     needRedraw = true;
@@ -968,7 +986,14 @@ void loop()
     }
     // The native Spectrum keypad handles its own encoder clicks below.
     // Do not let the generic click handler clear CMD_SPECTRUM_INPUT first.
-    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_FM_DX)\n    {\n      fmDxUiClick();\n      needRedraw = true;\n      elapsedSleep = elapsedCommand = currentTime = millis();\n      pb1st.wasClicked = pb1st.wasShortPressed = false;\n    }\n    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_FTX_DECODER)
+    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_FM_DX)
+    {
+      fmDxUiClick();
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+      pb1st.wasClicked = pb1st.wasShortPressed = false;
+    }
+    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_FTX_DECODER)
     {
       ftxUiClick();
       needRedraw = true;
@@ -1105,7 +1130,9 @@ void loop()
     pb1st.wasClicked = pb1st.wasShortPressed = false;
   }
 
-  if(currentCmd == CMD_FM_DX && fmDxUiTick(currentTime))\n    needRedraw = true;\n  if(currentCmd == CMD_FTX_DECODER && ftxUiTick(currentTime))
+  if(currentCmd == CMD_FM_DX && fmDxUiTick(currentTime))
+    needRedraw = true;
+  if(currentCmd == CMD_FTX_DECODER && ftxUiTick(currentTime))
     needRedraw = true;
   if(currentCmd == CMD_RTTY_DECODER && rttyUiTick(currentTime))
     needRedraw = true;

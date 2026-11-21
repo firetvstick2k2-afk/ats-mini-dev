@@ -46,6 +46,9 @@ constexpr uint32_t kFtxPresetPreviewDelayMs = 2000;
 VfoState ftxPresetOriginalState{};
 int16_t ftxPresetOriginalBfo = 0;
 bool ftxPresetOriginalValid = false;
+Band ftxPresetTargetBandOriginal{};
+int ftxPresetTargetBandIndex = -1;
+bool ftxPresetTargetBandSnapshotValid = false;
 bool ftxPresetPreviewPending = false;
 bool ftxPresetPreviewActive = false;
 uint32_t ftxPresetPreviewStartedAt = 0;
@@ -288,6 +291,8 @@ void restoreFtxPresetPreviewSpeaker()
 void clearFtxPresetPreviewState()
 {
   ftxPresetOriginalValid = false;
+  ftxPresetTargetBandIndex = -1;
+  ftxPresetTargetBandSnapshotValid = false;
   ftxPresetPreviewPending = false;
   ftxPresetPreviewActive = false;
   ftxPresetPreviewStartedAt = 0;
@@ -297,6 +302,9 @@ void clearFtxPresetPreviewState()
 void restoreFtxPresetOriginal(bool clearSnapshot = true)
 {
   if(ftxPresetOriginalValid && ftxPresetPreviewActive) {
+    if(ftxPresetTargetBandSnapshotValid && ftxPresetTargetBandIndex >= 0 &&
+       ftxPresetTargetBandIndex < getTotalBands())
+      bands[ftxPresetTargetBandIndex] = ftxPresetTargetBandOriginal;
     Band& savedBand = bands[ftxPresetOriginalState.band];
     savedBand.currentFreq = ftxPresetOriginalState.freq;
     savedBand.bandMode = ftxPresetOriginalState.mode;
@@ -358,6 +366,8 @@ void commitFtxPresetPreview()
   // Keep the selected frequency, but undo any temporary speaker override.
   restoreFtxPresetPreviewSpeaker();
   ftxPresetOriginalValid = false;
+  ftxPresetTargetBandIndex = -1;
+  ftxPresetTargetBandSnapshotValid = false;
   ftxPresetPreviewPending = false;
   ftxPresetPreviewActive = false;
   ftxPresetPreviewStartedAt = 0;
@@ -381,6 +391,10 @@ bool applyFtxPreset(const DecoderFrequencyPreset& preset)
   }
   if(bestBand < 0) return false;
 
+  // Keep the target band's pre-preview memory intact when auditioning another band.
+  ftxPresetTargetBandIndex = bestBand;
+  ftxPresetTargetBandOriginal = bands[bestBand];
+  ftxPresetTargetBandSnapshotValid = true;
   bands[bestBand].currentFreq = static_cast<uint16_t>(preset.frequencyKHz);
   bands[bestBand].bandMode = preset.modulation;
   bands[bestBand].bandwidthIdx = preset.bandwidthChoice;

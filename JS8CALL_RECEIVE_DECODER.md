@@ -202,3 +202,27 @@ The ATS Mini repository is MIT-licensed. The JS8Call reference implementation is
 - JS8Call-improved source file index: https://js8call.com/JS8Call-improved/files.html
 - JS8Call source and license notice: https://github.com/JS8Call-improved/JS8Call-improved
 - Original JS8Call repository: https://github.com/js8call/js8call
+
+
+## 2c. Source audit of the actual ATS Mini capture scheduler (2026-11-21)
+
+The live AudioCaptureService.cpp was inspected rather than treating its declared 4 kHz rate as a hardware-clock guarantee:
+
+- GPIO11 is sampled by repeated software calls to analogRead(); this is not an I2S/DMA audio stream. The task schedules reads against esp_timer_get_time() and a nominal 4,000-sample/s target.
+- Samples are delivered in blocks of 24 (nominally 6 ms). The callback timestamp is derived from gettimeofday() at block delivery and back-calculated from the block length; it is not a per-sample monotonic hardware timestamp.
+- Every 2,000 samples the capture task calls vTaskDelay(1) and resets its scheduling base. The cost/jitter of analogRead(), task scheduling and this periodic yield therefore need to be measured; kSampleRate = 4000 alone does not prove an exact or low-jitter sample clock.
+- The ADC values are passed as raw signed 16-bit integers representing the ADC reading; the existing FTX consumer removes a slowly varying DC estimate and scales the result. JS8 must independently validate DC offset, usable amplitude, clipping, noise and sample-clock behavior.
+- The existing LILYGO guard is explicit: AudioCaptureService::begin() returns false for LILYGO_SI473X because GPIO11 is SPI MOSI on that profile. JS8 must preserve this restriction.
+
+### Consequence for the first implementation milestone
+
+Do not begin by adding the JS8 LDPC decoder or a UI. First add a non-invasive, JS8-owned capture diagnostic path that subscribes to the existing service and measures, without changing the FT8/CW/RTTY consumers:
+
+1. callback cadence and long-term sample-clock drift using monotonic esp_timer_get_time() observations and the known sample count per block;
+2. queue overruns, missing blocks and discontinuities;
+3. ADC minimum/maximum, mean/DC, RMS/AC level and clipping frequency over bounded windows;
+4. spectral response and tone-bin separation using controlled 4 kHz test signals, followed by legally usable real JS8 NORMAL recordings.
+
+The callback must only copy/enqueue a bounded block and timestamp it. All window statistics and spectral analysis belong in the JS8 worker. A measured callback cadence is only an estimate of the capture scheduler output timing; it cannot expose every intra-block ADC interval. If the diagnostic shows unacceptable jitter or drift, evaluate a narrowly scoped timing improvement to the shared capture service separately and regression-test existing digital decoders before adopting it.
+
+Do not change the shared sampler just to suit JS8 before this measurement. In particular, do not create a second ADC sampler, do not alter FT8/CW/RTTY behavior as a side effect, and do not claim that the 4 kHz stream is suitable until the real capture path passes these checks.

@@ -220,3 +220,10 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Moved the RTTY-specific long-press handling to immediately after the physical ButtonTracker sample in `ats-mini/ats-mini.ino`, before serial/BLE/TCP and encoder event handling. The handler is one-shot per physical press, clears pending short-click flags, calls `rttyUiExit()`, and refreshes the main screen/timers. The existing later generic RTTY long-press branch remains guarded by the same one-shot flag and therefore cannot double-exit.
 - Scope is limited to RTTY exit dispatch; decoder DSP/service, baud presets, FT8/FT4, shared audio, TEF6686 and LittleFS are unchanged.
 - Source-only fix; no build, Actions run, flash or hardware verification. On next device test, verify long press exits RTTY, restores BFO/volume/Wi-Fi, and returns to the normal radio screen; short click must still cycle BAUD/BFO modes.
+
+
+## FT8/FT4 switchable speaker monitoring — 2026-11-21
+- Added short encoder click on the FT8/FT4 decoder page to toggle speaker output while the decoder continues running. The header shows `SPK ON` / `SPK OFF`; default is the pre-entry amplifier state (normally ON).
+- The toggle controls only `PIN_AMP_EN` (external speaker amplifier). It deliberately does NOT call `muteOn()`, `rx.setAudioMute()`, alter receiver volume, or change GPIO11 ADC capture, because GPIO11 is the live FT8/FT4 decoder audio tap. This keeps the receiver volume boost at 50 and preserves the captured audio path while the speaker amp is disabled.
+- On decoder exit, the amplifier enable state present on entry is restored; the existing original receiver volume restore remains intact. Long press still exits FT8/FT4. No decoder DSP, slot timing, shared audio capture, RTTY, TEF6686, or LittleFS logic changed.
+- Source-only implementation on `development`; no build, Actions run, flash, or hardware verification. Verify that short click toggles speaker audibility without affecting decodes, and long press restores the original speaker/volume state.

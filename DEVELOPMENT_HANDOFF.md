@@ -1050,3 +1050,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - No JS8 firmware source has been added yet. This is protocol/UI design refinement only; the next implementation step is a clean-room NORMAL physical-layer decoder and independent frame/protocol parser, with reference-vector validation before display integration.
 - Existing shared capture is 4 kHz / 24 samples per callback. The current FT8 engine uses a different monitor/payload pipeline; do not modify it or assume it is directly reusable. The ATS Mini Makefile uses wildcard source/header lists for `src/audio`, `src/ftx`, and `src/rtty`; add `src/js8` explicitly when new files are created.
 - No compile, GitHub Actions run, flash, or hardware test was performed.
+
+
+## JS8Call technical baseline update (2026-11-21)
+- Continued JS8 receive-only planning on `development`; no firmware code, build, Actions run, flash or hardware test in this step.
+- Verified against the current public JS8Call source: 79 channel symbols = 21 sync symbols (three 7-symbol Costas blocks) + 58 data symbols; LDPC(174,87); 87 information bits comprise 75 payload bits plus CRC-12; CRC polynomial 0xC06 with JS8 XOR value 42. CRC validation is required before payload parsing.
+- Verified sample-rate constraint: upstream source processes 12 kHz, while ATS Mini `AudioCaptureService` supplies 4 kHz. Nominal 4 kHz symbol lengths are 640 samples NORMAL, 1,280 SLOW, 400 FAST and 200 JS8 40. These are planning calculations only; filter/passband, timing and frequency stability must be measured on actual captured reference signals before choosing DSP constants.
+- AUTO/MULTI speed detection remains a planned feature after individual modes are validated. Accept a speed only after mode-specific synchronization, channel decode and CRC validation. Benchmark parallel mode decoding against a lower-cost candidate scheduler; do not overload the ESP32-S3.
+- Source provenance was recorded in `JS8CALL_RECEIVE_DECODER.md`. Do not copy GPL-licensed JS8Call implementation code or tables into this MIT repository without an explicit licensing decision.
+- Next technical gate: obtain/prepare legally usable JS8 NORMAL reference recordings and an independently generated host-side validation path; then implement and verify the physical layer before integrating UI or logging.

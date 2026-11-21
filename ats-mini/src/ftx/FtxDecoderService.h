@@ -67,7 +67,7 @@ private:
   int64_t offlineWindowStartUs_ = 0;
   int64_t offlineLastScanUs_ = 0;
   int64_t offlineGridOriginUs_ = 0;
-  bool offlineSignalSync_ = false;
+  volatile bool offlineSignalSync_ = false;
   bool offlineLocked_ = false;
   uint8_t offlineMissedSlots_ = 0;
   FtxMode mode_ = FtxMode::FT8;

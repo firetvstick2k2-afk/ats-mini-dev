@@ -74,8 +74,9 @@ void drawJs8MonitorPage() {
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(white, panel);
   char value[64];
-  snprintf(value, sizeof(value), "GPIO %u / NOMINAL 4 kHz",
-           static_cast<unsigned>(AudioCaptureService::kPin));
+  if (playback) snprintf(value, sizeof(value), "SYNTH / NOMINAL 4 kHz");
+  else snprintf(value, sizeof(value), "GPIO %u / NOMINAL 4 kHz",
+                static_cast<unsigned>(AudioCaptureService::kPin));
   spr.setFont(FONT_SMALL);
   spr.drawString(value, 304, 48);
 

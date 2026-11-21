@@ -20,9 +20,8 @@ Letzter bestätigter Commit: `2daa5a1a6df3b34e76d9466f03df21c51bfde989` (aktuali
 
 ### DAB Layout (21.11.2026)
 - Layout-Menüeintrag heißt in Deutsch und Englisch nur noch **DAB**.
-- Index 8 rendert jetzt immer `drawLayoutDABStyle()`; der bisherige TinyRadio-Fallback bei Nicht-FM wurde entfernt.
-- Geänderte Dateien: `ats-mini/Draw.cpp`, `ats-mini/Menu_german.cpp.src`, `ats-mini/Menu_english.cpp.src`.
-- Source-only; Build und Hardwaretest stehen noch aus.
+- Das bestehende Verhalten bleibt erhalten: FM zeigt DAB Style, Nicht-FM verwendet weiterhin den TinyRadio-Fallback.
+- Es wurde ausschließlich die Menübezeichnung angepasst; die Fallback-Logik bleibt unverändert.
 
 
 

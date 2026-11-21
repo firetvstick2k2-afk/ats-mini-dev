@@ -278,3 +278,26 @@ If JS8 audio monitor failed appears, metrics remain invalid, or synthetic metric
 - After the golden vector is validated, implement the JS8-only sample consumer and NORMAL sync/soft-decision/LDPC/CRC path. Add a clearly labeled on-device self-test that routes the known vector through the same decoder path and displays the expected text only when the decoder actually recovers it.
 - Do not call the generic 8-FSK monitor stimulus a JS8 decode test. Do not copy GPLv3 JS8Call source/tables into this MIT repository. Do not run builds/Actions; user handles manual builds.
 - UI-only change commit: 959e58308b4982fa96e3a754c7bc4f0249b55597. Source-only; not compiled or hardware-tested.
+
+
+## 10. MIT clean-room implementation decision (2026-11-21)
+
+The project owner confirmed that the repository must remain MIT and that the JS8 implementation must be developed independently. This excludes copying JS8Call GPL source, porting its implementation, or importing parity-check/generator/permutation tables copied or mechanically extracted from that source.
+
+A fresh protocol-documentation review confirms the public NORMAL frame dimensions and the existence of the JS8 LDPC(174,87) channel code. The current public user guide explicitly says implementation details remain subject to change and points to source as the implementation truth; it does not publish the complete LDPC construction data. A third-party clean-room write-up was located, but it explicitly says its numeric LDPC tables were machine-generated from the JS8Call reference source. Those tables are therefore not an acceptable independent input under this project's agreed boundary and will not be copied.
+
+Important interoperability constraint: generating a different PEG matrix with the same dimensions/rate would create a different code and would not decode ordinary JS8Call transmissions. We must not substitute an arbitrary LDPC(174,87) matrix or label a self-consistent private test as JS8Call-compatible.
+
+Implementation path:
+
+1. Keep the exact JS8 protocol facts sourced to public documentation (NORMAL symbol count/rate/tone spacing, sync placement, CRC definition and payload structure) and record provenance per item.
+2. Develop the receiver's audio front end independently: 4 kHz sample windowing, candidate frequency/time search, NORMAL Costas correlation, eight-tone soft metrics and explicit rejection of discontinuous audio. These stages can be validated with a synthetic sync-plus-data waveform without claiming a valid encoded JS8 message.
+3. Keep LDPC integration blocked until a legally independent source for the exact interoperable code construction is established, or until a formally documented licensing exception is approved. Do not invent a substitute matrix.
+4. Once the exact code construction is lawfully established, create independently generated bit-level golden vectors and verify encoder/decoder round trips plus cross-implementation interoperability before exposing decoded text.
+
+This is a deliberate quality gate, not a reduction in the target: the goal remains real JS8Call-compatible receive decoding. No firmware build, GitHub Actions run, flash or hardware test was started as part of this research.
+
+References reviewed:
+- JS8Call User Guide / current improved guide: https://js8call.com/JS8Call-improved/d6/d14/md_docs_2user__guide_2JS8Call__User__Guide.html
+- JS8Call source was consulted only to understand the provenance boundary; no source or tables were copied into the repository.
+- Third-party technical write-up was rejected as a table source because it states that its LDPC tables were generated from the JS8Call reference source: https://patrick.lidstone.net/js8-native-keyboard-keyboard-weak-signal-messaging-mode/

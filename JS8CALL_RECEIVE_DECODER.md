@@ -234,7 +234,7 @@ A JS8-owned diagnostic subscriber has now been added under ats-mini/src/js8/:
 
 - Js8AudioMonitor.h/.cpp subscribes to the existing AudioCaptureService; it never calls analogRead() and does not create or change an ADC sampler.
 - The callback captures a monotonic esp_timer_get_time() observation, copies the bounded 24-sample block into a 96-block queue, increments minimal callback/queue-drop counters, and returns. It does not perform sample statistics, filtering or spectral analysis.
-- A separate low-priority worker estimates delivered block cadence (interval min/max/mean and effective output rate), counts long gaps/missing-block estimates, measures ADC min/max/DC/AC-RMS/near-rail samples, and retains the newest 4,096 raw samples for later spectral analysis.
+- A separate low-priority worker estimates delivered block cadence (interval min/max/mean and effective output rate), counts long gaps/missing-block estimates, measures ADC min/max/DC/AC-RMS/near-rail samples, and retains the newest 4,096 raw samples in a PSRAM-first ring buffer (internal-heap fallback) for later spectral analysis.
 - The wall-clock callback timestamp is intentionally ignored for cadence measurement. The reported rate is an estimate from callback delivery timestamps and known block sample counts; it is not a measurement of individual analogRead() intervals or intra-block jitter.
 - The service exposes begin(), stop(), copyMetrics() and copyRecentSamples(). It is not yet connected to a JS8 menu, UI or decoder lifecycle, and it does not decode JS8.
 - The LILYGO GPIO11/SPI guard remains intact. Makefile wildcard lists include the new src/js8 files.

@@ -114,3 +114,8 @@ void AudioCaptureService::sampleTask() {
     }
   }
 }
+
+AudioCaptureService& sharedAudioCapture() {
+  static AudioCaptureService capture;
+  return capture;
+}

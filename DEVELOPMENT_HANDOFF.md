@@ -1,6 +1,6 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-11-20 (DAB Style TinyRadio fallback and cyan-blue color refinement; clean-chat handover prepared)
+Last updated: 2026-11-21 (FT8/FT4 preset delayed preview listening)
 Repository: https://github.com/13HN2709/ats-mini-dev (private development workspace); public release repository: https://github.com/13HN2709/ats-mini
 Active work branch: `development` (never modify `main` unless explicitly requested)
 

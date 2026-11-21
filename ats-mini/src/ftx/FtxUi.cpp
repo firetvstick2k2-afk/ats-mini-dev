@@ -698,6 +698,10 @@ void ftxUiClick()
           decoderService.enter(pageMode, true, clockAvailable(), previousActive, sharedAudioCapture());
           statusShow("Sync mode switch failed", "Previous mode restored");
         } else {
+          if(requestedOffline) {
+            ftxLogStop();
+            ftxLogPath[0] = 0;
+          }
           lastProcessedSlot = 0;
           haveProcessedSlot = false;
           statusShow(requestedOffline ? "Offline signal sync" : "Online UTC sync",

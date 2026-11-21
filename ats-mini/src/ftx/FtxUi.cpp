@@ -32,6 +32,9 @@ bool haveProcessedSlot = false;
 constexpr uint8_t kFtxPlaybackVolume = 50;
 uint8_t volumeBeforeFtx = 0;
 bool ftxVolumeBoostActive = false;
+// Toggle only the external speaker amplifier; keep SI473x audio and GPIO11 ADC capture alive.
+bool ftxSpeakerAmpBefore = true;
+bool ftxSpeakerEnabled = true;
 
 const char* countryForCall(const char* call)
 {
@@ -289,6 +292,10 @@ bool ftxUiOpen(FtxMode mode)
   }
   ftxVolumeBoostActive = true;
 
+  // Preserve the amplifier state and default to audible monitoring on entry.
+  ftxSpeakerAmpBefore = PIN_AMP_EN < 0 || digitalRead(PIN_AMP_EN) == HIGH;
+  ftxSpeakerEnabled = ftxSpeakerAmpBefore;
+
   memset(recentMessages,0,sizeof(recentMessages));
   decodedMessageCount=ldpcErrorCount=0;
   lastProcessedSlot=0;
@@ -303,6 +310,8 @@ void ftxUiExit()
   if(!pageActive) return;
   pageActive = false;
   decoderService.exit();
+  if(PIN_AMP_EN >= 0) digitalWrite(PIN_AMP_EN, ftxSpeakerAmpBefore ? HIGH : LOW);
+  ftxSpeakerEnabled = ftxSpeakerAmpBefore;
   if(ftxVolumeBoostActive) {
     volume = volumeBeforeFtx;
     rx.setVolume(volume);
@@ -310,6 +319,14 @@ void ftxUiExit()
   }
   netInit(restoreNetworkMode);
   currentCmd = CMD_NONE;
+}
+
+void ftxUiClick()
+{
+  if(!pageActive || PIN_AMP_EN < 0) return;
+  ftxSpeakerEnabled = !ftxSpeakerEnabled;
+  // Do not call muteOn()/rx.setAudioMute(): GPIO11 is the decoder's live ADC tap.
+  digitalWrite(PIN_AMP_EN, ftxSpeakerEnabled ? HIGH : LOW);
 }
 
 bool ftxUiTick(uint32_t now)
@@ -333,6 +350,10 @@ void drawFtxDecoderPage()
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(0xFFFF);
   spr.drawString(frequencyText,8,5,&lgfx::fonts::Orbitron_Light_24);
+  spr.setFont(FONT_SMALL);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(ftxSpeakerEnabled?0x07E0:0xF800);
+  spr.drawString(ftxSpeakerEnabled?"SPK ON":"SPK OFF",151,13);
   char counters[32];
   snprintf(counters,sizeof(counters),"DEC %lu ERR %lu",
     static_cast<unsigned long>(decodedMessageCount),

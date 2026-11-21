@@ -123,8 +123,9 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_SPECTRUM    17
 #define MENU_ALL_SPECTRUM 18
 #define MENU_DECODER_FREQUENCIES 19
-#define MENU_FTX_DECODER 20
-#define MENU_SETTINGS    21
+#define MENU_RTTY_DECODER 20
+#define MENU_FTX_DECODER 21
+#define MENU_SETTINGS    22
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -170,6 +171,7 @@ static const char *menu[] =
   "VHF SPEKTRUM",
   "ALL BAND SPEKTRUM",
   "DECODER-FREQUENZEN",
+  "RTTY DEKODER",
   "FT8 /FT4 DEKODER",
   "EINSTELLUNGEN",
 };
@@ -981,6 +983,9 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
     case MENU_DECODER_FREQUENCIES: decoderFrequencyOpen(); break;
+    case MENU_RTTY_DECODER:
+      if(rttyUiOpen(45.45f)) currentCmd = CMD_RTTY_DECODER;
+      break;
     case MENU_FTX_DECODER:
       if(ftxUiOpen(FtxMode::FT8)) currentCmd = CMD_FTX_DECODER;
       break;

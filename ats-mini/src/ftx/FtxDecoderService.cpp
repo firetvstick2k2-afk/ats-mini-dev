@@ -267,8 +267,9 @@ void FtxDecoderService::processChunk(const AudioChunk& chunk) {
         ++slotStartSuccesses_;
         activeSlotStartUs_ = nextBoundary;
         collecting_ = true;
-        BootDiagnostics::printf("[FTX][SLOT][START] mode=%s utc=%lld source=boundary-split",
-          mode_ == FtxMode::FT4 ? "FT4" : "FT8", static_cast<long long>(nextBoundary / 1000000LL));
+        BootDiagnostics::printf("[FTX][SLOT][START] mode=%s slot_start=%lld timebase=%s source=boundary-split",
+          mode_ == FtxMode::FT4 ? "FT4" : "FT8", static_cast<long long>(nextBoundary / 1000000LL),
+          offlineSignalSync_ ? "monotonic" : "utc");
         if (before < chunk.count) {
           decoder_.pushSamples(chunk.samples + before, chunk.count - before);
           if (decoder_.slotReady()) {
@@ -279,8 +280,9 @@ void FtxDecoderService::processChunk(const AudioChunk& chunk) {
         }
       } else {
         ++slotStartFailures_;
-        BootDiagnostics::printf("[FTX][SLOT][START_FAIL] mode=%s utc=%lld source=boundary-split",
-          mode_ == FtxMode::FT4 ? "FT4" : "FT8", static_cast<long long>(nextBoundary / 1000000LL));
+        BootDiagnostics::printf("[FTX][SLOT][START_FAIL] mode=%s slot_start=%lld timebase=%s source=boundary-split",
+          mode_ == FtxMode::FT4 ? "FT4" : "FT8", static_cast<long long>(nextBoundary / 1000000LL),
+          offlineSignalSync_ ? "monotonic" : "utc");
       }
       return;
     }
@@ -294,7 +296,7 @@ void FtxDecoderService::processChunk(const AudioChunk& chunk) {
     return;
   }
 
-  // Wait for the exact UTC slot edge. A chunk that straddles the edge is split
+  // Wait for the next aligned slot edge. A chunk that straddles the edge is split
   // at the first sample on/after that edge, preserving symbol timing.
   if (chunkStart < nextBoundary && chunkEnd >= nextBoundary) {
     ++boundaryHits_;
@@ -309,16 +311,18 @@ void FtxDecoderService::processChunk(const AudioChunk& chunk) {
     ++slotStartAttempts_;
     if (!decoder_.startSlot(offlineSignalSync_ ? 0 : static_cast<time_t>(nextBoundary / 1000000LL), !offlineSignalSync_)) {
       ++slotStartFailures_;
-      BootDiagnostics::printf("[FTX][SLOT][START_FAIL] mode=%s utc=%lld source=first-boundary offset=%u count=%u",
+      BootDiagnostics::printf("[FTX][SLOT][START_FAIL] mode=%s slot_start=%lld timebase=%s source=first-boundary offset=%u count=%u",
         mode_ == FtxMode::FT4 ? "FT4" : "FT8", static_cast<long long>(nextBoundary / 1000000LL),
+        offlineSignalSync_ ? "monotonic" : "utc",
         static_cast<unsigned>(offset), static_cast<unsigned>(chunk.count));
       return;
     }
     ++slotStartSuccesses_;
     activeSlotStartUs_ = nextBoundary;
     collecting_ = true;
-    BootDiagnostics::printf("[FTX][SLOT][START] mode=%s utc=%lld source=first-boundary offset=%u count=%u",
+    BootDiagnostics::printf("[FTX][SLOT][START] mode=%s slot_start=%lld timebase=%s source=first-boundary offset=%u count=%u",
       mode_ == FtxMode::FT4 ? "FT4" : "FT8", static_cast<long long>(nextBoundary / 1000000LL),
+      offlineSignalSync_ ? "monotonic" : "utc",
       static_cast<unsigned>(offset), static_cast<unsigned>(chunk.count));
     decoder_.pushSamples(chunk.samples + offset, chunk.count - offset);
     if (decoder_.slotReady()) {

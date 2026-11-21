@@ -566,3 +566,11 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Ausschließlich Branch `development` bearbeiten; `main` bleibt unangetastet.
 - Fertige und source-geprüfte Änderungen dürfen direkt nach `development` gepusht werden.
 - Der Firmware-Workflow läuft nur über `workflow_dispatch`; Pushes lösen keinen Build aus. Der Nutzer startet den Build selbst über GitHub Actions. Assistant startet keine Actions/Builds ohne ausdrückliche Aufforderung.
+
+
+## FM-DX selectable tuning steps — 2026-11-22
+- FM-DX Actions now has four entries: AUTO start/pause, filter change, tuning step, and Back.
+- The tuning-step entry cycles through 0.01, 0.05, 0.10, 0.20, 0.50 and 1.00 MHz. The default is the requested 0.01 MHz mini-step: displayed frequency 100.00 advances to 100.01 per encoder detent.
+- Encoder rotation outside the Actions overlay uses the selected FM-DX step directly and the existing `updateFrequency(..., true)` band-wrap/retune path. This selection is local to the FM-DX page and does not change the saved band step.
+- Source change: `ats-mini/src/radio/FmDxUi.cpp`, commit `96adba5730789f2fe16033711cabb7dad7e465c3`.
+- Source-only review; no compilation, Actions build, flash or hardware test. User starts OSPI-DE build manually; `main` untouched.

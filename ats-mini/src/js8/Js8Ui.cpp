@@ -46,80 +46,81 @@ void js8UiClick() {
 }
 
 void drawJs8MonitorPage() {
-  constexpr uint16_t navy = 0x0008, panel = 0x001F, panelAlt = 0x0359;
-  constexpr uint16_t border = 0x04BF, green = 0x07E0, cyan = 0x07FF, white = 0xFFFF;
-  spr.fillSprite(navy);
-  spr.drawRect(2, 2, 316, 166, panel);
-  spr.fillRect(8, 5, 304, 25, panelAlt);
-  spr.drawRect(8, 5, 304, 25, border);
+  // Text-first diagnostic layout: pure black, high-contrast white, one green accent.
+  constexpr uint16_t black = 0x0000;
+  constexpr uint16_t white = 0xFFFF;
+  constexpr uint16_t muted = 0xBDF7;
+  constexpr uint16_t green = 0x07E0;
+  constexpr uint16_t line = 0x4208;
+
+  spr.fillSprite(black);
   spr.setTextDatum(ML_DATUM);
-  spr.setTextColor(green, panelAlt);
+  spr.setTextColor(white, black);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-  spr.drawString("JS8 RX  /  AUDIO MONITOR", 15, 17);
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(white, panelAlt);
-  spr.setFont(FONT_SMALL);
-  spr.drawString("NORMAL: 6.25 BAUD", 304, 17);
+  spr.drawString("JS8 RX", 8, 13);
 
   Js8AudioMonitor::Metrics m{};
   const bool valid = audioMonitor.copyMetrics(m);
   const bool playback = audioMonitor.testPlaybackActive();
-  spr.fillRect(8, 35, 304, 27, panel);
-  spr.drawRect(8, 35, 304, 27, border);
-  spr.setTextColor(valid ? green : cyan, panel);
-  spr.setTextDatum(ML_DATUM);
-  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-  spr.drawString(playback ? "TEST PLAYBACK: 8-FSK" :
-                 (valid ? "LIVE AUDIO MONITOR" : "WAITING FOR AUDIO..."), 15, 48);
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(white, panel);
-  char value[64];
-  if (playback) snprintf(value, sizeof(value), "SYNTH / NOMINAL 4 kHz");
-  else snprintf(value, sizeof(value), "GPIO %u / NOMINAL 4 kHz",
-                static_cast<unsigned>(AudioCaptureService::kPin));
-  spr.setFont(FONT_SMALL);
-  spr.drawString(value, 304, 48);
 
-  const int rowsY[] = {67, 86, 105, 124};
-  const char* labels[] = {"PROC. RATE EST.", "BLOCK INTERVAL", "ADC MIN / MAX", "DC MEAN / AC RMS"};
-  char values[4][48]{};
-  if (valid) {
-    snprintf(values[0], sizeof(values[0]), "%.1f Hz", m.callbackRateHz);
-    snprintf(values[1], sizeof(values[1]), "%.0f us (%lu..%lu)",
-             m.meanBlockIntervalUs, static_cast<unsigned long>(m.minBlockIntervalUs),
-             static_cast<unsigned long>(m.maxBlockIntervalUs));
-    snprintf(values[2], sizeof(values[2]), "%d / %d", m.adcMin, m.adcMax);
-    snprintf(values[3], sizeof(values[3]), "%.1f / %.1f", m.adcMean, m.adcRmsAc);
-  } else {
-    for (uint8_t i = 0; i < 4; ++i) snprintf(values[i], sizeof(values[i]), "--");
-  }
-  for (uint8_t i = 0; i < 4; ++i) {
-    const uint16_t bg = (i & 1) ? panelAlt : panel;
-    spr.fillRect(8, rowsY[i], 304, 17, bg);
-    spr.drawRect(8, rowsY[i], 304, 17, border);
-    spr.setTextDatum(ML_DATUM);
-    spr.setTextColor(white, bg);
-    spr.setFont(FONT_SMALL);
-    spr.drawString(labels[i], 14, rowsY[i] + 8);
-    spr.setTextDatum(TR_DATUM);
-    spr.setTextColor(green, bg);
-    spr.drawString(values[i], 304, rowsY[i] + 8);
-  }
-  spr.fillRect(8, 145, 304, 14, navy);
-  spr.setTextDatum(ML_DATUM);
-  spr.setTextColor(cyan, navy);
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(playback ? green : (valid ? green : muted), black);
   spr.setFont(FONT_SMALL);
+  spr.drawString(playback ? "TEST SIGNAL" : (valid ? "LIVE AUDIO" : "WAITING"), 312, 13);
+  spr.drawFastHLine(8, 25, 304, line);
+
+  spr.setTextDatum(ML_DATUM);
+  spr.setTextColor(muted, black);
+  spr.setFont(FONT_SMALL);
+  spr.drawString(playback ? "SOURCE: INTERNAL 8-FSK" : "SOURCE: GPIO 11", 8, 37);
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(white, black);
+  spr.drawString("NORMAL  6.25 BAUD", 312, 37);
+
+  char row[80];
   if (valid) {
-    snprintf(value, sizeof(value), "BLOCKS %lu DROP %lu GAP %lu CLIP %lu",
-             static_cast<unsigned long>(m.callbackBlocks),
+    snprintf(row, sizeof(row), "RATE  %.0f Hz     BLOCK  %.0f us",
+             m.callbackRateHz, m.meanBlockIntervalUs);
+  } else {
+    snprintf(row, sizeof(row), "RATE  --           BLOCK  --");
+  }
+  spr.setTextDatum(ML_DATUM);
+  spr.setTextColor(white, black);
+  spr.drawString(row, 8, 55);
+
+  if (valid) {
+    snprintf(row, sizeof(row), "LEVEL  %.0f RMS     ADC  %d..%d",
+             m.adcRmsAc, m.adcMin, m.adcMax);
+  } else {
+    snprintf(row, sizeof(row), "LEVEL  --           ADC  --");
+  }
+  spr.drawString(row, 8, 71);
+
+  if (valid) {
+    snprintf(row, sizeof(row), "DROP %lu   GAP %lu   CLIP %lu",
              static_cast<unsigned long>(m.queueDrops),
              static_cast<unsigned long>(m.discontinuities),
              static_cast<unsigned long>(m.clippedSamples));
   } else {
-    snprintf(value, sizeof(value), "WAITING FOR FIRST MEASUREMENT WINDOW");
+    snprintf(row, sizeof(row), "DROP --   GAP --   CLIP --");
   }
-  spr.drawString(value, 12, 152);
+  spr.setTextColor(green, black);
+  spr.drawString(row, 8, 87);
+
+  spr.drawFastHLine(8, 99, 304, line);
+  spr.setTextColor(white, black);
+  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+  spr.drawString("DECODED MESSAGES", 8, 112);
+
+  // Keep the message area intentionally empty until a frame passes JS8 sync,
+  // LDPC and CRC validation. Never show a fabricated/demo decode as received text.
+  spr.setTextColor(muted, black);
+  spr.setFont(FONT_SMALL);
+  spr.drawString("Waiting for valid JS8 NORMAL frame...", 8, 132);
+  spr.drawString("Known-text test will appear here.", 8, 146);
+
+  spr.drawFastHLine(8, 156, 304, line);
+  spr.setTextColor(white, black);
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(white, navy);
-  spr.drawString("CLICK: TEST PLAY/STOP   LONG PRESS: EXIT", 160, 164, FONT_SMALL);
+  spr.drawString("CLICK: AUDIO TEST     HOLD: EXIT", 160, 165, FONT_SMALL);
 }

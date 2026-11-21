@@ -42,6 +42,15 @@ bool ftxPresetMenuOpen = false;
 uint8_t ftxPresetSelection = 0;
 uint8_t ftxPresetScroll = 0;
 DecoderKind ftxPresetDecoder = DecoderKind::FT8;
+constexpr uint32_t kFtxPresetPreviewDelayMs = 2000;
+VfoState ftxPresetOriginalState{};
+int16_t ftxPresetOriginalBfo = 0;
+bool ftxPresetOriginalValid = false;
+bool ftxPresetPreviewPending = false;
+bool ftxPresetPreviewActive = false;
+uint32_t ftxPresetPreviewStartedAt = 0;
+bool ftxPresetPreviewSpeakerWasEnabled = true;
+bool ftxPresetPreviewSpeakerForced = false;
 bool ftxAutoScroll = true;
 uint8_t ftxMenuSelection = 0;
 constexpr uint8_t kFtxMenuItems = 8;
@@ -265,6 +274,84 @@ const DecoderFrequencyPreset* ftxPresetAt(uint8_t wanted)
   return nullptr;
 }
 
+void restoreFtxPresetPreviewSpeaker()
+{
+  if(!ftxPresetPreviewSpeakerForced) return;
+  if(PIN_AMP_EN >= 0)
+    digitalWrite(PIN_AMP_EN, ftxPresetPreviewSpeakerWasEnabled ? HIGH : LOW);
+  ftxSpeakerEnabled = ftxPresetPreviewSpeakerWasEnabled;
+  ftxPresetPreviewSpeakerForced = false;
+}
+
+void clearFtxPresetPreviewState()
+{
+  ftxPresetOriginalValid = false;
+  ftxPresetPreviewPending = false;
+  ftxPresetPreviewActive = false;
+  ftxPresetPreviewStartedAt = 0;
+  restoreFtxPresetPreviewSpeaker();
+}
+
+void restoreFtxPresetOriginal()
+{
+  if(ftxPresetOriginalValid && ftxPresetPreviewActive) {
+    Band& savedBand = bands[ftxPresetOriginalState.band];
+    savedBand.currentFreq = ftxPresetOriginalState.freq;
+    savedBand.bandMode = ftxPresetOriginalState.mode;
+    savedBand.currentStepIdx = ftxPresetOriginalState.stepIdx;
+    savedBand.bandwidthIdx = ftxPresetOriginalState.bandwidthIdx;
+    selectBand(ftxPresetOriginalState.band, false);
+    if(currentBFO != ftxPresetOriginalBfo)
+      updateBFO(ftxPresetOriginalBfo, true);
+  }
+  clearFtxPresetPreviewState();
+}
+
+void scheduleFtxPresetPreview(uint32_t now)
+{
+  if(!ftxPresetOriginalValid) {
+    ftxPresetOriginalState = captureVfo();
+    ftxPresetOriginalBfo = currentBFO;
+    ftxPresetOriginalValid = true;
+  }
+  ftxPresetPreviewPending = true;
+  ftxPresetPreviewActive = false;
+  ftxPresetPreviewStartedAt = now;
+}
+
+void startFtxPresetPreview()
+{
+  const DecoderFrequencyPreset* preset = ftxPresetAt(ftxPresetSelection);
+  if(!preset || !ftxPresetOriginalValid) {
+    ftxPresetPreviewPending = false;
+    return;
+  }
+
+  if(!applyFtxPreset(*preset)) {
+    ftxPresetPreviewPending = false;
+    return;
+  }
+
+  ftxPresetPreviewPending = false;
+  ftxPresetPreviewActive = true;
+  if(PIN_AMP_EN >= 0 && !ftxSpeakerEnabled) {
+    ftxPresetPreviewSpeakerWasEnabled = ftxSpeakerEnabled;
+    ftxPresetPreviewSpeakerForced = true;
+    ftxSpeakerEnabled = true;
+    digitalWrite(PIN_AMP_EN, HIGH);
+  }
+}
+
+void commitFtxPresetPreview()
+{
+  // Keep the selected frequency, but undo any temporary speaker override.
+  restoreFtxPresetPreviewSpeaker();
+  ftxPresetOriginalValid = false;
+  ftxPresetPreviewPending = false;
+  ftxPresetPreviewActive = false;
+  ftxPresetPreviewStartedAt = 0;
+}
+
 bool applyFtxPreset(const DecoderFrequencyPreset& preset)
 {
   // Prefer the narrowest existing HF band containing this frequency.
@@ -457,6 +544,7 @@ bool ftxUiOpen(FtxMode mode)
 void ftxUiExit()
 {
   if(!pageActive) return;
+  restoreFtxPresetOriginal();
   pageActive = false;
   ftxActionsOpen = false;
   ftxPresetMenuOpen = false;
@@ -481,9 +569,12 @@ void ftxUiRotate(int delta)
     int next = static_cast<int>(ftxPresetSelection) + (delta > 0 ? 1 : -1);
     if(next < 0) next = count - 1;
     if(next >= count) next = 0;
+    if(ftxPresetPreviewActive)
+      restoreFtxPresetOriginal();
     ftxPresetSelection = static_cast<uint8_t>(next);
     if(ftxPresetSelection < ftxPresetScroll) ftxPresetScroll = ftxPresetSelection;
     if(ftxPresetSelection >= ftxPresetScroll + 6) ftxPresetScroll = ftxPresetSelection - 5;
+    scheduleFtxPresetPreview(millis());
     return;
   }
   const int count = ftxActionCount();
@@ -504,7 +595,11 @@ void ftxUiClick()
   }
   if(ftxPresetMenuOpen) {
     const DecoderFrequencyPreset* preset = ftxPresetAt(ftxPresetSelection);
-    if(preset) applyFtxPreset(*preset);
+    const bool applied = ftxPresetPreviewActive || (preset && applyFtxPreset(*preset));
+    if(applied)
+      commitFtxPresetPreview();
+    else
+      restoreFtxPresetOriginal();
     ftxPresetMenuOpen = false;
     ftxActionsOpen = false;
     return;
@@ -517,6 +612,7 @@ void ftxUiClick()
         ftxPresetDecoder = ftxMenuSelection == 0 ? DecoderKind::FT8 : DecoderKind::FT4;
         ftxPresetMenuOpen = true;
         ftxPresetSelection = ftxPresetScroll = 0;
+        scheduleFtxPresetPreview(millis());
         break;
       case 2: // Speaker
         if(PIN_AMP_EN >= 0) {
@@ -568,7 +664,16 @@ void ftxUiClick()
 
 bool ftxUiTick(uint32_t now)
 {
-  if(!pageActive || static_cast<uint32_t>(now - lastPageRefresh) < 500) return false;
+  if(!pageActive) return false;
+
+  bool changed = false;
+  if(ftxPresetMenuOpen && ftxPresetPreviewPending &&
+     static_cast<uint32_t>(now - ftxPresetPreviewStartedAt) >= kFtxPresetPreviewDelayMs) {
+    startFtxPresetPreview();
+    changed = true;
+  }
+
+  if(static_cast<uint32_t>(now - lastPageRefresh) < 500) return changed;
   lastPageRefresh = now;
   refreshRecentMessages();
   return true;

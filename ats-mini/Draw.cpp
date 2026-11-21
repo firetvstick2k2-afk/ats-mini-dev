@@ -669,8 +669,8 @@ void drawScreen()
     
   if(uiLayoutIdx == 8)
   {
-    // DAB is an explicitly selected layout and must remain visible on every band/mode.
-    drawLayoutDABStyle();
+    if(currentMode == FM) drawLayoutDABStyle();
+    else drawLayoutTinyRadio(); // DAB Style is FM-only; TinyRadio is the selected alternative for non-FM bands.
   }
   else switch(uiLayoutIdx)
   {

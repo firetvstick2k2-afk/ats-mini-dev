@@ -25,7 +25,8 @@ const char* const polarityNames[3]={"AUTO","NORMAL","REVERSE"};
 uint8_t polarityIndex=0;
 bool bfoAuto=true;
 uint8_t volumeBefore=0;
-bool volumeBoost=false;\nint16_t bfoAtEntry=0;
+bool volumeBoost=false;
+int16_t bfoAtEntry=0;
 constexpr uint8_t kPlaybackVolume=50;
 constexpr int kBfoLimit=250;
 constexpr int kManualBfoStep=5;
@@ -247,7 +248,6 @@ void drawRttyDecoderPage() {
       if(i==0) state=bfoAuto?"AUTO":"MANUAL";
       else if(i==1) { snprintf(value,sizeof(value),"%.2f Bd",baudChoices[baudIndex]); state=value; }
       else if(i==2) state=polarityNames[polarityIndex];
-      else if(i==1 || i==2) state="";
       spr.setTextDatum(MR_DATUM);
       spr.drawString(state,277,y);
     }

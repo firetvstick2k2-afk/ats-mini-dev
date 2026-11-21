@@ -43,7 +43,7 @@ namespace {
     }
   }
 
-  void drawValueOrDash(const char *value, int x, int y, int font = FONT_DEFAULT) {
+  void drawValueOrDash(const char *value, int x, int y, const lgfx::IFont *font = FONT_DEFAULT) {
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(value && value[0] ? WHITE : GREY, BLACK);
     spr.drawString(value && value[0] ? value : "--", x, y, font);

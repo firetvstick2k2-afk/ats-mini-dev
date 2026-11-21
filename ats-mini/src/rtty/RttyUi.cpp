@@ -484,6 +484,16 @@ void drawRttyDecoderPage() {
         "EXIT RTTY"
       };
       spr.drawString("RTTY ACTIONS",menuX+12,menuY+7);
+      char toneStatus[48];
+      if(service.markHz()>0 && service.spaceHz()>0)
+        snprintf(toneStatus,sizeof(toneStatus),"M %.0f  S %.0f Hz",service.markHz(),service.spaceHz());
+      else snprintf(toneStatus,sizeof(toneStatus),"TONE PAIR: SEARCHING");
+      spr.setFont(FONT_SMALL);
+      spr.setTextDatum(TR_DATUM);
+      spr.setTextColor(cyan);
+      spr.drawString(toneStatus,menuX+menuW-12,menuY+10);
+      spr.setTextDatum(TL_DATUM);
+      spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
       for(uint8_t i=0;i<kMenuCount;++i) {
         const int y=menuY+27+i*17;
         if(i==menuIndex) spr.fillRect(menuX+7,y-2,menuW-14,18,0x0359);

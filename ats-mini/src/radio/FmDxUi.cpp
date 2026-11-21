@@ -7,6 +7,9 @@
 #include <string.h>
 
 extern bool updateFrequency(int newFreq, bool wrap);
+extern bool consumeAbortPending();
+extern void clearStationInfo();
+extern bool identifyFrequency(uint32_t freq, bool background = false);
 
 namespace {
   bool pageActive = false;
@@ -21,6 +24,32 @@ namespace {
   constexpr uint8_t FM_DX_STEP_COUNT = 6;
   constexpr uint8_t fmDxSteps[FM_DX_STEP_COUNT] = { 1, 5, 10, 20, 50, 100 };
   uint8_t fmDxStepSelection = 0;
+  bool shortScanRunning = false;
+
+  void fmDxSeekProgress(uint16_t frequency) {
+    currentFrequency = frequency;
+  }
+
+  bool fmDxSeekAbort() {
+    return consumeAbortPending();
+  }
+
+  void runShortScan() {
+    if(currentMode != FM || shortScanRunning) return;
+    shortScanRunning = true;
+    actionsOpen = false;
+    clearStationInfo();
+    rssi = snr = 0;
+    muteOn(MUTE_TEMP, true);
+    consumeAbortPending();
+    rx.seekStationProgress(fmDxSeekProgress, fmDxSeekAbort, 1);
+    updateFrequency(rx.getFrequency(), true);
+    clearStationInfo();
+    identifyFrequency(currentFrequency);
+    muteOn(MUTE_TEMP, false);
+    shortScanRunning = false;
+    lastRefresh = 0;
+  }
 
   constexpr uint16_t BLACK  = 0x0000;
   constexpr uint16_t WHITE  = 0xFFFF;
@@ -245,7 +274,7 @@ void drawFmDxPage() {
     spr.drawRoundRect(65, 23, 190, 124, 5, CYAN);
     spr.setTextDatum(TC_DATUM);
     spr.setTextColor(CYAN, 0x0841);
-    spr.drawString("FM-DX ACTIONS", 160, 27, FONT_DEFAULT);
+    spr.drawString("FM-DX ACTIONS", 160, 21, FONT_DEFAULT);
     char stepText[32];
     const uint16_t stepValue = fmDxSteps[fmDxStepSelection];
     snprintf(stepText, sizeof(stepText), "STEP: %u.%02u MHz",

@@ -1145,3 +1145,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Documented next path in JS8CALL_RECEIVE_DECODER.md section 10: independently implement/test the 4 kHz front end, timing/frequency candidate search, NORMAL Costas sync and eight-tone soft decisions using a clearly labeled non-LDPC synthetic fixture. Keep actual payload decode blocked until a lawful independent source for the exact interoperable LDPC construction is established.
 - No firmware code, build, GitHub Actions run, flash or hardware test was performed in this research step. Work remains on development; main untouched.
 - Documentation commit: 746dac66148af67abd18e196d08afc66924c70de.
+
+
+## JS8 NORMAL DSP first code step — 2026-11-21
+- Added standalone `ats-mini/src/js8/Js8NormalSync.h/.cpp` on development. `Js8NormalSync::evaluate()` measures the 21 known NORMAL Costas pilot symbols at positions 0–6, 36–42 and 72–78 using per-symbol DC removal and Goertzel tone energy at a caller-supplied frame start and frequency hypothesis.
+- Result reports expected-tone/best-tone and expected-tone/total-tone ratios, minimum pilot ratio, pilot energy and number of strong pilot matches. It is deliberately only a candidate metric; it does not search time/frequency, decode data symbols, LDPC/CRC or emit messages.
+- Numerical sanity check with an ideal synthetic 4 kHz 79-symbol signal (NORMAL pilots, arbitrary data tones, continuous phase) gave 21/21 matches and ratio 1.0. This is not a protocol-valid JS8 message vector, not a noise/sensitivity test and not a firmware build/test.
+- Existing JS8 Makefile wildcard already includes these files. No Makefile changes required.
+- Next: host C++ tests with timing/frequency offsets, gain/noise and negative cases; then design a 50,560-sample (12.64 s / about 101 kB int16) bounded receive window. The existing 4,096-sample diagnostic ring is too short for a complete NORMAL frame.
+- LDPC/CRC/message decode remains blocked until an exact interoperable LDPC construction is lawfully available from an independent source. Preserve MIT; no GPL-derived tables.
+- No build, Actions, flash or hardware test. Code is not yet compiler-verified on ESP32. Commit sequence: `ce29d934a06c25cf7b7a55b89901dc4d3eaa3575` (header), `3fa1917feb7e169d259f202763e26844253ff9f2` (implementation), `963e83b7bc715a6d212547a36686a7c0b69ca205` (decoder-plan update).

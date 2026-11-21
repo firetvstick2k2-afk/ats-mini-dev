@@ -4,8 +4,16 @@ Last updated: 2026-11-21 (RTTY preset preview submenu)
 Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
 Active work branch: `development` (never modify `main` unless explicitly requested)
 
+## Latest bugfix: FT8/FT4 logging in offline mode (2026-11-21)
+- User-reported issue: FT8 Actions > Logging stayed OFF and could not be enabled.
+- Root cause: `ftxLogStart()` rejected offline synchronization and required a valid UTC date; `ftxLogMessage()` also discarded messages without valid UTC. Switching to offline mode additionally stopped and cleared the active log.
+- Fixed in commit `4b3a3e8d46e6061235349d15bf4cad9e4bf8d84e`: logging can start without UTC, uses a unique `FT8_UNTIMED` / `FT4_UNTIMED` filename when no date is available, writes unknown timestamps for offline receptions, and remains active across online/offline sync changes.
+- Changelog fragment: `changelog/+ft8-offline-logging.fixed.md`.
+- Source review only. No compile, GitHub Actions run, or hardware test was performed; user must verify Logging ON, actual file creation, offline reception entries, and online/offline switching on device.
+
 ## Working agreement
 - Keep this file current after every meaningful feature or code change. Use it as the handoff reference when starting a new chat.
+- **Bugfix priority:** when the user reports a bug during planned feature work, pause the roadmap and handle that bug first; after the fix, resume the previous highest-priority task (currently JS8Call).
 - New features must be isolated from existing features wherever practical. If implementing a feature would require changing shared feature-specific logic, duplicate that logic into a new module/state/handler for the new feature rather than refactoring the established feature.
 - Preserve Dual RX, existing Web Spectrum behavior, Clean Layout and especially Layout-TEF6686 unless a change is explicitly required.
 - Shared low-level radio/scanning primitives may be reused only after checking their side effects and compatibility.

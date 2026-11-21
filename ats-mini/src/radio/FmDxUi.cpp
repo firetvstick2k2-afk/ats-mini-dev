@@ -139,8 +139,8 @@ void fmDxUiRotate(int16_t delta) {
   if(!pageActive || !delta) return;
   if(actionsOpen) {
     int next = static_cast<int>(actionSelection) + (delta > 0 ? 1 : -1);
-    if(next < 0) next = 3;
-    if(next > 3) next = 0;
+    if(next < 0) next = 4;
+    if(next > 4) next = 0;
     actionSelection = static_cast<uint8_t>(next);
     return;
   }
@@ -157,18 +157,21 @@ void fmDxUiClick() {
   }
   switch(actionSelection) {
     case 0:
+      runShortScan();
+      break;
+    case 1:
       if(fmDxActive()) fmDxStop();
       else fmDxStart();
       break;
-    case 1:
+    case 2:
       if(fmDxActive()) fmDxStop();
       manualFilter = manualFilter == 4 ? 2 : manualFilter + 1;
       fmDxSetManualBandwidth(manualFilter);
       break;
-    case 2:
+    case 3:
       fmDxStepSelection = static_cast<uint8_t>((fmDxStepSelection + 1) % FM_DX_STEP_COUNT);
       break;
-    case 3:
+    case 4:
       actionsOpen = false;
       break;
   }

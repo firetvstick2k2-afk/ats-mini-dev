@@ -35,6 +35,9 @@ public:
   bool begin(AudioCaptureService& capture);
   void stop();
   bool active() const { return active_; }
+  bool testPlaybackActive() const { return testPlayback_; }
+  bool startTestPlayback();
+  void stopTestPlayback();
   bool copyMetrics(Metrics& out) const;
   // Copies the newest samples in chronological order; returns copied count.
   size_t copyRecentSamples(int16_t* out, size_t capacity) const;
@@ -53,11 +56,14 @@ private:
   void processBlock(const AudioBlock& block);
   void publishWindow(int64_t endTimeUs);
   void resetMeasurementState();
+  void makeTestBlock(AudioBlock& block);
 
   static constexpr size_t kQueueDepth = 96;
   static constexpr uint32_t kWindowUs = 1000000;
   static constexpr uint32_t kClipLow = 8;
   static constexpr uint32_t kClipHigh = 4087;
+  static constexpr uint32_t kTestSymbolSamples = 640; // 160 ms at 4 kHz
+  static constexpr uint32_t kTestSymbolCount = 79;
 
   AudioCaptureService* capture_ = nullptr;
   QueueHandle_t queue_ = nullptr;
@@ -67,8 +73,11 @@ private:
   Metrics published_{};
   volatile bool active_ = false;
   volatile bool resetRequested_ = false;
+  volatile bool testPlayback_ = false;
   bool initialized_ = false;
 
+  uint32_t testSampleIndex_ = 0;
+  float testPhase_ = 0.0f;
   int16_t* sampleRing_ = nullptr;
   size_t sampleWrite_ = 0;
   size_t sampleCount_ = 0;
@@ -97,4 +106,5 @@ private:
 };
 
 // One monitor instance is owned by the JS8 subsystem; it subscribes to the
-// same shared ADC capture used by the other digital receive services.
+// shared capture service. A synthetic 8-FSK source can temporarily replace
+// only this subscriber for repeatable DSP-pipeline testing.

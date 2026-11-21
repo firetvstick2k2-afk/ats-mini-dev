@@ -1040,3 +1040,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Keine NAVTEX- oder weiteren Decoderarbeiten vor den Punkten 1–5.
 - Nutzer startet Builds/Actions manuell und testet auf dem ATS Mini V4. Assistant startet keine Builds/Actions und behauptet keine Hardwareprüfung.
 - Nach jedem wesentlichen Arbeitsschritt beide Handoff-Dateien aktualisieren.
+
+
+## JS8Call implementation preparation — 2026-11-21
+- Rechecked the live `development` branch, `AGENTS.md`, development guide, Makefile, shared audio capture and FT8 engine/UI before continuing.
+- Refined `JS8CALL_RECEIVE_DECODER.md` against the current JS8Call-improved User Guide. Important physical-layer detail: NORMAL uses its legacy-compatible triple Costas pattern; SLOW/FAST/JS8 40 use three distinct Costas arrays. All four established modes use 8 tones and 79 symbols. JS8 60 remains experimental and is deferred.
+- Confirmed the official USB-only and timing requirement: the receive window is aligned to 15/10/6/30-second frame boundaries; an error greater than roughly two seconds can prevent decoding. No synthetic UTC or guessed timing will be used.
+- Added the requested receive-screen behavior to the plan: line-by-line incoming text, automatic upward scrolling in live-follow mode, pause/resume and manual history scrolling. Reception and optional logging must continue independently of the visible scroll position.
+- No JS8 firmware source has been added yet. This is protocol/UI design refinement only; the next implementation step is a clean-room NORMAL physical-layer decoder and independent frame/protocol parser, with reference-vector validation before display integration.
+- Existing shared capture is 4 kHz / 24 samples per callback. The current FT8 engine uses a different monitor/payload pipeline; do not modify it or assume it is directly reusable. The ATS Mini Makefile uses wildcard source/header lists for `src/audio`, `src/ftx`, and `src/rtty`; add `src/js8` explicitly when new files are created.
+- No compile, GitHub Actions run, flash, or hardware test was performed.

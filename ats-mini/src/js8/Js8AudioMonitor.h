@@ -52,6 +52,7 @@ private:
   void workerTask();
   void processBlock(const AudioBlock& block);
   void publishWindow(int64_t endTimeUs);
+  void resetMeasurementState();
 
   static constexpr size_t kQueueDepth = 96;
   static constexpr uint32_t kWindowUs = 1000000;
@@ -65,6 +66,7 @@ private:
   mutable portMUX_TYPE metricsMux_ = portMUX_INITIALIZER_UNLOCKED;
   Metrics published_{};
   volatile bool active_ = false;
+  volatile bool resetRequested_ = false;
   bool initialized_ = false;
 
   int16_t sampleRing_[kSnapshotSamples]{};

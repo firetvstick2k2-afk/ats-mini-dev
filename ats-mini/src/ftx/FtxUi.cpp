@@ -136,6 +136,229 @@ const char* countryForCall(const char* call)
      !strcmp(prefix,"BJ") || !strcmp(prefix,"BL") || !strcmp(prefix,"BT") ||
      !strcmp(prefix,"BU") || !strcmp(prefix,"BV") || !strcmp(prefix,"BW") ||
      !strcmp(prefix,"BX") || !strcmp(prefix,"BZ")) return "CN";
+  // Additional common DXCC prefixes. Countries with no dedicated flag graphic
+  // are rendered by drawFlag() as their two-letter ISO code.
+  if(!strcmp(prefix,"LZ")) return "BG"; // Bulgaria
+  if(!strcmp(prefix,"R") || !strcmp(prefix,"RA") || !strcmp(prefix,"RC") ||
+     !strcmp(prefix,"RD") || !strcmp(prefix,"RE") || !strcmp(prefix,"RF") ||
+     !strcmp(prefix,"RG") || !strcmp(prefix,"RH") || !strcmp(prefix,"RI") ||
+     !strcmp(prefix,"RJ") || !strcmp(prefix,"RK") || !strcmp(prefix,"RL") ||
+     !strcmp(prefix,"RM") || !strcmp(prefix,"RN") || !strcmp(prefix,"RO") ||
+     !strcmp(prefix,"RP") || !strcmp(prefix,"RQ") || !strcmp(prefix,"RR") ||
+     !strcmp(prefix,"RT") || !strcmp(prefix,"RU") || !strcmp(prefix,"RV") ||
+     !strcmp(prefix,"RW") || !strcmp(prefix,"RX") || !strcmp(prefix,"RY") ||
+     !strcmp(prefix,"RZ")) return "RU";
+  if(!strcmp(prefix,"UR") || !strcmp(prefix,"US") || !strcmp(prefix,"UT") ||
+     !strcmp(prefix,"UU") || !strcmp(prefix,"UV") || !strcmp(prefix,"UW") ||
+     !strcmp(prefix,"UX") || !strcmp(prefix,"UY") || !strcmp(prefix,"UZ")) return "UA";
+  if(!strcmp(prefix,"YO") || !strcmp(prefix,"YP") || !strcmp(prefix,"YQ") ||
+     !strcmp(prefix,"YR")) return "RO";
+  if(!strcmp(prefix,"HA") || !strcmp(prefix,"HG")) return "HU";
+  if(!strcmp(prefix,"YU") || !strcmp(prefix,"YT")) return "RS";
+  if(!strcmp(prefix,"9A")) return "HR";
+  if(!strcmp(prefix,"S5")) return "SI";
+  if(!strcmp(prefix,"4O")) return "ME";
+  if(!strcmp(prefix,"4U")) return "UN";
+  if(!strcmp(prefix,"ER")) return "MD";
+  if(!strcmp(prefix,"ES")) return "EE";
+  if(!strcmp(prefix,"YL")) return "LV";
+  if(!strcmp(prefix,"LY")) return "LT";
+  if(!strcmp(prefix,"EW")) return "BY";
+  if(!strcmp(prefix,"UR")) return "UA";
+  if(!strcmp(prefix,"4X") || !strcmp(prefix,"4Z")) return "IL";
+  if(!strcmp(prefix,"SV") || !strcmp(prefix,"SX") || !strcmp(prefix,"J4")) return "GR";
+  if(!strcmp(prefix,"9H")) return "MT";
+  if(!strcmp(prefix,"9M") || !strcmp(prefix,"9W")) return "MY";
+  if(!strcmp(prefix,"YB") || !strcmp(prefix,"YC") || !strcmp(prefix,"YD") ||
+     !strcmp(prefix,"YE") || !strcmp(prefix,"YF") || !strcmp(prefix,"YG") ||
+     !strcmp(prefix,"YH") || !strcmp(prefix,"YI") || !strcmp(prefix,"YJ") ||
+     !strcmp(prefix,"YK") || !strcmp(prefix,"YL") || !strcmp(prefix,"YM") ||
+     !strcmp(prefix,"YN") || !strcmp(prefix,"YO") || !strcmp(prefix,"YP") ||
+     !strcmp(prefix,"YQ") || !strcmp(prefix,"YR") || !strcmp(prefix,"YS") ||
+     !strcmp(prefix,"YT") || !strcmp(prefix,"YU") || !strcmp(prefix,"YV") ||
+     !strcmp(prefix,"YW") || !strcmp(prefix,"YX") || !strcmp(prefix,"YY") ||
+     !strcmp(prefix,"YZ")) return "ID";
+  if(!strcmp(prefix,"VU")) return "IN";
+  if(!strcmp(prefix,"4S")) return "LK";
+  if(!strcmp(prefix,"9V")) return "SG";
+  if(!strcmp(prefix,"HS") || !strcmp(prefix,"E2")) return "TH";
+  if(!strcmp(prefix,"BV") || !strcmp(prefix,"BM") || !strcmp(prefix,"BN")) return "TW";
+  if(!strcmp(prefix,"DU") || !strcmp(prefix,"DV") || !strcmp(prefix,"DW") ||
+     !strcmp(prefix,"DX") || !strcmp(prefix,"DY") || !strcmp(prefix,"DZ")) return "PH";
+  if(!strcmp(prefix,"VU") || !strcmp(prefix,"AT")) return "IN";
+  if(!strcmp(prefix,"A4")) return "OM";
+  if(!strcmp(prefix,"A6")) return "AE";
+  if(!strcmp(prefix,"A7")) return "QA";
+  if(!strcmp(prefix,"A9")) return "BH";
+  if(!strcmp(prefix,"HZ") || !strcmp(prefix,"7Z")) return "SA";
+  if(!strcmp(prefix,"5B")) return "CY";
+  if(!strcmp(prefix,"Z3")) return "MK";
+  if(!strcmp(prefix,"TA") || !strcmp(prefix,"TB") || !strcmp(prefix,"TC") ||
+     !strcmp(prefix,"YM")) return "TR";
+  if(!strcmp(prefix,"CN") || !strcmp(prefix,"5N")) return "MA";
+  if(!strcmp(prefix,"EA6")) return "GI";
+  if(!strcmp(prefix,"9G")) return "GH";
+  if(!strcmp(prefix,"5Z")) return "KE";
+  if(!strcmp(prefix,"ZS") || !strcmp(prefix,"ZT") || !strcmp(prefix,"ZU")) return "ZA";
+  if(!strcmp(prefix,"D4")) return "CV";
+  if(!strcmp(prefix,"C5")) return "GM";
+  if(!strcmp(prefix,"5A")) return "LY";
+  if(!strcmp(prefix,"3V")) return "TN";
+  if(!strcmp(prefix,"7X")) return "DZ";
+  if(!strcmp(prefix,"7Q")) return "MW";
+  if(!strcmp(prefix,"9J")) return "ZM";
+  if(!strcmp(prefix,"5H")) return "TZ";
+  if(!strcmp(prefix,"5N")) return "NG";
+  if(!strcmp(prefix,"JY")) return "JO";
+  if(!strcmp(prefix,"YK")) return "SY";
+  if(!strcmp(prefix,"EP") || !strcmp(prefix,"EQ")) return "IR";
+  if(!strcmp(prefix,"AP") || !strcmp(prefix,"6P")) return "PK";
+  if(!strcmp(prefix,"9K")) return "KW";
+  if(!strcmp(prefix,"9L")) return "SL";
+  if(!strcmp(prefix,"9Q")) return "CD";
+  if(!strcmp(prefix,"7P")) return "LS";
+  if(!strcmp(prefix,"7Q")) return "MW";
+  if(!strcmp(prefix,"7Y")) return "DZ";
+  if(!strcmp(prefix,"YV") || !strcmp(prefix,"YY")) return "VE";
+  if(!strcmp(prefix,"HC") || !strcmp(prefix,"HD")) return "EC";
+  if(!strcmp(prefix,"OA")) return "PE";
+  if(!strcmp(prefix,"CP")) return "BO";
+  if(!strcmp(prefix,"CE") || !strcmp(prefix,"CA") || !strcmp(prefix,"CB") ||
+     !strcmp(prefix,"CC") || !strcmp(prefix,"CD") || !strcmp(prefix,"XQ")) return "CL";
+  if(!strcmp(prefix,"CX")) return "UY";
+  if(!strcmp(prefix,"YF")) return "CO";
+  if(!strcmp(prefix,"HK") || !strcmp(prefix,"5J")) return "CO";
+  if(!strcmp(prefix,"TI") || !strcmp(prefix,"TE")) return "CR";
+  if(!strcmp(prefix,"HP")) return "PA";
+  if(!strcmp(prefix,"TG")) return "GT";
+  if(!strcmp(prefix,"YS")) return "SV";
+  if(!strcmp(prefix,"HR")) return "HN";
+  if(!strcmp(prefix,"YN")) return "NI";
+  if(!strcmp(prefix,"OA")) return "PE";
+  if(!strcmp(prefix,"XE") || !strcmp(prefix,"XF") || !strcmp(prefix,"4A") ||
+     !strcmp(prefix,"4B") || !strcmp(prefix,"4C")) return "MX";
+  if(!strcmp(prefix,"ZP")) return "PY";
+  if(!strcmp(prefix,"CE")) return "CL";
+  if(!strcmp(prefix,"HK")) return "CO";
+  if(!strcmp(prefix,"YB")) return "ID";
+  if(!strcmp(prefix,"VK") || !strcmp(prefix,"AX")) return "AU";
+  if(!strcmp(prefix,"ZL") || !strcmp(prefix,"ZM")) return "NZ";
+  if(!strcmp(prefix,"FK")) return "NC";
+  if(!strcmp(prefix,"FO")) return "PF";
+  if(!strcmp(prefix,"KH6")) return "US";
+  if(!strcmp(prefix,"V6")) return "FM";
+  if(!strcmp(prefix,"T8")) return "PW";
+  if(!strcmp(prefix,"DU")) return "PH";
+  if(!strcmp(prefix,"9M")) return "MY";
+  if(!strcmp(prefix,"YJ")) return "VU";
+  if(!strcmp(prefix,"ZC4")) return "CY";
+  if(!strcmp(prefix,"P2")) return "PG";
+  if(!strcmp(prefix,"YB")) return "ID";
+  if(!strcmp(prefix,"VK")) return "AU";
+  if(!strcmp(prefix,"ZK")) return "CK";
+  if(!strcmp(prefix,"3D2")) return "FJ";
+  if(!strcmp(prefix,"A3")) return "TO";
+  if(!strcmp(prefix,"5W")) return "WS";
+  if(!strcmp(prefix,"KH")) return "US";
+  if(!strcmp(prefix,"KL7")) return "US";
+  if(!strcmp(prefix,"CE0")) return "CL";
+  if(!strcmp(prefix,"VP8")) return "FK";
+  if(!strcmp(prefix,"VP9")) return "BM";
+  if(!strcmp(prefix,"V2")) return "AG";
+  if(!strcmp(prefix,"J3")) return "GD";
+  if(!strcmp(prefix,"J6")) return "LC";
+  if(!strcmp(prefix,"J7")) return "DM";
+  if(!strcmp(prefix,"J8")) return "VC";
+  if(!strcmp(prefix,"PJ2")) return "CW";
+  if(!strcmp(prefix,"PJ4")) return "BQ";
+  if(!strcmp(prefix,"PZ")) return "SR";
+  if(!strcmp(prefix,"OA")) return "PE";
+  if(!strcmp(prefix,"HC8")) return "EC";
+  if(!strcmp(prefix,"YI")) return "IQ";
+  if(!strcmp(prefix,"4W")) return "TL";
+  if(!strcmp(prefix,"9V")) return "SG";
+  if(!strcmp(prefix,"XU")) return "KH";
+  if(!strcmp(prefix,"XW")) return "LA";
+  if(!strcmp(prefix,"XZ")) return "MM";
+  if(!strcmp(prefix,"A5")) return "BT";
+  if(!strcmp(prefix,"S2")) return "BD";
+  if(!strcmp(prefix,"9N")) return "NP";
+  if(!strcmp(prefix,"VU")) return "IN";
+  if(!strcmp(prefix,"AP")) return "PK";
+  if(!strcmp(prefix,"5T")) return "MR";
+  if(!strcmp(prefix,"5U")) return "NE";
+  if(!strcmp(prefix,"5V")) return "TG";
+  if(!strcmp(prefix,"TR")) return "GA";
+  if(!strcmp(prefix,"TU")) return "CI";
+  if(!strcmp(prefix,"TY")) return "BJ";
+  if(!strcmp(prefix,"TZ")) return "ML";
+  if(!strcmp(prefix,"XT")) return "BF";
+  if(!strcmp(prefix,"3X")) return "GN";
+  if(!strcmp(prefix,"9U")) return "BI";
+  if(!strcmp(prefix,"9X")) return "RW";
+  if(!strcmp(prefix,"ET")) return "ET";
+  if(!strcmp(prefix,"ST")) return "SD";
+  if(!strcmp(prefix,"SU")) return "EG";
+  if(!strcmp(prefix,"5R")) return "MG";
+  if(!strcmp(prefix,"V5")) return "NA";
+  if(!strcmp(prefix,"A2")) return "BW";
+  if(!strcmp(prefix,"C9")) return "MZ";
+  if(!strcmp(prefix,"D2")) return "AO";
+  if(!strcmp(prefix,"D6")) return "KM";
+  if(!strcmp(prefix,"EL")) return "LR";
+  if(!strcmp(prefix,"J5")) return "GW";
+  if(!strcmp(prefix,"J2")) return "DJ";
+  if(!strcmp(prefix,"S9")) return "ST";
+  if(!strcmp(prefix,"TL")) return "CF";
+  if(!strcmp(prefix,"TN")) return "CG";
+  if(!strcmp(prefix,"TT")) return "TD";
+  if(!strcmp(prefix,"5X")) return "UG";
+  if(!strcmp(prefix,"9Y")) return "TT";
+  if(!strcmp(prefix,"VP2")) return "AI";
+  if(!strcmp(prefix,"VQ9")) return "IO";
+  if(!strcmp(prefix,"ZB")) return "GI";
+  if(!strcmp(prefix,"ZD7")) return "SH";
+  if(!strcmp(prefix,"ZD8")) return "SH";
+  if(!strcmp(prefix,"ZS")) return "ZA";
+  if(!strcmp(prefix,"3B8")) return "MU";
+  if(!strcmp(prefix,"3B9")) return "MU";
+  if(!strcmp(prefix,"V8")) return "BN";
+  if(!strcmp(prefix,"9M2")) return "MY";
+  if(!strcmp(prefix,"9M6")) return "MY";
+  if(!strcmp(prefix,"YB")) return "ID";
+  if(!strcmp(prefix,"VK")) return "AU";
+  if(!strcmp(prefix,"ZL")) return "NZ";
+  if(!strcmp(prefix,"P4")) return "AW";
+  if(!strcmp(prefix,"PJ5")) return "BQ";
+  if(!strcmp(prefix,"PJ7")) return "SX";
+  if(!strcmp(prefix,"J6")) return "LC";
+  if(!strcmp(prefix,"J8")) return "VC";
+  if(!strcmp(prefix,"V3")) return "BZ";
+  if(!strcmp(prefix,"C6")) return "BS";
+  if(!strcmp(prefix,"VP5")) return "TC";
+  if(!strcmp(prefix,"ZF")) return "KY";
+  if(!strcmp(prefix,"6Y")) return "JM";
+  if(!strcmp(prefix,"HI")) return "DO";
+  if(!strcmp(prefix,"CO") || !strcmp(prefix,"CM")) return "CU";
+  if(!strcmp(prefix,"FG")) return "GP";
+  if(!strcmp(prefix,"FM")) return "MQ";
+  if(!strcmp(prefix,"FY")) return "GF";
+  if(!strcmp(prefix,"J3")) return "GD";
+  if(!strcmp(prefix,"8P")) return "BB";
+  if(!strcmp(prefix,"8R")) return "GY";
+  if(!strcmp(prefix,"9Y")) return "TT";
+  if(!strcmp(prefix,"YV")) return "VE";
+  if(!strcmp(prefix,"PZ")) return "SR";
+  if(!strcmp(prefix,"OA")) return "PE";
+  if(!strcmp(prefix,"CE")) return "CL";
+  if(!strcmp(prefix,"LU")) return "AR";
+  if(!strcmp(prefix,"PY")) return "BR";
+  if(!strcmp(prefix,"HC")) return "EC";
+  if(!strcmp(prefix,"HK")) return "CO";
+  if(!strcmp(prefix,"TI")) return "CR";
+  if(!strcmp(prefix,"HP")) return "PA";
+  if(!strcmp(prefix,"YF")) return "CO";
+  if(!strcmp(prefix,"ZP")) return "PY";
   return "";
 }
 

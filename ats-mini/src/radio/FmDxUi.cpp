@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
+extern bool updateFrequency(int newFreq, bool wrap);
+
 namespace {
   bool pageActive = false;
   uint32_t lastRefresh = 0;
@@ -14,7 +16,6 @@ namespace {
   bool actionsOpen = false;
   uint8_t actionSelection = 0;
   uint8_t manualFilter = 3;
-  extern bool updateFrequency(int newFreq, bool wrap);
 
   constexpr uint16_t BLACK  = 0x0000;
   constexpr uint16_t WHITE  = 0xFFFF;
@@ -82,7 +83,7 @@ void fmDxUiExit() {
   if(!pageActive) return;
   actionsOpen = false;
   pageActive = false;
-  fmDxStop();
+  fmDxEndSession();
   currentCmd = CMD_NONE;
 }
 
@@ -129,7 +130,7 @@ void fmDxUiClick() {
     case 1:
       if(fmDxActive()) fmDxStop();
       manualFilter = manualFilter == 4 ? 2 : manualFilter + 1;
-      rx.setFmBandwidth(manualFilter);
+      fmDxSetManualBandwidth(manualFilter);
       break;
     case 2:
       actionsOpen = false;
@@ -252,7 +253,7 @@ void drawFmDxPage() {
     spr.setTextDatum(TC_DATUM);
     spr.setTextColor(CYAN, 0x0841);
     spr.drawString("FM-DX ACTIONS", 160, 41, FONT_DEFAULT);
-    const char *items[] = { fmDxActive() ? "PAUSE AUTO" : "START AUTO", "FILTER WIDTH", "BACK" };
+    const char *items[] = { fmDxActive() ? "PAUSE AUTO" : "START AUTO", "FILTER: CHANGE", "BACK" };
     for(uint8_t n=0;n<3;++n) {
       int y=65+n*22;
       if(n==actionSelection) {

@@ -3,7 +3,7 @@
 Stand: 21.11.2026  
 Repository: `firetvstick2k2-afk/ats-mini-dev` (privat)  
 Arbeitsbranch: `development`  
-Letzter Code-Commit: 5c8cbdbdee7047b3875f9e28316578cbc8627b06 (RTTY preset preview submenu).
+Letzter Code-Commit: b036dbcd234f7fc5577b46d7bfc4335a205fe19a (RTTY preset preview submenu and action-menu polish).
 
 ## 1. Wichtige Arbeitsregeln
 
@@ -358,5 +358,5 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Bedienung wie FT8: drehen wählt, nach 2 Sekunden wird die Frequenz probeweise abgestimmt (WAIT → LISTEN), erneutes Drehen stellt die vorherige Frequenz wieder her und wechselt zur nächsten Vorauswahl. Kurzer Klick übernimmt die Frequenz und setzt die zum Preset gehörige Baudrate (45.45/50 Bd), AUTO-Polarität und Decoder-Reset. Klick vor Ablauf der 2 Sekunden übernimmt direkt.
 - Während der Vorschau werden Lautsprecher-Mute und Verstärker nur falls nötig temporär aktiviert und anschließend auf den vorherigen Zustand zurückgesetzt. Beim Verlassen während einer Vorschau wird auch der ursprüngliche VFO/BFO wiederhergestellt.
 - Nur das RTTY-Aktions-/Preset-Untermenü wurde optisch an FT8 angepasst; die RTTY-Empfangsseite bleibt unverändert.
-- Quellcode-Commits: `5941a11ea95a2c0f12ce0f8d28c030dda44036ba`, `d9361fd80c40b7852e78780a3ceb7d2c4eaab1a3`, `5c8cbdbdee7047b3875f9e28316578cbc8627b06`.
+- Quellcode-Commits: `5941a11ea95a2c0f12ce0f8d28c030dda44036ba`, `d9361fd80c40b7852e78780a3ceb7d2c4eaab1a3`, `5c8cbdbdee7047b3875f9e28316578cbc8627b06`, `b036dbcd234f7fc5577b46d7bfc4335a205fe19a`.
 - Build und Hardwaretest stehen noch aus. Nächster Schritt: manueller OSPI-DE-Build auf `development`; anschließend alle 11 Presets, 2-s-Vorschau, Audio, Auswahl/Abbruch, Baudrate, BFO- und Exit-Wiederherstellung testen.

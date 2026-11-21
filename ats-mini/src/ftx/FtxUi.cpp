@@ -566,7 +566,7 @@ bool ftxUiOpen(FtxMode mode)
     decoderService.exit();
     netInit(restoreNetworkMode);
     ftxOfflineSyncActive = false;
-    statusShow("Decoder start failed", ftxOfflineSyncPreference ? "Check audio / PSRAM" : "Check UTC and audio input");
+    statusShow("Decoder start failed", ftxOfflineSyncActive ? "Check audio / PSRAM" : "Check UTC and audio input");
     return false;
   }
 

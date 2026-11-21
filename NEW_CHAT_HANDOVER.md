@@ -330,3 +330,13 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - FM, PTY and RDS RadioText centered in their respective frames; RDS clock lowered; Wi-Fi icon moved left to avoid battery-voltage overlap.
 - PI logo file path normalized to `/Logos/<filename>` before opening the PNG. LittleFS mount/migration untouched.
 - Changed only `ats-mini/Layout-DABStyle.cpp` plus handoff notes. Build/hardware validation pending.
+
+## DAB Style station logos — Mini_OS port (2026-11-21)
+- Ported the Mini_OS `StationLogoClient` behavior from `firetvstick2k2-afk/Mini_OS`, branch `dev/first-build-preparation`, into ATS Mini development.
+- Added `ats-mini/StationLogoClient.cpp/.h`: asynchronous FreeRTOS lookup task, mutex-protected RAM image buffer, PSRAM-first/internal-heap allocation, 220 KB image limit, PNG/JPEG signature validation, 5 s connect and 7 s request timeouts, strict redirects, and the same deliberately insecure TLS setting as Mini_OS.
+- Lookup order: local PI match in `/logos/`; if absent and Wi-Fi is already connected, FM-DX Station Logo lookup for D-prefixed PI (program-suffixed PNG candidates from expected name, RDS station name and RadioText, then PI PNG/JPG/JPEG); finally Radio Browser Germany fallback with exact normalized station-name match and PNG/JPEG favicon.
+- Successful HTTPS remote logos are cached in `/logos/<PI>_REMOTE.png|jpg`; image bytes are held in RAM for rendering. The DAB layout renders PNG/JPEG proportionally in the existing logo viewport and shows SEARCHING / NO LOGO / LOGO ERROR states.
+- ATS Mini-specific directory rule confirmed by user: `/logos/` lowercase only. At every boot, `logosInit()` scans LittleFS root for PNG files, skips `splash.png` case-insensitively, and renames other root PNGs into `/logos/`. Existing destination files are not overwritten. The logo client itself searches only `/logos/` (no `/Logos` or root fallback).
+- Startup initializes the logo client after LittleFS migration. The initial offline lookup can still load a local logo; if Wi-Fi becomes available afterward, the same station key is retried immediately rather than waiting for the 60-second online retry interval.
+- Changed: `ats-mini/StationLogoClient.cpp/.h`, `ats-mini/Layout-DABStyle.cpp`, `ats-mini/Storage.cpp`, `ats-mini/ats-mini.ino`.
+- Source-only port. No GitHub Actions build, flash, or hardware/network test was started. User should manually run the OSPI-DE build on `development`, then test local PNG/JPG/JPEG display, root PNG migration (including splash exclusion and duplicate handling), online FM-DX lookup, Radio Browser fallback, offline behavior, cache persistence and station changes.

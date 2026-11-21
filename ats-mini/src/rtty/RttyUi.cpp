@@ -32,6 +32,8 @@ bool presetPreviewActive=false;
 uint32_t presetPreviewStartedAt=0;
 bool presetPreviewSpeakerWasEnabled=true;
 bool presetPreviewSpeakerForced=false;
+bool presetPreviewAmpWasEnabled=true;
+bool presetPreviewAmpForced=false;
 uint8_t restoreNetworkMode=NET_OFF;
 uint32_t lastRefresh=0;
 uint32_t lastAutoBfoAdjust=0;
@@ -74,9 +76,14 @@ const DecoderFrequencyPreset* rttyPresetAt(uint8_t wanted) {
 }
 
 void restoreRttyPresetPreviewSpeaker() {
-  if(!presetPreviewSpeakerForced) return;
-  digitalWrite(AUDIO_MUTE,presetPreviewSpeakerWasEnabled?LOW:HIGH);
-  presetPreviewSpeakerForced=false;
+  if(presetPreviewSpeakerForced) {
+    digitalWrite(AUDIO_MUTE,presetPreviewSpeakerWasEnabled?LOW:HIGH);
+    presetPreviewSpeakerForced=false;
+  }
+  if(presetPreviewAmpForced) {
+    if(PIN_AMP_EN>=0) digitalWrite(PIN_AMP_EN,presetPreviewAmpWasEnabled?HIGH:LOW);
+    presetPreviewAmpForced=false;
+  }
 }
 
 void clearRttyPresetPreviewState() {
@@ -159,6 +166,11 @@ void startRttyPresetPreview() {
     return;
   }
   presetPreviewPending=false;
+  if(PIN_AMP_EN>=0 && digitalRead(PIN_AMP_EN)!=HIGH) {
+    presetPreviewAmpWasEnabled=false;
+    presetPreviewAmpForced=true;
+    digitalWrite(PIN_AMP_EN,HIGH);
+  }
   if(digitalRead(AUDIO_MUTE)!=LOW) {
     presetPreviewSpeakerWasEnabled=false;
     presetPreviewSpeakerForced=true;
@@ -194,6 +206,7 @@ void acceptRttyPreset() {
     polarityIndex=0;
     service.setPolarity(polarityIndex);
     service.resetDecoder();
+    lastAutoBfoAdjust=0;
     bfoAtEntry=currentBFO;
   } else {
     restoreRttyPresetOriginal();

@@ -70,7 +70,14 @@ void fmDxUiExit() {
 }
 
 bool fmDxUiTick(uint32_t now) {
-  if(!pageActive || static_cast<uint32_t>(now - lastRefresh) < 500) return false;
+  if(!pageActive) return false;
+  // A remote band change can bypass the local encoder while this page is open.
+  // Close cleanly instead of leaving an FM-only page active on another mode.
+  if(currentMode != FM) {
+    fmDxUiExit();
+    return true;
+  }
+  if(static_cast<uint32_t>(now - lastRefresh) < 500) return false;
   lastRefresh = now;
   return true;
 }

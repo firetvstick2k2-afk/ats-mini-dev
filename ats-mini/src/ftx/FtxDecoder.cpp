@@ -94,6 +94,7 @@ bool FtxDecoder::begin(FtxMode mode, float minAudioHz, float maxAudioHz) {
   dcEstimate_ = 2048.0f;
   frameFill_ = resultCount_ = 0;
   slotUtc_ = 0;
+  slotUtcValid_ = false;
   collecting_ = slotReady_ = false;
   initialized_ = true;
   return true;
@@ -104,15 +105,17 @@ void FtxDecoder::end() {
   monitor_ = {};
   initialized_ = collecting_ = slotReady_ = false;
   frameFill_ = resultCount_ = 0;
+  slotUtcValid_ = false;
 }
 
-bool FtxDecoder::startSlot(time_t utcSlotStart) {
-  if (!initialized_ || utcSlotStart <= 0) return false;
+bool FtxDecoder::startSlot(time_t utcSlotStart, bool utcValid) {
+  if (!initialized_ || (utcValid && utcSlotStart <= 0)) return false;
   monitor_reset(&monitor_);
   memset(frame_, 0, sizeof(frame_));
   memset(results_, 0, sizeof(results_));
   frameFill_ = resultCount_ = 0;
-  slotUtc_ = utcSlotStart;
+  slotUtc_ = utcValid ? utcSlotStart : 0;
+  slotUtcValid_ = utcValid;
   collecting_ = true;
   slotReady_ = false;
   return true;
@@ -179,6 +182,9 @@ size_t FtxDecoder::decodeSlot() {
     out.syncScore = candidates[i].score > 0 ? static_cast<uint16_t>(candidates[i].score) : 0;
     out.ldpcErrors = status.ldpc_errors;
     out.slotUtc = slotUtc_;
+    out.utcValid = slotUtcValid_;
+    out.slotOffsetSeconds = candidates[i].time_offset * symbolPeriod +
+      candidates[i].time_sub * symbolPeriod / monitor_.wf.time_osr;
   }
 
   slotReady_ = false;

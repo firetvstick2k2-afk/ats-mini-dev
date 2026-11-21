@@ -299,3 +299,12 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Tone-pair detection remains automatic. The actions overlay displays the currently detected MARK and SPACE frequencies (or `TONE PAIR: SEARCHING...`). There is no manual tone-frequency editor or true automatic baud-rate detector in the current decoder, so neither is presented as a feature.
 - Changed only `ats-mini/src/rtty/RttyUi.cpp`, `RttyService.h`, and `RttyService.cpp`. FT8/FT4 files and DSP, the main Decoder Frequencies menu, TEF6686, LittleFS, and shared audio capture were not changed.
 - Source-only changes on `development`. No compile, GitHub Actions run, flash, or hardware test was performed. User must manually build OSPI-DE on `development`; test preset baud defaults, manual baud and polarity edits, AUTO/MANUAL BFO behavior, clear/reset, BACK/EXIT, and restoration of BFO, volume and Wi-Fi.
+
+
+## Direct RTTY decoder main-menu entry — 2026-11-21
+- Added a standalone `RTTY DECODER` entry directly after `DECODER FREQUENCIES` and before `FT8 / FT4 DECODER` in both German and English main menus.
+- Selecting it starts the existing RTTY decoder directly at the currently tuned receiver frequency, with 45.45 baud as the general non-preset default, BFO AUTO, and polarity AUTO. The RTTY actions menu remains available immediately after launch.
+- Existing RTTY frequency presets continue to pass their own recommended baud rate (amateur RTTY 45.45, DWD/Pinneberg 50); the new direct entry does not change preset routing.
+- Shifted the main-menu indices for FT8/FT4 and Settings by one position to make room. Existing symbolic menu indices and settings handlers were kept aligned in both language files.
+- Changed only `ats-mini/Menu_german.cpp.src` and `ats-mini/Menu_english.cpp.src`. No FT8/FT4 decoder implementation, RTTY service/UI logic, TEF6686, LittleFS, or frequency preset definitions changed in this addition.
+- Source-only on `development`; no compile, Actions run, flash, or hardware test was performed. Verify that the main-menu order is Decoder Frequencies → RTTY Decoder → FT8 / FT4 Decoder and that the direct entry starts RTTY at the current frequency.

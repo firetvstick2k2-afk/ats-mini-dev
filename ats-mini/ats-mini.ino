@@ -773,6 +773,14 @@ void loop()
   if(currentCmd == CMD_DUAL_RX && digitalRead(ENCODER_PUSH_BUTTON) != LOW && dualRxTick(currentTime))
     needRedraw = true;
 
+  if(currentCmd == CMD_FTX_DECODER && encCount)
+  {
+    ftxUiRotate(encCount);
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime;
+    encCount = encCountAccel = 0;
+  }
+
   if(currentCmd == CMD_RTTY_DECODER && encCount)
   {
     rttyUiRotate(encCount);

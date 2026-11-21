@@ -16,6 +16,7 @@
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
 #include "src/cw/CwUi.h"
+#include "src/js8/Js8Ui.h"
 #include "Storage.h"
 
 #include <time.h>
@@ -127,7 +128,8 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_CW_DECODER  20
 #define MENU_RTTY_DECODER 21
 #define MENU_FTX_DECODER 22
-#define MENU_SETTINGS    23
+#define MENU_JS8_MONITOR 23
+#define MENU_SETTINGS    24
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -176,6 +178,7 @@ static const char *menu[] =
   "CW DEKODER",
   "RTTY DEKODER",
   "FT8 /FT4 DEKODER",
+  "JS8 RX MONITOR",
   "EINSTELLUNGEN",
 };
 
@@ -994,6 +997,9 @@ static void clickMenu(int cmd, bool shortPress)
       break;
     case MENU_FTX_DECODER:
       if(ftxUiOpen(FtxMode::FT8)) currentCmd = CMD_FTX_DECODER;
+      break;
+    case MENU_JS8_MONITOR:
+      if(js8UiOpen()) currentCmd = CMD_JS8_MONITOR;
       break;
   }
 }

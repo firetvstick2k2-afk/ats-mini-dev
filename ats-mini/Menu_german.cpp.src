@@ -2004,6 +2004,11 @@ bool decoderFrequencyClick()
     decoderLastTunedPreset = decoderPresetIndex;
   }
   const DecoderKind decoder = kDecoderFrequencyPresets[presetIndex].decoder;
+  if(decoder == DecoderKind::CW)
+  {
+    if(cwUiOpen()) currentCmd = CMD_CW_DECODER;
+    return true;
+  }
   if(decoder == DecoderKind::FT8 || decoder == DecoderKind::FT4)
   {
     if(ftxUiOpen(decoder == DecoderKind::FT8 ? FtxMode::FT8 : FtxMode::FT4))

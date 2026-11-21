@@ -1180,3 +1180,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - FT8/FT4 message-row fills changed to black while retaining the blue row outlines and the blue outer display frame.
 - Frequency is now left-aligned first, followed by the kHz label on the same top row.
 - The receive progress indicator is rendered as separated blue equalizer-style blocks instead of a continuous blue bar.
+
+
+## Diamond-style menu redesign (2026-11-21)
+- Main menu, Settings and Decoder now use a consistent compact scrolling list: dark navy/black background, thin blue separators, cyan accents, white selected text, item numbers, position counter and a narrow scroll indicator.
+- Decoder entries have been consolidated into a dedicated scrolling Decoder submenu with a Back item. The existing CW, RTTY, FT8/FT4, JS8 and decoder-frequency actions are routed from there.
+- Settings now has a Back row and retains its existing settings actions; the previously skipped Zoom entry remains skipped.
+- Selecting Volume opens a compact overlay slider immediately. Encoder rotation adjusts volume; encoder click returns to the same main-menu selection.
+- Existing radio layouts and decoder implementations are not intentionally changed by this menu work.
+- JS8 compile cleanup: duplicate Costas include/constant and repeated test-metric declarations/assignments removed after Build #17 exposed these compile errors.

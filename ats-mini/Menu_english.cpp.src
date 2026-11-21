@@ -124,12 +124,8 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_VFO         16
 #define MENU_SPECTRUM    17
 #define MENU_ALL_SPECTRUM 18
-#define MENU_DECODER_FREQUENCIES 19
-#define MENU_CW_DECODER  20
-#define MENU_RTTY_DECODER 21
-#define MENU_FTX_DECODER 22
-#define MENU_JS8_MONITOR 23
-#define MENU_SETTINGS    24
+#define MENU_DECODER_MENU 19
+#define MENU_SETTINGS    20
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -146,6 +142,8 @@ static const char *decoderCategoryLabels[] = {
   "CB",
 };
 static uint8_t decoderCategoryIndex = 0;
+static uint8_t decoderMenuIdx = 0;
+static const char *decoderMenu[] = { "BACK", "DECODER FREQUENCIES", "CW DECODER", "RTTY DECODER", "FT8 / FT4", "JS8 RX MONITOR" };
 static uint8_t decoderPresetIndex = 0;
 static bool decoderPresetView = false;
 static uint32_t decoderSelectionChangedAt = 0;
@@ -155,31 +153,11 @@ static const char *spectrumMenu[] = { "VHF SPECTRUM", "ALL Band Spectrum" };
 
 static const char *menu[] =
 {
-  "Volume",
-  "Keypad",
-  "Band",
-  "Mode",
-  "BFO",
-  "Steps",
-  "Seek",
-  "Scan",
-  "Memory",
-  "Squelch",
-  "Bandwidth",
-  "Frequency",
-  "AGC/ATTN",
-  "AVC",
-  "SoftMute",
-  "DUAL RX",
-  "VFO A/B",
-  "VHF Spectrum",
-  "ALL Band Spectrum",
-  "Decoder Frequencies",
-  "CW Decoder",
-  "RTTY Decoder",
-  "FT8 / FT4 Decoder",
-  "JS8 RX Monitor",
-  "Settings",
+  "Volume", "Keypad", "Band", "Mode", "BFO",
+  "Steps", "Seek", "Scan", "Memory", "Squelch",
+  "Bandwidth", "Frequency", "AGC/ATTN", "AVC",
+  "SoftMute", "DUAL RX", "VFO A/B", "VHF Spectrum",
+  "ALL Band Spectrum", "Decoder", "Settings",
 };
 
 #define MENU_BRIGHTNESS   0
@@ -515,7 +493,7 @@ void doVolume(int16_t enc)
 
 static void clickVolume(bool shortPress)
 {
-  if(shortPress) muteOn(MUTE_MAIN, !muteOn(MUTE_MAIN)); else currentCmd = CMD_NONE;
+  currentCmd = CMD_MENU;
 }
 
 static void clickSquelch(bool shortPress)
@@ -966,19 +944,7 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_DUAL_RX: dualRxStart(); break;
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
-    case MENU_DECODER_FREQUENCIES: decoderFrequencyOpen(); break;
-    case MENU_CW_DECODER:
-      if(cwUiOpen()) currentCmd = CMD_CW_DECODER;
-      break;
-    case MENU_RTTY_DECODER:
-      if(rttyUiOpen(45.45f)) currentCmd = CMD_RTTY_DECODER;
-      break;
-    case MENU_FTX_DECODER:
-      if(ftxUiOpen(FtxMode::FT8)) currentCmd = CMD_FTX_DECODER;
-      break;
-    case MENU_JS8_MONITOR:
-      if(js8UiOpen()) currentCmd = CMD_JS8_MONITOR;
-      break;
+    case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
   }
 }
 
@@ -988,7 +954,21 @@ static const char *settingLabel(int idx)
   return settings[idx];
 }
 
-static void doSettings(int16_t enc) { settingsIdx = wrap_range(settingsIdx, enc, 0, LAST_ITEM(settings)); if(settingsIdx == MENU_ZOOM) settingsIdx = (enc >= 0) ? MENU_ZOOM + 1 : MENU_ZOOM - 1; }
+static void doSettings(int16_t enc) { settingsIdx = wrap_range(settingsIdx, enc, 0, ITEM_COUNT(settings) - 1); }
+
+static void clickDecoderMenu(int idx)
+{
+  switch(idx)
+  {
+    case 0: currentCmd = CMD_MENU; break;
+    case 1: decoderFrequencyOpen(); break;
+    case 2: if(cwUiOpen()) currentCmd = CMD_CW_DECODER; break;
+    case 3: if(rttyUiOpen(45.45f)) currentCmd = CMD_RTTY_DECODER; break;
+    case 4: if(ftxUiOpen(FtxMode::FT8)) currentCmd = CMD_FTX_DECODER; break;
+    case 5: if(js8UiOpen()) currentCmd = CMD_JS8_MONITOR; break;
+    default: currentCmd = CMD_MENU; break;
+  }
+}
 
 static void clickSettings(int cmd, bool shortPress)
 {
@@ -1031,6 +1011,7 @@ bool doSideBar(uint16_t cmd, int16_t enc, int16_t enca)
   switch(cmd)
   {
     case CMD_MENU:       doMenu(scrollDirection * enc);break;
+    case CMD_DECODER_MENU: decoderMenuIdx = wrap_range(decoderMenuIdx, scrollDirection * enc, 0, LAST_ITEM(decoderMenu)); break;
     case CMD_SPECTRUM_MENU: spectrumMenuIdx = wrap_range(spectrumMenuIdx, scrollDirection * enc, 0, LAST_ITEM(spectrumMenu)); break;
     case CMD_MODE:       doMode(scrollDirection * enc);break;
     case CMD_STEP:       doStep(scrollDirection * enc);break;
@@ -1074,13 +1055,17 @@ bool clickHandler(uint16_t cmd, bool shortPress)
   switch(cmd)
   {
     case CMD_MENU:     clickMenu(menuIdx, shortPress);break;
+    case CMD_DECODER_MENU: clickDecoderMenu(decoderMenuIdx); break;
     case CMD_DECODER_FREQUENCIES: decoderFrequencyClick(); break;
     case CMD_FTX_DECODER: ftxUiExit(); break;
     case CMD_SPECTRUM_MENU:
       if(spectrumMenuIdx == 0) spectrumScannerStart();
       else currentCmd = CMD_SPECTRUM_MENU; // All-band scanner is reserved for a later feature.
       break;
-    case CMD_SETTINGS: clickSettings(settingsIdx, shortPress);break;
+    case CMD_SETTINGS:
+      if(settingsIdx == 0) currentCmd = CMD_MENU;
+      else clickSettings(settingsIdx <= MENU_ZOOM ? settingsIdx - 1 : settingsIdx, shortPress);
+      break;
     case CMD_UPDATEFW: otaRequestLatest(updateFwIdx == 1);break;
     case CMD_MEMORY:   clickMemory(memoryIdx, shortPress);break;
     case CMD_BLEMODE:  clickBleMode(bleModeMenuIdx, shortPress);break;
@@ -1799,71 +1784,112 @@ static int drawXXLText(const char *text, int x, int y, uint16_t color, const lgf
 
 void drawFullScreenMenu(uint16_t cmd)
 {
-  const uint16_t bg = 0x0000;
-  const uint16_t blue = 0x001F;
-  const uint16_t cyan = 0x07FF;
+  const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF, white = 0xFFFF;
   const bool settingsPage = cmd == CMD_SETTINGS;
   const bool spectrumPage = cmd == CMD_SPECTRUM_MENU;
-  const int rawIdx = settingsPage ? settingsIdx : (spectrumPage ? spectrumMenuIdx : menuIdx);
-  const int idx = (settingsPage && rawIdx > MENU_ZOOM) ? rawIdx - 1 : rawIdx;
-  const int count = settingsPage ? ITEM_COUNT(settings) - 1 : (spectrumPage ? ITEM_COUNT(spectrumMenu) : ITEM_COUNT(menu));
-  const char *title = settingsPage ? "SETTINGS" : (spectrumPage ? "SPECTRUM" : "MAIN MENU");
-  const char *selected = settingsPage ? settingLabel(rawIdx) : (spectrumPage ? spectrumMenu[idx] : menu[idx]);
-  const char *displaySelected = selected;
-  // Render menu labels in uppercase without corrupting UTF-8 umlauts.
-  char uppercaseLabel[96];
-  snprintf(uppercaseLabel, sizeof(uppercaseLabel), "%s", displaySelected ? displaySelected : "");
-  for (size_t i = 0; uppercaseLabel[i] != '\0'; ++i) {
-    if (uppercaseLabel[i] >= 'a' && uppercaseLabel[i] <= 'z') {
-      uppercaseLabel[i] = static_cast<char>(uppercaseLabel[i] - ('a' - 'A'));
-    }
-  }
-  displaySelected = uppercaseLabel;
+  const bool decoderPage = cmd == CMD_DECODER_MENU;
+  const int selected = settingsPage ? settingsIdx :
+    (spectrumPage ? spectrumMenuIdx : (decoderPage ? decoderMenuIdx : menuIdx));
+  const int count = settingsPage ? ITEM_COUNT(settings) :
+    (spectrumPage ? ITEM_COUNT(spectrumMenu) :
+     (decoderPage ? ITEM_COUNT(decoderMenu) : ITEM_COUNT(menu)));
+  const char *title = settingsPage ? "SETTINGS" :
+    (spectrumPage ? "SPECTRUM" : (decoderPage ? "DECODER" : "MENU"));
+  const int first = max(0, min(count - 5, selected - 2));
 
   spr.fillSprite(bg);
-  spr.fillRoundRect(3, 3, 314, 164, 5, bg);
-  spr.drawRoundRect(3, 3, 314, 164, 5, blue);
-
-  drawXXLText(title, 12, 7, cyan, &lgfx::fonts::Orbitron_Light_24);
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(cyan);
-  spr.setFont(FONT_SMALL);
-  char counter[12];
-  snprintf(counter, sizeof(counter), "%02d / %02d", idx + 1, count);
-  spr.drawString(counter, 307, 9);
-
-
-  // Text-only menu: center the selected label in the screen area.
-  // A fixed anchor avoids item-specific vertical shifts caused by icon alignment.
-  const int maxTextWidth = 286;
-  const lgfx::IFont *menuFont = &lgfx::fonts::Orbitron_Light_24;
-  int textWidth = spr.textWidth(displaySelected, menuFont);
-  if (textWidth > maxTextWidth) {
-    menuFont = FONT_LARGE;
-    textWidth = spr.textWidth(displaySelected, menuFont);
-  }
-  int textX = (320 - textWidth) / 2;
-  // The custom UTF-8 renderer draws Ä as a single glyph; compensate for
-  // native textWidth counting its UTF-8 bytes differently on this label.
-  const int textY = (settingsPage && rawIdx == MENU_WIFIMODE) ? 76 : 73;
-  if (!settingsPage && idx == MENU_AVC) textX -= 7;
-  if (!settingsPage && idx == MENU_SETTINGS) textX = (320 - textWidth) / 2;
-  drawXXLText(displaySelected, textX, textY, cyan, menuFont);
-
-  // Keep the existing footer, without any divider line or inner frame.
-  spr.setTextColor(cyan);
+  spr.fillRect(8, 7, 4, 22, cyan);
   spr.setTextDatum(TL_DATUM);
-  drawXXLText("ROTATE: SELECT", 12, 151, cyan, FONT_SMALL);
-  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(white);
+  spr.setFont(FONT_LARGE);
+  spr.drawString(title, 18, 7);
+  spr.setTextDatum(MC_DATUM);
+  spr.setTextColor(white);
   spr.setFont(FONT_SMALL);
+  spr.drawString("DR / ATS MINI", 160, 17);
+  spr.setTextDatum(TR_DATUM);
   spr.setTextColor(cyan);
-  spr.drawString("CLICK: OK", 307, 151, FONT_SMALL);
-  if(!settingsPage && !spectrumPage && (idx == MENU_SPECTRUM || idx == MENU_ALL_SPECTRUM)) {
-    spr.setTextDatum(MC_DATUM);
-    spr.setTextColor(0xBDF7);
+  char counter[16];
+  snprintf(counter, sizeof(counter), "%02d / %02d", selected + 1, count);
+  spr.drawString(counter, 308, 17);
+  spr.drawFastHLine(10, 34, 300, blue);
+
+  for(int row = 0; row < 5; ++row)
+  {
+    const int item = first + row;
+    if(item >= count) break;
+    const int y = 39 + row * 25;
+    const bool active = item == selected;
+    const int settingsItem = item == 0 ? -1 : (item <= MENU_ZOOM ? item - 1 : item);
+    const char *label = settingsPage ? (item == 0 ? "BACK" : settingLabel(settingsItem)) :
+      (spectrumPage ? spectrumMenu[item] :
+       (decoderPage ? decoderMenu[item] : menu[item]));
+    if(active) {
+      spr.fillRect(9, y, 298, 24, blue);
+      spr.fillRect(9, y, 3, 24, cyan);
+    }
+    spr.setTextDatum(ML_DATUM);
+    spr.setTextColor(active ? white : cyan);
     spr.setFont(FONT_SMALL);
-    spr.drawString(idx == MENU_ALL_SPECTRUM ? "AM / USB / LSB - Max scan width: 1000 kHz" : "Click to enter start frequency", 160, 132);
+    char number[5];
+    snprintf(number, sizeof(number), "%02d", item + 1);
+    spr.drawString(number, 18, y + 12);
+    spr.setTextColor(active ? white : 0xBDF7);
+    spr.drawString(label, 52, y + 12);
+    if(!settingsPage && !decoderPage && !spectrumPage) {
+      char value[24] = "";
+      switch(item) {
+        case MENU_VOLUME: snprintf(value, sizeof(value), "%u", volume); break;
+        case MENU_BAND: snprintf(value, sizeof(value), "%s", bands[bandIdx].bandName); break;
+        case MENU_MODE: snprintf(value, sizeof(value), "%s", bandModeDesc[currentMode]); break;
+        case MENU_DECODER_MENU:
+        case MENU_SETTINGS: snprintf(value, sizeof(value), ">"); break;
+        default: break;
+      }
+      if(value[0]) {
+        spr.setTextDatum(MR_DATUM);
+        spr.setTextColor(active ? white : cyan);
+        spr.drawString(value, 298, y + 12);
+      }
+    }
+    spr.drawFastHLine(52, y + 24, 255, blue);
   }
+  spr.drawFastVLine(313, 39, 124, blue);
+  const int thumbY = 39 + (count > 5 ? selected * 99 / (count - 1) : 0);
+  spr.fillRect(311, thumbY, 5, 25, cyan);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(cyan);
+  spr.drawString("DREHEN: WÄHLEN", 12, 151, FONT_SMALL);
+  spr.setTextDatum(TR_DATUM);
+  spr.drawString("KLICK: OK", 307, 151, FONT_SMALL);
+}
+
+void drawVolumePopup()
+{
+  const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF;
+  spr.fillSprite(bg);
+  spr.fillRect(8, 7, 4, 22, cyan);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(0xFFFF);
+  spr.drawString("MENU / VOLUME", 18, 8, FONT_SMALL);
+  spr.drawFastHLine(10, 34, 300, blue);
+  spr.fillRoundRect(24, 51, 272, 78, 8, 0x0821);
+  spr.drawRoundRect(24, 51, 272, 78, 8, cyan);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(0xFFFF);
+  spr.drawString("Volume", 42, 62, FONT_SMALL);
+  spr.setTextDatum(TR_DATUM);
+  char value[8];
+  snprintf(value, sizeof(value), "%u", volume);
+  spr.drawString(value, 274, 56, FONT_LARGE);
+  spr.fillRoundRect(42, 103, 236, 10, 5, 0x39E7);
+  const int width = static_cast<int>(volume) * 236 / 63;
+  if(width > 0) spr.fillRoundRect(42, 103, width, 10, 5, 0xFFFF);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(cyan);
+  spr.drawString("DREHEN: EINSTELLEN", 12, 151, FONT_SMALL);
+  spr.setTextDatum(TR_DATUM);
+  spr.drawString("KLICK: BESTÄTIGEN", 308, 151, FONT_SMALL);
 }
 
 void drawSideBar(uint16_t cmd, int x, int y, int sx)

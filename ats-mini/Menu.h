@@ -60,6 +60,7 @@
 #define CMD_RTTY_DECODER 0x4000 // RTTY decoder screen
 #define CMD_CW_DECODER   0x4100 // CW decoder screen
 #define CMD_JS8_MONITOR  0x4200 // Independent JS8 RX audio monitor
+#define CMD_DECODER_MENU 0x4300 // Scrolling decoder submenu
 
 
 
@@ -145,6 +146,7 @@ static inline bool isSettingsMode(uint16_t cmd)
 uint8_t seekMode(bool toggle = false);
 void drawSideBar(uint16_t cmd, int x, int y, int sx);
 void drawFullScreenMenu(uint16_t cmd);
+void drawVolumePopup();
 void drawDecoderFrequencyMenu();
 void decoderFrequencyOpen();
 bool decoderFrequencyRotate(int16_t enc);

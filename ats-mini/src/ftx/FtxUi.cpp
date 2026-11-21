@@ -35,6 +35,10 @@ bool ftxVolumeBoostActive = false;
 // Toggle only the external speaker amplifier; keep SI473x audio and GPIO11 ADC capture alive.
 bool ftxSpeakerAmpBefore = true;
 bool ftxSpeakerEnabled = true;
+bool ftxActionsOpen = false;
+bool ftxAutoScroll = true;
+uint8_t ftxMenuSelection = 0;
+constexpr uint8_t kFtxMenuItems = 5;
 
 const char* countryForCall(const char* call)
 {
@@ -176,6 +180,29 @@ void extractMetadata(const char* message, char* country, size_t countrySize,
       }
     }
   }
+
+  if(ftxActionsOpen) {
+    const int menuX=28, menuY=27, menuW=264, menuH=128;
+    const char* labels[kFtxMenuItems] = {
+      ftxSpeakerEnabled ? "SPEAKER       ON" : "SPEAKER       OFF",
+      ftxAutoScroll ? "AUTO SCROLL   ON" : "AUTO SCROLL   OFF",
+      "CLEAR STATIONS",
+      "BACK",
+      "EXIT FT8 + FT4"
+    };
+    spr.fillRoundRect(menuX,menuY,menuW,menuH,4,blueDark);
+    spr.drawRoundRect(menuX,menuY,menuW,menuH,4,cyan);
+    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(cyan);
+    spr.drawString(pageMode==FtxMode::FT4 ? "FT4 ACTIONS" : "FT8 ACTIONS",menuX+12,menuY+8);
+    for(uint8_t i=0;i<kFtxMenuItems;++i) {
+      const int y=menuY+29+i*19;
+      if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,18,0x0359);
+      spr.setTextColor(i==ftxMenuSelection?0xFFFF:0xBDF7);
+      spr.drawString(labels[i],menuX+14,y);
+    }
+  }
 }
 
 void drawFlag(const char* country, int x, int y)
@@ -309,6 +336,7 @@ void ftxUiExit()
 {
   if(!pageActive) return;
   pageActive = false;
+  ftxActionsOpen = false;
   decoderService.exit();
   if(PIN_AMP_EN >= 0) digitalWrite(PIN_AMP_EN, ftxSpeakerAmpBefore ? HIGH : LOW);
   ftxSpeakerEnabled = ftxSpeakerAmpBefore;
@@ -321,19 +349,54 @@ void ftxUiExit()
   currentCmd = CMD_NONE;
 }
 
+void ftxUiRotate(int delta)
+{
+  if(!pageActive || !ftxActionsOpen || !delta) return;
+  int next = static_cast<int>(ftxMenuSelection) + (delta > 0 ? 1 : -1);
+  if(next < 0) next = kFtxMenuItems - 1;
+  if(next >= kFtxMenuItems) next = 0;
+  ftxMenuSelection = static_cast<uint8_t>(next);
+}
+
 void ftxUiClick()
 {
-  if(!pageActive || PIN_AMP_EN < 0) return;
-  ftxSpeakerEnabled = !ftxSpeakerEnabled;
-  // Do not call muteOn()/rx.setAudioMute(): GPIO11 is the decoder's live ADC tap.
-  digitalWrite(PIN_AMP_EN, ftxSpeakerEnabled ? HIGH : LOW);
+  if(!pageActive) return;
+  if(!ftxActionsOpen) {
+    ftxActionsOpen = true;
+    ftxMenuSelection = 0;
+    return;
+  }
+
+  switch(ftxMenuSelection) {
+    case 0: // Speaker
+      if(PIN_AMP_EN >= 0) {
+        ftxSpeakerEnabled = !ftxSpeakerEnabled;
+        // Do not call muteOn()/rx.setAudioMute(): GPIO11 is the decoder's live ADC tap.
+        digitalWrite(PIN_AMP_EN, ftxSpeakerEnabled ? HIGH : LOW);
+      }
+      break;
+    case 1: // Auto-scroll
+      ftxAutoScroll = !ftxAutoScroll;
+      break;
+    case 2: // Clear displayed station history/counters
+      memset(recentMessages, 0, sizeof(recentMessages));
+      decodedMessageCount = 0;
+      ldpcErrorCount = 0;
+      break;
+    case 3: // Back
+      ftxActionsOpen = false;
+      break;
+    case 4: // Exit decoder
+      ftxUiExit();
+      break;
+  }
 }
 
 bool ftxUiTick(uint32_t now)
 {
   if(!pageActive || static_cast<uint32_t>(now - lastPageRefresh) < 500) return false;
   lastPageRefresh = now;
-  refreshRecentMessages();
+  if(ftxAutoScroll) refreshRecentMessages();
   return true;
 }
 

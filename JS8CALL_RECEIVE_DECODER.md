@@ -240,3 +240,11 @@ A JS8-owned diagnostic subscriber has now been added under ats-mini/src/js8/:
 - The LILYGO GPIO11/SPI guard remains intact. Makefile wildcard lists include the new src/js8 files.
 - Next gate: source-review the menu/UI/lifecycle integration, then collect controlled-tone and lawful JS8 NORMAL measurements on hardware. Do not implement NORMAL DSP until the actual capture evidence is acceptable.
 - No build, repository check, GitHub Actions run, flash or hardware test has been performed.
+
+
+## 8. Deterministic 8-FSK playback harness (implemented; not a JS8 decode vector)
+The JS8 RX Monitor now supports a built-in repeatable synthetic signal source, activated by short click and stopped by another short click. It temporarily replaces only the JS8 monitor's live GPIO11 subscription, generates a nominal 4 kHz 8-FSK sequence with 79 symbols × 640 samples (160 ms per symbol), 6.25 Hz tone spacing and an audio center near 1 kHz, then feeds blocks through the monitor worker. Live capture resumes automatically when playback ends or is stopped.
+
+Important: this first waveform is deliberately a generic deterministic 8-FSK stimulus, not a protocol-valid JS8 NORMAL frame. It does not yet include verified JS8 Costas sync, LDPC(174,87), JS8 CRC-12 or a known message payload. It can exercise the monitor's block processing, timing and level metrics, but cannot prove successful JS8 synchronization or decoding. The next validation artifact must be an independently generated and verified protocol-valid NORMAL golden frame with expected decoded payload and metadata. No GPL JS8Call source is embedded.
+
+The playback path currently terminates at the monitor worker; a dedicated JS8 decoder sample-consumer interface remains a next implementation step. No build or hardware test has been performed.

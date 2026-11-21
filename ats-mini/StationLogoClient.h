@@ -27,6 +27,7 @@ private:
   bool haveRequested_ = false;
   char lastRequestKey_[40] = {};
   uint32_t lastAttemptMs_ = 0;
+  bool lastAttemptHadWifi_ = false;
   SemaphoreHandle_t logoMutex_ = nullptr;
   uint8_t* logoData_ = nullptr;
   size_t logoLength_ = 0;

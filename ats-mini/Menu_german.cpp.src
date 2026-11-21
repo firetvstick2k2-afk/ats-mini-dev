@@ -15,6 +15,7 @@
 #include "src/radio/DecoderFrequencyList.h"
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
+#include "src/cw/CwUi.h"
 #include "Storage.h"
 
 #include <time.h>
@@ -123,9 +124,10 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_SPECTRUM    17
 #define MENU_ALL_SPECTRUM 18
 #define MENU_DECODER_FREQUENCIES 19
-#define MENU_RTTY_DECODER 20
-#define MENU_FTX_DECODER 21
-#define MENU_SETTINGS    22
+#define MENU_CW_DECODER  20
+#define MENU_RTTY_DECODER 21
+#define MENU_FTX_DECODER 22
+#define MENU_SETTINGS    23
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -171,6 +173,7 @@ static const char *menu[] =
   "VHF SPEKTRUM",
   "ALL BAND SPEKTRUM",
   "DECODER-FREQUENZEN",
+  "CW DEKODER",
   "RTTY DEKODER",
   "FT8 /FT4 DEKODER",
   "EINSTELLUNGEN",
@@ -983,6 +986,9 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
     case MENU_DECODER_FREQUENCIES: decoderFrequencyOpen(); break;
+    case MENU_CW_DECODER:
+      if(cwUiOpen()) currentCmd = CMD_CW_DECODER;
+      break;
     case MENU_RTTY_DECODER:
       if(rttyUiOpen(45.45f)) currentCmd = CMD_RTTY_DECODER;
       break;

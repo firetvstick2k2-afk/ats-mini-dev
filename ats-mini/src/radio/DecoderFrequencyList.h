@@ -11,6 +11,7 @@ struct DecoderFrequencyPreset {
   uint8_t modulation;
   uint8_t bandwidthChoice;
   DecoderKind decoder = DecoderKind::None;
+  float recommendedBaud = 45.45f;
 };
 
 static constexpr DecoderFrequencyPreset kDecoderFrequencyPresets[] = {
@@ -48,19 +49,19 @@ static constexpr DecoderFrequencyPreset kDecoderFrequencyPresets[] = {
   {"FT4 10m", 28180, USB, 4, DecoderKind::FT4},
 
   // RTTY
-  {"RTTY 80m", 3580, USB, 4, DecoderKind::RTTY},
-  {"RTTY 40m", 7045, USB, 4, DecoderKind::RTTY},
-  {"RTTY 20m", 14080, USB, 4, DecoderKind::RTTY},
-  {"RTTY 15m", 21080, USB, 4, DecoderKind::RTTY},
-  {"RTTY 10m", 28080, USB, 4, DecoderKind::RTTY},
+  {"RTTY 80m", 3580, USB, 4, DecoderKind::RTTY, 45.45f},
+  {"RTTY 40m", 7045, USB, 4, DecoderKind::RTTY, 45.45f},
+  {"RTTY 20m", 14080, USB, 4, DecoderKind::RTTY, 45.45f},
+  {"RTTY 15m", 21080, USB, 4, DecoderKind::RTTY, 45.45f},
+  {"RTTY 10m", 28080, USB, 4, DecoderKind::RTTY, 45.45f},
 
   // DWD Pinneberg: RTTY/weather data and weather fax
-  {"PINNEBERG DDH 47", 147, AM, 4, DecoderKind::RTTY},
-  {"PINNEBERG DDK 2", 4583, USB, 4, DecoderKind::RTTY},
-  {"PINNEBERG DDH 7", 7646, USB, 4, DecoderKind::RTTY},
-  {"PINNEBERG DDK 9", 10101, USB, 4, DecoderKind::RTTY},
-  {"PINNEBERG DDH 9", 11039, USB, 4, DecoderKind::RTTY},
-  {"PINNEBERG DDH 8", 14467, USB, 4, DecoderKind::RTTY},
+  {"PINNEBERG DDH 47", 147, AM, 4, DecoderKind::RTTY, 50.0f},
+  {"PINNEBERG DDK 2", 4583, USB, 4, DecoderKind::RTTY, 50.0f},
+  {"PINNEBERG DDH 7", 7646, USB, 4, DecoderKind::RTTY, 50.0f},
+  {"PINNEBERG DDK 9", 10101, USB, 4, DecoderKind::RTTY, 50.0f},
+  {"PINNEBERG DDH 9", 11039, USB, 4, DecoderKind::RTTY, 50.0f},
+  {"PINNEBERG DDH 8", 14467, USB, 4, DecoderKind::RTTY, 50.0f},
   {"DWD FAX 7.880", 7880, USB, 4},
   {"DWD FAX 13.882", 13883, USB, 4},
   {"DWD FAX 3.855", 3855, USB, 4},

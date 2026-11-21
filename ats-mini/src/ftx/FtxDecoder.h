@@ -13,6 +13,9 @@ struct FtxDecodedMessage {
   uint16_t syncScore = 0;
   int ldpcErrors = 0;
   time_t slotUtc = 0;
+  uint64_t slotId = 0;
+  float slotOffsetSeconds = 0.0f;
+  bool utcValid = false;
 };
 
 // DSP/slot engine only. It never accesses GPIO, the ADC, Wi-Fi or the display.
@@ -25,7 +28,7 @@ public:
 
   bool begin(FtxMode mode, float minAudioHz = 250.0f, float maxAudioHz = 1750.0f);
   void end();
-  bool startSlot(time_t utcSlotStart);
+  bool startSlot(time_t utcSlotStart, bool utcValid = true);
   void pushSamples(const int16_t* samples, size_t count);
   bool slotReady() const { return slotReady_; }
   size_t decodeSlot();
@@ -55,6 +58,7 @@ private:
   size_t frameFill_ = 0;
   size_t resultCount_ = 0;
   time_t slotUtc_ = 0;
+  bool slotUtcValid_ = false;
   bool initialized_ = false;
   bool collecting_ = false;
   bool slotReady_ = false;

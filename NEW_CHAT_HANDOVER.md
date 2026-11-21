@@ -360,3 +360,11 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Nur das RTTY-Aktions-/Preset-Untermenü wurde optisch an FT8 angepasst; die RTTY-Empfangsseite bleibt unverändert.
 - Quellcode-Commits: `5941a11ea95a2c0f12ce0f8d28c030dda44036ba`, `d9361fd80c40b7852e78780a3ceb7d2c4eaab1a3`, `5c8cbdbdee7047b3875f9e28316578cbc8627b06`, `b036dbcd234f7fc5577b46d7bfc4335a205fe19a`.
 - Build und Hardwaretest stehen noch aus. Nächster Schritt: manueller OSPI-DE-Build auf `development`; anschließend alle 11 Presets, 2-s-Vorschau, Audio, Auswahl/Abbruch, Baudrate, BFO- und Exit-Wiederherstellung testen.
+
+## RTTY 147 kHz workaround / additional USB preset (21.11.2026)
+- Latest code commit on `development`: `6f041ec34c24f462e3a9ac1d3e8961800df6b62e`.
+- In the existing running RTTY decoder action submenu, `PINNEBERG DDH 47` at 147 kHz AM now uses an experimental USB-first, then AM reinitialization sequence. The selected receiver band's lower limit is temporarily set to 147 kHz only while the normal band initialization runs; the original 150 kHz limit is restored immediately afterward.
+- Added `PINNEBERG DDH 47 USB` as a separate local-only RTTY preset directly after the 147 kHz AM entry. It uses 50 baud and the same two-second preview/commit behavior.
+- Important scope: the USB preset is defined locally in `RttyUi.cpp`; `DecoderFrequencyList.h` and the top-level `Decoder Frequencies` browser are unchanged.
+- Both 147 kHz paths are experimental and unverified on hardware. No build, Actions run or flash was performed. Next step is the user's manual OSPI-DE build on `development`, then test 147 kHz AM audio after USB→AM switching and RTTY decoding on 147 kHz USB. Also verify preview rollback restores the original band state and 150 kHz minimum.
+

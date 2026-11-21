@@ -1205,3 +1205,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Preserved the frequency/speaker/counter header and message metadata layout.
 - Build #19 (run 44939322581) completed successfully on development at commit 968585b3b1e241321c9ab463165d8be0d77754aa.
 - This change is committed for OSPI-DE Build #20; hardware validation is pending.
+
+
+## Hardware feedback: complete Settings submenu redesign — 2026-11-21
+- Build #20 (run 44940230714) completed successfully for OSPI-DE on branch development at commit 6b1558539ee1c442e919f8df943e2eb90946cd07.
+- User hardware photos confirmed the Settings landing page and brightness popup were modernized, but selecting entries such as USB PORT still fell through to legacy drawSideBar() widgets.
+- Added a shared full-screen Settings popup renderer for the remaining settings commands; it presents the setting name and current value in the new dark/blue/cyan style while retaining existing encoder handlers and setting logic.
+- Routed Settings subcommands through the shared renderer in Draw.cpp, keeping the dedicated Volume and Brightness popups.
+- Applied the UTF-8 umlaut-aware text renderer to popup headings and labels in both German and English menu sources; German Volume/Brightness labels are localized consistently.
+- This commit is intended for the next OSPI-DE hardware-test build. Build result and remaining menu/umlaut audit findings must be appended after CI.

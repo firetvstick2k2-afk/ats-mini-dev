@@ -1891,13 +1891,13 @@ void drawVolumePopup()
   spr.fillRect(8, 7, 4, 22, cyan);
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(0xFFFF);
-  spr.drawString("MENU / VOLUME", 18, 8, FONT_SMALL);
+  drawXXLText("MENÜ / LAUTSTÄRKE",18,8,0xFFFF,FONT_SMALL);
   spr.drawFastHLine(10, 34, 300, blue);
   spr.fillRoundRect(24, 51, 272, 78, 8, 0x0821);
   spr.drawRoundRect(24, 51, 272, 78, 8, cyan);
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(0xFFFF);
-  spr.drawString("Volume", 42, 62, FONT_SMALL);
+  drawXXLText("Lautstärke",42,62,0xFFFF,FONT_SMALL);
   spr.setTextDatum(TR_DATUM);
   char value[8];
   snprintf(value, sizeof(value), "%u", volume);
@@ -1907,7 +1907,7 @@ void drawVolumePopup()
   if(width > 0) spr.fillRoundRect(42, 103, width, 10, 5, 0xFFFF);
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(cyan);
-  spr.drawString("DREHEN: EINSTELLEN", 12, 151, FONT_SMALL);
+  drawXXLText("DREHEN: EINSTELLEN",12,151,cyan,FONT_SMALL);
   spr.setTextDatum(TR_DATUM);
   spr.drawString("KLICK: BESTÄTIGEN", 308, 151, FONT_SMALL);
 }
@@ -1920,12 +1920,12 @@ void drawBrightnessPopup()
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(0xFFFF);
   spr.setFont(FONT_SMALL);
-  spr.drawString("SETTINGS / HELLIGKEIT", 18, 8);
+  drawXXLText("EINSTELLUNGEN / HELLIGKEIT",18,8,0xFFFF,FONT_SMALL);
   spr.drawFastHLine(10, 34, 300, blue);
   spr.fillRoundRect(24, 51, 272, 78, 8, 0x0821);
   spr.drawRoundRect(24, 51, 272, 78, 8, cyan);
   spr.setTextDatum(TL_DATUM);
-  spr.drawString("Helligkeit", 42, 62, FONT_SMALL);
+  drawXXLText("Helligkeit",42,62,0xFFFF,FONT_SMALL);
   spr.setTextDatum(TR_DATUM);
   char value[8];
   snprintf(value, sizeof(value), "%u", currentBrt);
@@ -1938,6 +1938,94 @@ void drawBrightnessPopup()
   spr.drawString("DREHEN: EINSTELLEN", 12, 151, FONT_SMALL);
   spr.setTextDatum(TR_DATUM);
   spr.drawString("KLICK: ZURÜCK", 308, 151, FONT_SMALL);
+}
+
+
+static int settingsIndexForCommand(uint16_t cmd)
+{
+  switch(cmd) {
+    case CMD_CAL: return MENU_CALIBRATION;
+    case CMD_THEME: return MENU_THEME;
+    case CMD_UI: return MENU_UI;
+    case CMD_RDS: return MENU_RDS;
+    case CMD_DATETIME: return MENU_DATETIME;
+    case CMD_ZOOM: return MENU_ZOOM;
+    case CMD_SCROLL: return MENU_SCROLL;
+    case CMD_SLEEP: return MENU_SLEEP;
+    case CMD_SLEEPMODE: return MENU_SLEEPMODE;
+    case CMD_UTCOFFSET: return MENU_UTCOFFSET;
+    case CMD_USBMODE: return MENU_USBMODE;
+    case CMD_TCPMODE: return MENU_TCPMODE;
+    case CMD_BLEMODE: return MENU_BLEMODE;
+    case CMD_WIFIMODE: return MENU_WIFIMODE;
+    case CMD_FM_REGION: return MENU_FM_REGION;
+    case CMD_FM_STEREO: return MENU_FM_STEREO;
+    case CMD_DSP_PATCHES: return MENU_DSP_PATCHES;
+    case CMD_UPDATEFW: return MENU_UPDATEFW;
+    case CMD_ABOUT: return MENU_ABOUT;
+    default: return -1;
+  }
+}
+
+static void drawSettingsPopup(uint16_t cmd)
+{
+  const uint16_t bg=0x0000, blue=0x001F, cyan=0x07FF, white=0xFFFF;
+  const int settingIndex=settingsIndexForCommand(cmd);
+  char value[48] = "";
+  const char *valueText=value;
+  switch(cmd) {
+    case CMD_CAL:
+      snprintf(value,sizeof(value),"%+d Hz",currentMode==USB?bands[bandIdx].usbCal:bands[bandIdx].lsbCal);
+      break;
+    case CMD_THEME: valueText=theme[themeIdx].name; break;
+    case CMD_UI: valueText=uiLayoutDesc[uiLayoutIdx]; break;
+    case CMD_RDS: valueText=rdsMode[rdsModeIdx].desc; break;
+    case CMD_DATETIME:
+      snprintf(value,sizeof(value),"%04u-%02u-%02u  %02u:%02u:%02u",
+        (unsigned)dateTimeYear,(unsigned)dateTimeMonth,(unsigned)dateTimeDay,
+        (unsigned)dateTimeHour,(unsigned)dateTimeMinute,(unsigned)dateTimeSecond);
+      break;
+    case CMD_ZOOM: valueText=zoomMenu?"ON":"OFF"; break;
+    case CMD_SCROLL: valueText=scrollDirection>0?"FORWARD":"REVERSE"; break;
+    case CMD_SLEEP: snprintf(value,sizeof(value),"%u",currentSleep); break;
+    case CMD_SLEEPMODE: valueText=sleepModeDesc[sleepModeIdx]; break;
+    case CMD_UTCOFFSET: valueText=utcOffsets[utcOffsetIdx].desc; break;
+    case CMD_USBMODE: valueText=usbModeDesc[usbModeIdx]; break;
+    case CMD_TCPMODE: valueText=tcpModeDesc[tcpModeIdx]; break;
+    case CMD_BLEMODE: valueText=bleModeDesc[bleModeMenuIdx]; break;
+    case CMD_WIFIMODE: valueText=wifiModeDesc[wifiModeIdx]; break;
+    case CMD_FM_REGION: valueText=fmRegions[FmRegionIdx].desc; break;
+    case CMD_FM_STEREO: valueText=fmStereoDesc[fmStereoIdx]; break;
+    case CMD_DSP_PATCHES: snprintf(value,sizeof(value),"PATCH %u",dspPatchesIdx); break;
+    case CMD_UPDATEFW: valueText=updateFwActions[updateFwIdx]; break;
+    case CMD_ABOUT: valueText="ATS MINI V4"; break;
+    default: valueText=""; break;
+  }
+
+  spr.fillSprite(bg);
+  spr.fillRect(8,7,4,22,cyan);
+  const char *section="EINSTELLUNGEN";
+  int titleWidth=drawXXLText(section,18,8,cyan,FONT_SMALL);
+  drawXXLText(" / ",18+titleWidth,8,cyan,FONT_SMALL);
+  const int sectionWidth=titleWidth+drawXXLText(" / ",18+titleWidth,8,cyan,FONT_SMALL);
+  const char *label=settingIndex>=0?settingLabel(settingIndex):"";
+  drawXXLText(label,18+sectionWidth,8,white,FONT_SMALL);
+  spr.drawFastHLine(10,34,300,blue);
+  spr.fillRoundRect(20,48,280,88,8,0x0821);
+  spr.drawRoundRect(20,48,280,88,8,cyan);
+  const int labelWidth=drawXXLText(label,160,60,0xBDF7,FONT_SMALL);
+  (void)labelWidth;
+  spr.setTextDatum(TC_DATUM);
+  spr.setTextColor(white);
+  spr.setFont(FONT_LARGE);
+  const int valueWidth=spr.textWidth(valueText);
+  drawXXLText(valueText,max(30,(320-valueWidth)/2),88,white,FONT_LARGE);
+  spr.drawFastHLine(10,143,300,blue);
+  drawXXLText("DREHEN: ÄNDERN",12,151,cyan,FONT_DEFAULT);
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(cyan);
+  spr.setFont(FONT_DEFAULT);
+  spr.drawString("KLICK: AUSWÄHLEN",308,151);
 }
 
 void drawSideBar(uint16_t cmd, int x, int y, int sx)

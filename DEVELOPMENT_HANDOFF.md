@@ -1231,3 +1231,16 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Correction: remove `static` from the function definition in both `Menu_german.cpp.src` and `Menu_english.cpp.src`, matching the declaration in `Menu.h`. No settings behavior or radio logic is changed.
 - Correction committed to `development` only. Build #23 is triggered by this push; compilation and artifact availability remain unverified until CI completes.
 - Main remains untouched. The full source tree is preserved; verify recursive tree entry count after the commit.
+
+
+## Settings popup follow-up: UTF-8, centering and date/time selection — 2026-11-21
+- Updated `ats-mini/Menu_german.cpp.src` in commit `d7a7ecbbbd75d7e5bb01e3423a4ed64e1910c9a1`.
+- Updated `ats-mini/Menu_english.cpp.src` in commit `8800f4146202525c6dfba10b4a4d580d21425dd1`.
+- Added a UTF-8-aware text-width measurement helper alongside the existing UTF-8 renderer. Popup labels and values are now centered using measured rendered glyph widths; right-side instructions are aligned by their measured width instead of relying on the raw draw datum.
+- Routed the remaining German and English menu/footer instructions through the UTF-8-aware renderer. Corrected the English Volume popup footer from the stray German text to `CLICK: CONFIRM`.
+- Restored a visible active-field highlight in the new Date/Time popup by reusing the existing `dateTimeField` state and its six-field index mapping (year, month, day, hour, minute, second). The established encoder/click handlers were not changed.
+- Kept the existing dark popup, cyan frame/accent, and white text design. No radio-layout, TEF6686, RDS PS/RT, or decoder behavior was intentionally changed.
+- Both commits were pushed to `development` only. Their commit messages include `[skip ci]` because the Development workflow runs automatically on branch pushes; no firmware build was started. Build #24 remains pending separate user authorization.
+- Build #23 (run `44942466083`) was subsequently verified successful: OSPI-DE compile, single firmware binary preparation, and artifact upload all completed successfully; release job was skipped.
+- Hardware verification of the three popup corrections remains outstanding. Check all six Date/Time fields, German umlauts at the footer, popup title/value centering, and the English template on hardware.
+- `main` remains untouched.

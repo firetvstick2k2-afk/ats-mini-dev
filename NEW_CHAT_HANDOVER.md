@@ -235,3 +235,12 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - The overlay is rendered after the underlying decoder page; the decoder service and its capture/slot worker continue running. No DSP, slot timing, RTTY, TEF6686, or LittleFS changes.
 - Noise filter and volume adjustment are not exposed yet: they need safe receiver/audio-path behavior validation so they cannot disturb the FT8 ADC capture. Decoder volume remains at the existing boost level 50.
 - Source-only change on development; no build, Actions run, flash, or hardware verification. Confirm menu navigation, background decoding while open, speaker toggle, clear, auto-scroll freeze/resume, BACK, and EXIT.
+
+
+## FT8/FT4 log and display row color — 2026-11-21
+- User confirmed the live FT8 screen and speaker toggle work. The middle message row appeared bright green; all three message row backgrounds are now explicitly drawn in the same deep blue (`0x1036`) to remove the unintended green-looking alternating row.
+- Added a switchable per-session FT8/FT4 text log to the actions overlay: LOGGING ON/OFF. Enabling starts a new file in LittleFS root; disabling stops appends. Leaving the decoder also stops the current session. Each enable creates a unique dated file such as `FT8_21.11.26.txt`, then `FT8_21.11.26_1.txt`, etc.; FT4 sessions use an `FT4_` prefix.
+- Each successfully decoded message is appended with UTC timestamp, frequency, mode, country prefix/code when recognized, Maidenhead locator, distance from QTH `JO31TV` in km (or N/A), SNR, and decoded text. Unknown country prefixes are labelled Unknown; no guessed location/distance is written.
+- Added authenticated web log listing at `/radio/ft8-logs` and individual downloads at `/radio/ft8-log?name=...`. The list only exposes FT8_/FT4_ .txt files; download names are validated to prevent path traversal. This uses existing LittleFS and existing web-server authentication; no formatting, erasing, or reinitialization of LittleFS was added.
+- The logger opens/appends/closes the file per decoded message and flushes each line. No decoder DSP, slot timing, audio capture, RTTY, TEF6686, or existing storage preferences were changed.
+- Source-only implementation on `development`; no build, Actions run, flash, or hardware test. Verify green row is gone, logging toggles, repeated same-day sessions get numbered files, decoded rows contain metadata, files persist after reboot, and downloads work while Wi-Fi/web server is active.

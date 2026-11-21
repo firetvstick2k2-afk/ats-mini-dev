@@ -253,21 +253,30 @@ const DecoderFrequencyPreset* ftxPresetAt(uint8_t wanted)
 
 bool applyFtxPreset(const DecoderFrequencyPreset& preset)
 {
-  // Select the existing receiver band that covers this HF frequency.
+  // Prefer the narrowest existing HF band containing this frequency.
+  // This avoids the broad ALL-SW band shadowing the dedicated amateur bands.
+  int bestBand = -1;
+  uint16_t bestSpan = UINT16_MAX;
   for(int i=0;i<getTotalBands();++i) {
-    if(bands[i].bandType != SW_BAND_TYPE ||
+    if(bands[i].bandType == FM_BAND_TYPE ||
        preset.frequencyKHz < bands[i].minimumFreq ||
        preset.frequencyKHz > bands[i].maximumFreq) continue;
-    bands[i].currentFreq = static_cast<uint16_t>(preset.frequencyKHz);
-    bands[i].bandMode = preset.modulation;
-    bands[i].bandwidthIdx = preset.bandwidthChoice;
-    selectBand(static_cast<uint8_t>(i), false);
-    currentMode = preset.modulation;
-    currentFrequency = rx.getFrequency();
-    currentBFO = 0;
-    return currentFrequency == preset.frequencyKHz;
+    const uint16_t span = bands[i].maximumFreq - bands[i].minimumFreq;
+    if(span < bestSpan) {
+      bestSpan = span;
+      bestBand = i;
+    }
   }
-  return false;
+  if(bestBand < 0) return false;
+
+  bands[bestBand].currentFreq = static_cast<uint16_t>(preset.frequencyKHz);
+  bands[bestBand].bandMode = preset.modulation;
+  bands[bestBand].bandwidthIdx = preset.bandwidthChoice;
+  currentBFO = 0;
+  selectBand(static_cast<uint8_t>(bestBand), false);
+  currentMode = preset.modulation;
+  currentFrequency = rx.getFrequency();
+  return currentFrequency == preset.frequencyKHz;
 }
 
 uint8_t ftxActionCount()

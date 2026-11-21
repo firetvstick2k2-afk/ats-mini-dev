@@ -446,3 +446,12 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - AUTO/MULTI speed detection remains a planned feature after individual modes are validated. Accept a speed only after mode-specific synchronization, channel decode and CRC validation. Benchmark parallel mode decoding against a lower-cost candidate scheduler; do not overload the ESP32-S3.
 - Source provenance was recorded in `JS8CALL_RECEIVE_DECODER.md`. Do not copy GPL-licensed JS8Call implementation code or tables into this MIT repository without an explicit licensing decision.
 - Next technical gate: obtain/prepare legally usable JS8 NORMAL reference recordings and an independently generated host-side validation path; then implement and verify the physical layer before integrating UI or logging.
+
+
+## JS8 NORMAL 4 kHz receive-chain gate (2026-11-21)
+- Follow-up to JS8 baseline research: the ATS Mini capture is 4 kHz, Nyquist 2 kHz, while upstream JS8's baseline window extends to 2.5 kHz. Do not port its 12 kHz FFT/filter constants or baseline window unchanged.
+- NORMAL at 4 kHz is 640 samples/symbol, 160 ms/symbol, eight orthogonal tone bins spaced 6.25 Hz. Confirm the receiver's actual audio center/passband and GPIO11 capture response on the hardware; a center near 1 kHz is only an initial measurement target, not an assumed setting.
+- A 15-second mono int16 raw ring window is 120,000 bytes. Keep AudioCaptureService callbacks producer-only and short; DSP, sync search, LDPC and parser belong in a worker. Count overruns and reject frames with audio gaps.
+- New validation gates in `JS8CALL_RECEIVE_DECODER.md`: deterministic NORMAL vectors; host-side 4 kHz DSP tests with timing/carrier/noise offsets; independently verified LDPC bit ordering and CRC vectors; host performance/RAM tests; only then firmware integration.
+- Offline phase acquisition must use validated JS8 sync candidates and a monotonic 15-second phase grid, never fake UTC from the capture callback's wall-clock timestamp. Do not display OFFLINE LOCK before physical-layer validation passes.
+- Source-only documentation update. No firmware code, build, Actions, flash or hardware test performed.

@@ -1,6 +1,6 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-11-21 (main menu reorder and direct FT8/FT4 entry)
+Last updated: 2026-11-21 (DAB layout selection and menu label fix)
 Repository: https://github.com/13HN2709/ats-mini-dev (private development workspace); public release repository: https://github.com/13HN2709/ats-mini
 Active work branch: `development` (never modify `main` unless explicitly requested)
 
@@ -893,3 +893,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - On decoder entry, preserve the original amplifier and hardware-mute states; restore both on exit. Preset preview temporarily unmutes only the L/R speaker output and restores the prior speaker state afterward.
 - Changed only `ats-mini/src/ftx/FtxUi.cpp` plus these handoff notes. No FT8/FT4 DSP, slot timing, ADC capture service, RTTY, TEF6686, or LittleFS code changed.
 - Source-only correction on `development`, commit `3d00b9b7a6019ab0556763d97b95467d14e4b819`. No build, flash, or hardware verification performed. User should test: Speaker OFF must silence the speaker while FT8 decode counters/messages continue; Speaker ON restores audio; exit restores the prior mute/amplifier state.
+
+
+## DAB layout selection fix (2026-11-21)
+- The UI Layout menu now labels index 8 simply **DAB** in German and English; the misleading FM-only suffix was removed.
+- Selecting DAB now always calls `drawLayoutDABStyle()`, regardless of the currently selected receiver mode/band. It no longer silently substitutes TinyRadio outside FM.
+- Only `ats-mini/Draw.cpp`, `ats-mini/Menu_german.cpp.src`, and `ats-mini/Menu_english.cpp.src` were changed for this fix. No other layouts or receiver behavior were intentionally modified.
+- Source change only; no build or hardware test was run. User should verify the DAB layout while on FM and on a non-FM band.

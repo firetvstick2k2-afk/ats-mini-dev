@@ -949,3 +949,9 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Code commit: `6f041ec34c24f462e3a9ac1d3e8961800df6b62e`.
 - Source-only change. No GitHub Actions run, build, flash or hardware test was started. User should manually build OSPI-DE on `development` and test both 147 kHz entries: confirm the AM entry actually produces audio after USB→AM initialization, confirm the USB entry can receive/decode RTTY, and verify preview cancellation restores the previous band and 150 kHz floor.
 
+## FT8 country-code fallback styling (2026-11-21)
+- In `ats-mini/src/ftx/FtxUi.cpp`, the fallback for countries without a drawn flag now paints over the generic flag outline and displays only the cyan two-letter country code (for example `PL`). No surrounding rectangle/badge remains.
+- Actual drawn flags retain their existing border and appearance.
+- Only the unknown-flag fallback rendering changed. No country mapping, message parsing, FT8 DSP, slot timing, or Actions menu behavior changed.
+- Code commit: `5605a3b672421f6b450f326a4cb7cc53c93e25eb`. Source-only; no build or hardware test performed.
+

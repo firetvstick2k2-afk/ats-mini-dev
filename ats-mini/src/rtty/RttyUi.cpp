@@ -64,7 +64,7 @@ void applyBfo(int value) {
 }
 
 uint8_t rttyPresetCount() {
-  uint8_t count=1; // Additional 147 kHz USB preset, local to the RTTY submenu.
+  uint8_t count=0;
   for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i)
     if(kDecoderFrequencyPresets[i].decoder==DecoderKind::RTTY) ++count;
   return count;
@@ -75,10 +75,6 @@ const DecoderFrequencyPreset* rttyPresetAt(uint8_t wanted) {
   for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) {
     if(kDecoderFrequencyPresets[i].decoder!=DecoderKind::RTTY) continue;
     if(index++==wanted) return &kDecoderFrequencyPresets[i];
-    if(kDecoderFrequencyPresets[i].frequencyKHz==147 &&
-       kDecoderFrequencyPresets[i].modulation==AM) {
-      if(index++==wanted) return &kRtty147UsbPreset;
-    }
   }
   return nullptr;
 }
@@ -138,13 +134,11 @@ void scheduleRttyPresetPreview(uint32_t now) {
 }
 
 bool applyRttyPreset(const DecoderFrequencyPreset& preset) {
-  const bool belowNormalFloor=preset.frequencyKHz==147;
   int bestBand=-1;
   uint16_t bestSpan=UINT16_MAX;
   for(int i=0;i<getTotalBands();++i) {
     if(bands[i].bandType==FM_BAND_TYPE ||
-       (preset.frequencyKHz<bands[i].minimumFreq &&
-        !(belowNormalFloor && bands[i].minimumFreq==150)) ||
+       preset.frequencyKHz<bands[i].minimumFreq ||
        preset.frequencyKHz>bands[i].maximumFreq) continue;
     const uint16_t span=bands[i].maximumFreq-bands[i].minimumFreq;
     if(span<bestSpan) { bestSpan=span; bestBand=i; }
@@ -155,24 +149,11 @@ bool applyRttyPreset(const DecoderFrequencyPreset& preset) {
   presetTargetBandOriginal=bands[bestBand];
   presetTargetBandSnapshotValid=true;
   bands[bestBand].currentFreq=static_cast<uint16_t>(preset.frequencyKHz);
-  bands[bestBand].bandMode=belowNormalFloor?USB:preset.modulation;
+  bands[bestBand].bandMode=preset.modulation;
   bands[bestBand].bandwidthIdx=preset.bandwidthChoice;
   currentBFO=0;
 
-  // The SI473x normally rejects frequencies below 150 kHz in the standard
-  // band setup. Temporarily lower only this selected band's floor so the
-  // ordinary USB/AM initialization path can be used at 147 kHz.
-  const uint16_t originalMinimum= bands[bestBand].minimumFreq;
-  if(belowNormalFloor) bands[bestBand].minimumFreq=147;
   selectBand(static_cast<uint8_t>(bestBand),false);
-
-  // H.J. Berndt-style workaround: initialize the receiver in USB first,
-  // then reinitialize the same 147 kHz carrier in AM for DDH47.
-  if(belowNormalFloor && preset.modulation==AM) {
-    bands[bestBand].bandMode=AM;
-    selectBand(static_cast<uint8_t>(bestBand),false);
-  }
-  if(belowNormalFloor) bands[bestBand].minimumFreq=originalMinimum;
 
   currentMode=preset.modulation;
   currentFrequency=rx.getFrequency();

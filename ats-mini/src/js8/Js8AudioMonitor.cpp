@@ -1,6 +1,7 @@
 #include "Js8AudioMonitor.h"
 
 #include <esp_timer.h>
+#include <esp_heap_caps.h>
 #include <math.h>
 #include <string.h>
 
@@ -24,11 +25,18 @@ bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
   } else {
     queue_ = xQueueCreate(kQueueDepth, sizeof(AudioBlock));
     sampleMutex_ = xSemaphoreCreateMutex();
-    if (!queue_ || !sampleMutex_) {
+    sampleRing_ = static_cast<int16_t*>(heap_caps_malloc(
+      kSnapshotSamples * sizeof(int16_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+    if (!sampleRing_)
+      sampleRing_ = static_cast<int16_t*>(heap_caps_malloc(
+        kSnapshotSamples * sizeof(int16_t), MALLOC_CAP_8BIT));
+    if (!queue_ || !sampleMutex_ || !sampleRing_) {
       if (queue_) vQueueDelete(queue_);
       if (sampleMutex_) vSemaphoreDelete(sampleMutex_);
+      if (sampleRing_) heap_caps_free(sampleRing_);
       queue_ = nullptr;
       sampleMutex_ = nullptr;
+      sampleRing_ = nullptr;
       return false;
     }
     capture_ = &capture;
@@ -36,8 +44,10 @@ bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
                                 this, kWorkerPriority, &task_, kWorkerCore) != pdPASS) {
       vQueueDelete(queue_);
       vSemaphoreDelete(sampleMutex_);
+      heap_caps_free(sampleRing_);
       queue_ = nullptr;
       sampleMutex_ = nullptr;
+      sampleRing_ = nullptr;
       task_ = nullptr;
       capture_ = nullptr;
       return false;

@@ -1088,3 +1088,15 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Vor Messdaten keine Änderungen am gemeinsamen Sampler und keine Eingriffe in FT8/FT4, CW oder RTTY. LILYGO GPIO11/SPI-Sperre erhalten. Kein zweiter ADC-Sampler.
 - Danach erst DSP/Synchronisation, LDPC/CRC und Protokollparser unabhängig testen; UI, Presets, Offline-Timing und Logging später. Kein GPLv3-Code direkt in MIT-Repo kopieren.
 - Kein JS8-Firmwarecode vorhanden; kein Build, keine Actions, kein Flash, kein Hardwaretest. Builds/Actions nur auf ausdrücklichen Nutzerwunsch.
+
+
+## JS8 audio monitor — first isolated implementation (2026-11-21)
+- Added ats-mini/src/js8/Js8AudioMonitor.h/.cpp as a JS8-owned, non-invasive subscriber to the existing AudioCaptureService; it does not call analogRead(), create another ADC task, alter the shared sampler, or touch FT8/FT4, CW, RTTY, or any layout.
+- begin() attaches only after the shared capture service is running; the existing LILYGO_SI473X GPIO11/SPI guard is preserved.
+- The capture callback records a monotonic esp_timer_get_time() observation, copies at most one 24-sample block into a bounded 96-block FreeRTOS queue, updates minimal callback/drop counters, and returns. It ignores the wall-clock utcStartMicros for cadence measurement.
+- A separate low-priority worker measures callback-to-callback interval min/max/mean, estimates effective output rate from delivered block cadence and sample counts, detects long gaps/missing-block estimates, and computes per-window ADC min/max, mean/DC, AC RMS and near-rail sample count. It also retains the newest 4,096 raw samples (about 1.024 s at nominal 4 kHz) for a later spectral-analysis stage.
+- Metrics are exposed through copyMetrics() and the raw sample window through copyRecentSamples(). The service is not yet wired to a JS8 menu/UI or decoder lifecycle; it is an isolated diagnostic building block for the next integration step.
+- Important measurement limit: callback cadence estimates the scheduler's delivered block rate; it cannot measure the individual analogRead interval or intra-block sample jitter. Do not call the sample clock stable based on these metrics alone.
+- Makefile wildcard lists now include src/js8/*.h/.cpp.
+- Source-only review; no build, repository checks, GitHub Actions run, flash or hardware measurement was performed. The service is not yet compiler-verified or device-tested.
+- Next: source-review the new module and then add a minimal JS8 diagnostic entry/lifecycle that starts/stops this subscriber without touching other decoder services. Capture metrics with controlled audio input, then add worker-side spectral/tone analysis and compare against lawful JS8 NORMAL recordings. Do not implement JS8 NORMAL decoding until the capture evidence is acceptable.

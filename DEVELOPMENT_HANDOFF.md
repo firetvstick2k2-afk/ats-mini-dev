@@ -1126,3 +1126,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Lifecycle hardening (commits a9ed0983ed0cbe25f4d5d3a8e2676cbc44bad4bd and 917491b5a01dd728d47cc3c0084a6b008dbefd66): each queued audio block carries a source-generation tag. Source switches invalidate in-flight/stale callbacks so a GPIO11 block cannot be mistaken for synthetic playback or leak into the resumed live stream. This is source-reviewed only; no concurrency stress test or build has been run.
 
 - Follow-up to the source-generation guard: generation reads/increments are now serialized with the monitor's portMUX critical section so the UI stop action and worker auto-completion cannot lose a concurrent increment. Commits b707dc93a9b195a934576154d486655e361cf747 and df014139b7e3311072749fdced86d2e8c6ebbfd9. Still source-reviewed only; compile/runtime validation remains pending.
+
+
+## JS8 update — clean display and next decoder test (2026-11-21)
+
+- On development, ats-mini/src/js8/Js8Ui.cpp was redesigned as a pure-black, text-first screen: white primary text, muted secondary text, green status/counters, three compact diagnostic rows and a reserved decoded-message area.
+- The message area explicitly waits for a valid JS8 NORMAL frame. No sample/fake received message is shown.
+- Commit: 959e58308b4982fa96e3a754c7bc4f0249b55597.
+- The short-click waveform remains a generic 8-FSK pipeline stimulus, not a valid JS8 frame and not a decoder test.
+- Next engineering gate: independently generate and validate a protocol-correct JS8 NORMAL golden frame with a known payload, then implement a JS8-only decoder sample path (sync, soft tone decisions, LDPC and CRC) and route that exact vector through it as an on-device self-test. Only show decoded text after the decoder recovers and validates the payload.
+- Keep all work on development; do not touch main. No compile, Actions run, flash or hardware test was performed for the UI change. User starts any build manually.

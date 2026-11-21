@@ -323,3 +323,10 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - On decoder entry, preserve the original amplifier and hardware-mute states; restore both on exit. Preset preview temporarily unmutes only the L/R speaker output and restores the prior speaker state afterward.
 - Changed only `ats-mini/src/ftx/FtxUi.cpp` plus these handoff notes. No FT8/FT4 DSP, slot timing, ADC capture service, RTTY, TEF6686, or LittleFS code changed.
 - Source-only correction on `development`, commit `3d00b9b7a6019ab0556763d97b95467d14e4b819`. No build, flash, or hardware verification performed. User should test: Speaker OFF must silence the speaker while FT8 decode counters/messages continue; Speaker ON restores audio; exit restores the prior mute/amplifier state.
+
+
+## DAB layout fine-tuning (21.11.2026)
+- Main-menu neon-blue frame color matched with RGB565 `0x001F` throughout the DAB layout.
+- FM, PTY and RDS RadioText centered in their respective frames; RDS clock lowered; Wi-Fi icon moved left to avoid battery-voltage overlap.
+- PI logo file path normalized to `/Logos/<filename>` before opening the PNG. LittleFS mount/migration untouched.
+- Changed only `ats-mini/Layout-DABStyle.cpp` plus handoff notes. Build/hardware validation pending.

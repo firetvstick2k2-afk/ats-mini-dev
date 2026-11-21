@@ -1,0 +1,1 @@
+FT8/FT4 reception logging can now be enabled during offline synchronization or when UTC is unavailable. Entries without a valid UTC timestamp are retained with an explicit `unknown` timestamp instead of being discarded. Active logging also remains enabled when switching between online and offline synchronization modes.

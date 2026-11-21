@@ -1,0 +1,129 @@
+name: Build Firmware
+
+on:
+  push:
+    branches:
+      - development
+    # Editing the workflow itself must not launch a build.
+    paths-ignore:
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: "Optional release tag, e.g. v1.00"
+        type: string
+        required: false
+
+jobs:
+  build:
+    name: build ospi-de
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      slug: ${{ steps.slug.outputs.slug }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          # Development builds do not need the full Git history or all tags.
+          fetch-depth: 1
+          fetch-tags: false
+          ref: "${{ github.ref }}"
+
+      - name: Prepare German menu
+        run: cp ats-mini/Menu_german.cpp.src ats-mini/Menu.cpp
+
+      - name: Get version slug
+        id: slug
+        run: |
+          SLUG="${{ github.event.inputs.revision }}"
+          if [ -z "$SLUG" ]; then
+            SLUG=$(git rev-parse --short=7 HEAD)
+          fi
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Arduino packages and libraries
+        uses: actions/cache@v4
+        with:
+          path: ~/.arduino15
+          key: arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-${{ hashFiles('ats-mini/sketch.yaml', 'ats-mini/arduino-cli.yaml') }}
+          restore-keys: |
+            arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-
+ 
+      - name: Compile OSPI-DE firmware
+        uses: arduino/compile-sketches@v1
+        with:
+          cli-version: 1.4.1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          sketch-paths: |
+            - ats-mini
+          fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none
+          cli-compile-flags: |
+            - --profile
+            - esp32s3-ospi
+            - --export-binaries
+          enable-deltas-report: false
+          enable-warnings-report: true
+
+      - name: Prepare single firmware binary
+        run: |
+          mkdir -p artifact
+          test -s ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin
+          cp ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin "artifact/Mini_OS_#${{ github.run_number }}.bin"
+          ls -lh artifact
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Mini_OS-build-${{ github.run_number }}-ospi-de
+          path: artifact/Mini_OS_#${{ github.run_number }}.bin
+          archive: false
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.revision != '' }}
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: "${{ github.ref }}"
+
+      - name: Download firmware binary
+        uses: actions/download-artifact@v8
+        with:
+          name: Mini_OS-build-${{ github.run_number }}-ospi-de
+          path: artifact
+
+      - name: Prepare release notes
+        env:
+          SLUG: ${{ needs.build.outputs.slug }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          slug = os.environ["SLUG"]
+          changelog = Path("CHANGELOG.md").read_text()
+          version = re.escape(slug.removeprefix("v"))
+          match = re.search(rf"(^## {version} .*?)(?=^## \\d|\\Z)", changelog, re.MULTILINE | re.DOTALL)
+          Path("release-notes.md").write_text(match.group(0) if match else f"OSPI-DE test firmware {slug}")
+          PY
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SLUG: ${{ needs.build.outputs.slug }}
+        run: gh release create "$SLUG" --repo "${{ github.repository }}" --target "${{ github.sha }}" --notes-file release-notes.md
+
+      - name: Upload raw firmware binary
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SLUG: ${{ needs.build.outputs.slug }}
+        run: gh release upload "$SLUG" artifact/*.bin --repo "${{ github.repository }}" --clobber

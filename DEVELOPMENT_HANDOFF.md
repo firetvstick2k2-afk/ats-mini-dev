@@ -1068,3 +1068,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - New validation gates in `JS8CALL_RECEIVE_DECODER.md`: deterministic NORMAL vectors; host-side 4 kHz DSP tests with timing/carrier/noise offsets; independently verified LDPC bit ordering and CRC vectors; host performance/RAM tests; only then firmware integration.
 - Offline phase acquisition must use validated JS8 sync candidates and a monotonic 15-second phase grid, never fake UTC from the capture callback's wall-clock timestamp. Do not display OFFLINE LOCK before physical-layer validation passes.
 - Source-only documentation update. No firmware code, build, Actions, flash or hardware test performed.
+
+
+## JS8 audio capture source audit — 2026-11-21
+- Inspected the actual AudioCaptureService implementation. GPIO11 uses software-timed analogRead(), not I2S/DMA; 4 kHz is the scheduler target, not yet a verified low-jitter hardware sample clock.
+- Blocks contain 24 samples (nominally 6 ms). The callback timestamp is wall-clock gettimeofday() back-calculated at delivery, not a per-sample monotonic timestamp. The capture task yields and resets its timing base every 2,000 samples.
+- Next JS8 step is a non-invasive JS8-owned capture diagnostic subscriber: monotonic callback cadence/drift estimate, queue gaps/overruns, ADC min/max/DC/RMS/clipping, then spectral checks with controlled 4 kHz tones and lawful JS8 NORMAL recordings.
+- Keep the callback producer-only; do analysis in a worker. Do not alter the shared sampler or existing FT8/CW/RTTY consumers before measurements. Preserve the LILYGO GPIO11/SPI exclusion.
+- Updated detailed plan: JS8CALL_RECEIVE_DECODER.md section 2c. No firmware code, build, Actions, flash or hardware test in this step.

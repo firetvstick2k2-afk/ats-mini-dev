@@ -1076,3 +1076,15 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Next JS8 step is a non-invasive JS8-owned capture diagnostic subscriber: monotonic callback cadence/drift estimate, queue gaps/overruns, ADC min/max/DC/RMS/clipping, then spectral checks with controlled 4 kHz tones and lawful JS8 NORMAL recordings.
 - Keep the callback producer-only; do analysis in a worker. Do not alter the shared sampler or existing FT8/CW/RTTY consumers before measurements. Preserve the LILYGO GPIO11/SPI exclusion.
 - Updated detailed plan: JS8CALL_RECEIVE_DECODER.md section 2c. No firmware code, build, Actions, flash or hardware test in this step.
+
+
+## Chat-Übergabe / aktueller JS8-Stand — 2026-11-21
+- Nutzer bat um kurze Übergabe, da der Chat träge/voll wird. Beim nächsten Chat direkt hier fortsetzen; keine erneute Grundsatzplanung nötig.
+- Aktive Arbeit ausschließlich im Repository firetvstick2k2-afk/ats-mini-dev, Branch development. Main bleibt unangetastet.
+- Letzter technischer Commit: JS8CALL_RECEIVE_DECODER.md Abschnitt 2c zur tatsächlichen AudioCaptureService-Abtastung, Commit 3de3b88495ddfde2d52d6f763a1392054f28e108.
+- Letzte Handoff-Commits: DEVELOPMENT_HANDOFF.md 29f6ed05530332acfbf305e91aaef273e064fe64; NEW_CHAT_HANDOVER.md 4a96910b5c75ca9e0c1c711e6dca10f4cb38aa1b. Diese beiden Dateien werden mit dieser Übergabe erneut aktualisiert.
+- Wichtiger Befund: GPIO11 wird softwaregetaktet per analogRead() abgetastet, nicht I2S/DMA. 4 kHz ist nur der Sollwert. 24 Samples/Block (nominal 6 ms), gettimeofday()-Zeitstempel bei Übergabe, yield und Zeitbasis-Neustart alle 2.000 Samples. Jitter/Drift sind noch nicht gemessen.
+- Nächster konkreter Schritt: JS8-eigener, nicht-invasiver Diagnostic-Subscriber am bestehenden AudioCaptureService. Worker misst monotone Callback-Abstände/Drift-Schätzung, Queue-Aussetzer/Overruns, ADC min/max/DC/RMS/Clipping; danach kontrollierte 4-kHz-Tontests und legal nutzbare JS8-NORMAL-Aufnahmen. Callback bleibt producer-only.
+- Vor Messdaten keine Änderungen am gemeinsamen Sampler und keine Eingriffe in FT8/FT4, CW oder RTTY. LILYGO GPIO11/SPI-Sperre erhalten. Kein zweiter ADC-Sampler.
+- Danach erst DSP/Synchronisation, LDPC/CRC und Protokollparser unabhängig testen; UI, Presets, Offline-Timing und Logging später. Kein GPLv3-Code direkt in MIT-Repo kopieren.
+- Kein JS8-Firmwarecode vorhanden; kein Build, keine Actions, kein Flash, kein Hardwaretest. Builds/Actions nur auf ausdrücklichen Nutzerwunsch.

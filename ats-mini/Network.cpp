@@ -502,6 +502,46 @@ static void webInit()
     response->addHeader("Cache-Control", "no-store"); response->addHeader("Content-Disposition", "attachment; filename=ats-mini-diagnostics.log"); request->send(response);
   });
 
+  server.on("/radio/ft8-logs", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    String page = "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'><title>FT8 / FT4 Logs</title><style>body{font:16px sans-serif;background:#071426;color:#eef;margin:2em}a{color:#38dfff}li{margin:1em 0}</style></head><body><h2>FT8 / FT4 reception logs</h2><ul>";
+    File root = LittleFS.open("/");
+    if(root) {
+      File entry = root.openNextFile();
+      while(entry) {
+        String name = String(entry.name());
+        int slash = name.lastIndexOf('/');
+        if(slash >= 0) name = name.substring(slash + 1);
+        if((name.startsWith("FT8_") || name.startsWith("FT4_")) && name.endsWith(".txt") && !entry.isDirectory()) {
+          page += "<li><a href='/radio/ft8-log?name=" + name + "'>" + name + "</a> (" + String(entry.size()) + " bytes)</li>";
+        }
+        entry.close();
+        entry = root.openNextFile();
+      }
+      root.close();
+    }
+    page += "</ul><p><a href='/'>Back to ATS Mini</a></p></body></html>";
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", page);
+    response->addHeader("Cache-Control", "no-store");
+    request->send(response);
+  });
+
+  server.on("/radio/ft8-log", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    if(!request->hasParam("name")) return request->send(400, "text/plain", "Missing log filename.");
+    String name = request->getParam("name")->value();
+    if(!(name.startsWith("FT8_") || name.startsWith("FT4_")) ||
+       !name.endsWith(".txt") || name.indexOf('/') >= 0 || name.indexOf('\\') >= 0 ||
+       name.indexOf("..") >= 0)
+      return request->send(400, "text/plain", "Invalid log filename.");
+    String path = "/" + name;
+    if(!LittleFS.exists(path)) return request->send(404, "text/plain", "Log file not found.");
+    AsyncWebServerResponse *response = request->beginResponse(LittleFS, path, "text/plain", true);
+    response->addHeader("Cache-Control", "no-store");
+    response->addHeader("Content-Disposition", "attachment; filename=" + name);
+    request->send(response);
+  });
+
   server.on("/radio/tune-status.json", HTTP_GET, [] (AsyncWebServerRequest *request) {
     if(!webIsAuthenticated(request)) return request->requestAuthentication();
     String json = "{\"request_id\":" + String((uint32_t)webTuneRequestId) +

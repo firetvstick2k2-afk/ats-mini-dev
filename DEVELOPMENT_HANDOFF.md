@@ -12,7 +12,7 @@ Active work branch: `development` (never modify `main` unless explicitly request
 - Build workflow is manual (`workflow_dispatch`). Do not claim a build/device test passed unless verified. User launches build and tests on ATS Mini.
 - Keep branch hygiene simple; development first. User manages copying approved README/release changes to main unless explicitly asked.
 
-## Current task: native VHF Spectrum Scanner
+## Current task: CW decoder port (implemented; device validation pending)
 ### Intended user experience
 1. Main menu has XXL `SPECTRUM` category.
 2. Spectrum submenu has `VHF Spectrum` and `ALL Band Spectrum`. The all-band item is a future implementation and must not accidentally start the VHF scan.
@@ -272,7 +272,7 @@ Active work branch: `development` (never modify `main` unless explicitly request
 ## Current status and release workflow (2026-10-30)
 
 ### Repository roles
-- **Private development workspace:** https://github.com/13HN2709/ats-mini-dev
+- **Private development workspace:** https://github.com/firetvstick2k2-afk/ats-mini-dev
 - **Public releases:** https://github.com/13HN2709/ats-mini
 - Continue development in the private repository's `development` branch. Keep `main` for approved public release snapshots; do not copy changes to public `main` unless the user explicitly approves.
 - The private repository currently contains the `development` branch at source snapshot `ace95a45979dfe0b88fd002029aa86c727487d4c`. This is the development snapshot that was synced to public `main` for V1.31 preparation. The public `main` has additional release-only commits: version bump to 1.31 and README feature/release documentation. Do not blindly replace private `development` with public `main`; keep the branch roles clear.

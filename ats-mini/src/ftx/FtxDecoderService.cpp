@@ -1,8 +1,9 @@
 #include "FtxDecoderService.h"
 
 #include <math.h>
-
 #include <string.h>
+#include <esp_heap_caps.h>
+#include <esp_timer.h>
 #include "FtxDiagnostics.h"
 
 namespace {
@@ -47,19 +48,31 @@ bool FtxDecoderService::begin(AudioCaptureService& capture) {
   return true;
 }
 
-bool FtxDecoderService::enter(FtxMode mode, bool wifiOff, bool utcSynchronized, AudioCaptureService& capture) {
+bool FtxDecoderService::enter(FtxMode mode, bool wifiOff, bool utcSynchronized, bool offlineSignalSync, AudioCaptureService& capture) {
   exit();
 #if defined(LILYGO_SI473X)
-  (void)mode; (void)wifiOff; (void)utcSynchronized;
+  (void)mode; (void)wifiOff; (void)utcSynchronized; (void)offlineSignalSync;
   return false; // This board profile uses GPIO11 for SPI and has no ATS Mini audio input.
 #else
-  if (!wifiOff || !utcSynchronized) return false;
+  if (!wifiOff || (!utcSynchronized && !offlineSignalSync) || (offlineSignalSync && mode != FtxMode::FT8)) return false;
   if (!capture.begin() || !begin(capture)) return false;
 
   xSemaphoreTake(engineMutex_, portMAX_DELAY);
   const bool ready = decoder_.begin(mode);
   if (ready) {
     mode_ = mode;
+    offlineSignalSync_ = offlineSignalSync;
+    offlineLocked_ = false;
+    offlineMissedSlots_ = 0;
+    offlineWriteIndex_ = offlineSampleCount_ = 0;
+    offlineWindowStartUs_ = offlineLastScanUs_ = offlineGridOriginUs_ = 0;
+    if (offlineSignalSync_) {
+      offlineSamples_ = static_cast<int16_t*>(heap_caps_malloc(kOfflineWindowSamples * sizeof(int16_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+      if (!offlineSamples_) {
+        decoder_.end();
+        ready = false;
+      }
+    }
     collecting_ = false;
     activeSlotStartUs_ = 0;
     lastBlockStartUs_ = 0;
@@ -83,7 +96,11 @@ bool FtxDecoderService::enter(FtxMode mode, bool wifiOff, bool utcSynchronized, 
       static_cast<unsigned>(decoder_.waterfallMaxBlocks()));
   }
   xSemaphoreGive(engineMutex_);
-  if (!ready) return false;
+  if (!ready) {
+    if (offlineSamples_) { heap_caps_free(offlineSamples_); offlineSamples_ = nullptr; }
+    offlineSignalSync_ = false;
+    return false;
+  }
 
   active_ = true;
   if (!capture_->subscribe(this, onAudioSamples)) {
@@ -108,6 +125,11 @@ void FtxDecoderService::exit() {
     activeSlotStartUs_ = 0;
     lastBlockStartUs_ = 0;
     decoder_.end();
+    if (offlineSamples_) { heap_caps_free(offlineSamples_); offlineSamples_ = nullptr; }
+    offlineSignalSync_ = offlineLocked_ = false;
+    offlineWriteIndex_ = offlineSampleCount_ = 0;
+    offlineWindowStartUs_ = offlineLastScanUs_ = offlineGridOriginUs_ = 0;
+    offlineMissedSlots_ = 0;
     xSemaphoreGive(engineMutex_);
   }
 }
@@ -132,7 +154,9 @@ void FtxDecoderService::onAudioSamples(void* context, const int16_t* samples,
   AudioChunk chunk{};
   memcpy(chunk.samples, samples, count * sizeof(int16_t));
   chunk.count = static_cast<uint8_t>(count);
-  chunk.utcStartMicros = utcStartMicros;
+  chunk.startMicros = self->offlineSignalSync_
+    ? esp_timer_get_time() - static_cast<int64_t>(count) * 1000000LL / AudioCaptureService::kSampleRate
+    : utcStartMicros;
   // Measure AC audio activity without changing or delaying the decoder sample path.
   int64_t sum = 0;
   for (size_t i = 0; i < count; ++i) sum += samples[i];
@@ -164,10 +188,27 @@ void FtxDecoderService::workerTask() {
 
 void FtxDecoderService::processChunk(const AudioChunk& chunk) {
   if (!active_ || chunk.count == 0) return;
-  const int64_t chunkStart = chunk.utcStartMicros;
+  const int64_t chunkStart = chunk.startMicros;
   const int64_t chunkEnd = chunkStart +
     static_cast<int64_t>(chunk.count) * 1000000LL / AudioCaptureService::kSampleRate;
   const int64_t slotLengthUs = mode_ == FtxMode::FT4 ? 7500000LL : 15000000LL;
+
+  if (offlineSignalSync_) {
+    for (size_t i = 0; i < chunk.count; ++i) {
+      if (offlineSampleCount_ == 0) offlineWindowStartUs_ = chunkStart + static_cast<int64_t>(i) * 1000000LL / AudioCaptureService::kSampleRate;
+      else if (offlineSampleCount_ == kOfflineWindowSamples) offlineWindowStartUs_ += 1000000LL / AudioCaptureService::kSampleRate;
+      else ++offlineSampleCount_;
+      offlineSamples_[offlineWriteIndex_] = chunk.samples[i];
+      offlineWriteIndex_ = (offlineWriteIndex_ + 1) % kOfflineWindowSamples;
+    }
+    if (!offlineLocked_) {
+      if (offlineSampleCount_ == kOfflineWindowSamples &&
+          (!offlineLastScanUs_ || chunkEnd - offlineLastScanUs_ >= 2500000LL))
+        scanOfflineWindow(chunkEnd);
+      lastBlockStartUs_ = chunkStart;
+      return;
+    }
+  }
 
   ++chunksProcessed_;
   lastChunkStartUs_ = chunkStart;
@@ -181,10 +222,16 @@ void FtxDecoderService::processChunk(const AudioChunk& chunk) {
       collecting_ ? 1U : 0U, static_cast<long long>(activeSlotStartUs_));
     collecting_ = false;
     activeSlotStartUs_ = 0;
+    if (offlineSignalSync_) { offlineLocked_ = false; offlineLastScanUs_ = 0; lastBlockStartUs_ = chunkStart; return; }
   }
   lastBlockStartUs_ = chunkStart;
 
-  const int64_t currentSlotStart = (chunkStart / slotLengthUs) * slotLengthUs;
+  int64_t currentSlotStart = (chunkStart / slotLengthUs) * slotLengthUs;
+  if (offlineSignalSync_) {
+    const int64_t relative = chunkStart - offlineGridOriginUs_;
+    const int64_t slotIndex = relative >= 0 ? relative / slotLengthUs : -((-relative + slotLengthUs - 1) / slotLengthUs);
+    currentSlotStart = offlineGridOriginUs_ + slotIndex * slotLengthUs;
+  }
   const int64_t nextBoundary = currentSlotStart + slotLengthUs;
   lastBoundaryUs_ = nextBoundary;
 
@@ -210,7 +257,8 @@ void FtxDecoderService::processChunk(const AudioChunk& chunk) {
       activeSlotStartUs_ = 0;
 
       ++slotStartAttempts_;
-      const bool nextStarted = decoder_.startSlot(static_cast<time_t>(nextBoundary / 1000000LL));
+      if (offlineSignalSync_ && !offlineLocked_) return;
+      const bool nextStarted = decoder_.startSlot(offlineSignalSync_ ? 0 : static_cast<time_t>(nextBoundary / 1000000LL), !offlineSignalSync_);
       if (nextStarted) {
         ++slotStartSuccesses_;
         activeSlotStartUs_ = nextBoundary;
@@ -255,7 +303,7 @@ void FtxDecoderService::processChunk(const AudioChunk& chunk) {
       return;
     }
     ++slotStartAttempts_;
-    if (!decoder_.startSlot(static_cast<time_t>(nextBoundary / 1000000LL))) {
+    if (!decoder_.startSlot(offlineSignalSync_ ? 0 : static_cast<time_t>(nextBoundary / 1000000LL), !offlineSignalSync_)) {
       ++slotStartFailures_;
       BootDiagnostics::printf("[FTX][SLOT][START_FAIL] mode=%s utc=%lld source=first-boundary offset=%u count=%u",
         mode_ == FtxMode::FT4 ? "FT4" : "FT8", static_cast<long long>(nextBoundary / 1000000LL),
@@ -298,7 +346,11 @@ void FtxDecoderService::decodeAndPublish() {
   FtxDecodedMessage fresh[kResultCapacity]{};
   const size_t count = decoder_.resultCount() < kResultCapacity ?
     decoder_.resultCount() : kResultCapacity;
-  for (size_t i = 0; i < count; ++i) fresh[i] = decoder_.result(i);
+  for (size_t i = 0; i < count; ++i) {
+    fresh[i] = decoder_.result(i);
+    fresh[i].slotId = offlineSignalSync_ ? static_cast<uint64_t>(slotStart) : static_cast<uint64_t>(slotStart / 1000000LL);
+    fresh[i].utcValid = !offlineSignalSync_;
+  }
 
   // Keep the last successful slot published when the current slot has
   // no decodes. This prevents an empty/weak slot from erasing the last
@@ -308,6 +360,60 @@ void FtxDecoderService::decodeAndPublish() {
     memcpy(published_, fresh, sizeof(published_));
     xSemaphoreGive(resultMutex_);
   }
+  if (offlineSignalSync_ && offlineLocked_) {
+    if (count > 0) offlineMissedSlots_ = 0;
+    else if (++offlineMissedSlots_ >= 6) {
+      offlineLocked_ = false;
+      collecting_ = false;
+      activeSlotStartUs_ = 0;
+      offlineGridOriginUs_ = 0;
+      offlineLastScanUs_ = 0;
+      BootDiagnostics::write("[FTX][OFFLINE_SYNC] lost after six empty slots; scanning again");
+    }
+  }
+}
+
+void FtxDecoderService::scanOfflineWindow(int64_t nowUs) {
+  offlineLastScanUs_ = nowUs;
+  if (!offlineSamples_ || offlineSampleCount_ < kOfflineWindowSamples) return;
+  if (!decoder_.startSlot(0, false)) return;
+
+  size_t samplesToDecode = static_cast<size_t>(decoder_.waterfallMaxBlocks()) *
+                           static_cast<size_t>(decoder_.fftBlockSize());
+  if (samplesToDecode > kOfflineWindowSamples) samplesToDecode = kOfflineWindowSamples;
+  const size_t oldest = offlineWriteIndex_;
+  size_t first = kOfflineWindowSamples - oldest;
+  if (first > samplesToDecode) first = samplesToDecode;
+  decoder_.pushSamples(offlineSamples_ + oldest, first);
+  if (first < samplesToDecode) decoder_.pushSamples(offlineSamples_, samplesToDecode - first);
+  if (!decoder_.slotReady()) return;
+
+  decoder_.decodeSlot();
+  const size_t count = decoder_.resultCount() < kResultCapacity ? decoder_.resultCount() : kResultCapacity;
+  if (!count) return;
+
+  const float offsetSeconds = decoder_.result(0).slotOffsetSeconds;
+  const int64_t candidateStartUs = offlineWindowStartUs_ + static_cast<int64_t>(llroundf(offsetSeconds * 1000000.0f));
+  if (candidateStartUs <= 0) return;
+  offlineGridOriginUs_ = candidateStartUs;
+  offlineLocked_ = true;
+  offlineMissedSlots_ = 0;
+  collecting_ = false;
+  activeSlotStartUs_ = 0;
+
+  FtxDecodedMessage fresh[kResultCapacity]{};
+  for (size_t i = 0; i < count; ++i) {
+    fresh[i] = decoder_.result(i);
+    fresh[i].slotUtc = 0;
+    fresh[i].utcValid = false;
+    fresh[i].slotId = static_cast<uint64_t>(candidateStartUs);
+  }
+  xSemaphoreTake(resultMutex_, portMAX_DELAY);
+  memcpy(published_, fresh, sizeof(published_));
+  xSemaphoreGive(resultMutex_);
+  ++decodedSlots_;
+  BootDiagnostics::printf("[FTX][OFFLINE_SYNC] locked offset=%.3f slot_origin_us=%lld window_start_us=%lld results=%u",
+    offsetSeconds, static_cast<long long>(candidateStartUs), static_cast<long long>(offlineWindowStartUs_), static_cast<unsigned>(count));
 }
 
 bool FtxDecoderService::copyWaterfall(uint8_t* out, uint16_t maxRows, uint16_t outBins,

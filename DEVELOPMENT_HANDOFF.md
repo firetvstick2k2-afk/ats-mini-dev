@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-21 (RTTY preset preview submenu)
 Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
-Active work branch: `development` (never modify `main` unless explicitly requested)
+Active work branch: `development` (the sole development branch; never modify `main` except for a completed, tested feature explicitly approved for promotion)
 
 ## Latest bugfix: FT8/FT4 logging in offline mode (2026-11-21)
 - User-reported issue: FT8 Actions > Logging stayed OFF and could not be enabled.
@@ -17,8 +17,9 @@ Active work branch: `development` (never modify `main` unless explicitly request
 - New features must be isolated from existing features wherever practical. If implementing a feature would require changing shared feature-specific logic, duplicate that logic into a new module/state/handler for the new feature rather than refactoring the established feature.
 - Preserve Dual RX, existing Web Spectrum behavior, Clean Layout and especially Layout-TEF6686 unless a change is explicitly required.
 - Shared low-level radio/scanning primitives may be reused only after checking their side effects and compatibility.
-- Build workflow: pushes to `development` trigger the OSPI-DE BIN build; `workflow_dispatch` remains available. Do not claim a build/device test passed unless verified. Never modify `main` without explicit approval.
-- Keep branch hygiene simple; development first. User manages copying approved README/release changes to main unless explicitly asked.
+- Branch policy (user-confirmed 2026-11-21): use only `development` for all development. Do not create feature/test branches. The user intends to keep only `main` and `development`; old branches are not sources for recovery/merging—if something is needed later, recreate it in `development`.
+- Promotion policy (user-confirmed 2026-11-21): when a feature is complete, builds successfully and is verified working, promote it to `main`. `main` is the stable approved state; never update it prematurely.
+- Build workflow: pushes to `development` trigger the OSPI-DE BIN build; `workflow_dispatch` remains available. Do not claim a build/device test passed unless verified.
 
 ## Previous task: native VHF Spectrum Scanner
 ### Intended user experience
@@ -1273,3 +1274,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Static source checks confirmed the JO31TV reference remains in use, both display and log mark estimated values with `~`, all metadata call sites use the extended signature, braces are balanced, and no temporary coordinate placeholder remains. No local firmware compilation was run.
 - The user confirmed the preceding country-prefix/flag-code build worked successfully. This handoff update is pushed without `[skip ci]` to start the next OSPI-DE Development build for the distance fallback.
 - `main` remains untouched.
+
+
+## Dual-Boot APP1 identity (2026-11-21)
+- User wants the APP1 card in the GNBD ATS Mini Dualboot manager to show **Mini OS** and **Version BETA**, replacing the generic Arduino values (previously `arduino-lib-builder` and a short build hash).
+- User's installed manager reports version 4.2.2 DES; About page confirms APP1, ESP32-S3, ESP-IDF v5.5.5, 16 MB flash.
+- Research in `GNBD/ats-mini-dualboot` v3.2.1 confirmed the manager boots APP0/APP1 by ESP partition subtype. The card identity is carried in the ESP-IDF application descriptor (`esp_app_desc_t`), not our radio firmware's `VER_APP` constant.
+- Reference implementation: Espressif Arduino-ESP32 contains a strong `esp_app_desc` definition that overrides the weak prebuilt-library descriptor named `arduino-lib-builder` (reference file `variants/kodedot/kode_app_desc.cpp`). Applied the same linker-level approach to our sketch.
+- Added `ats-mini/mini_os_app_desc.cpp`: strong descriptor in `.rodata_desc`, `project_name = "Mini OS"`, `version = "BETA"`; preserves ESP-IDF compatibility fields (magic word, IDF version, efuse revision limits, MMU page size, build date/time). Does not change partitions, APP0, recovery, radio/DSP behavior, or internal `VER_APP`.
+- Source commit: `9aa0b87921c5bccdeb7c5a05977efe3b252ed99a` (intermediate commit with `[skip ci]`).
+- Final handoff commit will trigger the OSPI-DE build. Build and hardware verification are pending; confirm the APP1 card shows Mini OS / Version BETA after flashing.

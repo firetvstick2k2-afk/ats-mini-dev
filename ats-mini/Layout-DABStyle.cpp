@@ -172,20 +172,24 @@ void drawLayoutDABStyle()
   spr.setTextSize(1.0f);
   spr.setTextColor(BLUE);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-  spr.drawRightString("MHz",w-8,85);
+  // Raise MHz so its lower edge sits closer to the frequency baseline.
+  spr.drawRightString("MHz",w-8,77);
 
   // Stereo/mono and programme type.
   constexpr int badgeY=104;
   spr.drawRoundRect(124,badgeY,78,20,4,BLUE);
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(BLUE);
-  spr.setFont(&lgfx::fonts::Font0);
+  spr.setTextColor(WHITE);
+  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   spr.drawString("FM",163,badgeY+10);
   spr.drawRoundRect(210,badgeY,w-218,20,4,WHITE);
   const char *pty=getProgramInfo();
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(WHITE);
+  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+  spr.setTextSize(1.12f);
   spr.drawString((pty && *pty) ? pty : "FM",210+(w-218)/2,badgeY+10);
+  spr.setTextSize(1.0f);
 
   // RDS RadioText in a dedicated green ticker frame.
   constexpr int rtX=8,rtY=143,rtW=304,rtH=24;

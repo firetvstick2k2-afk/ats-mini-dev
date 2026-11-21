@@ -45,7 +45,7 @@ SRC = \
 	BlePeripheral.cpp BleUartPeripheral.cpp \
 	BleCentral.cpp BleHidCentral.cpp \
 	Layout-Default.cpp Layout-SMeter.cpp Layout-DABStyle.cpp \
-	$(wildcard src/audio/*.cpp src/rtty/*.cpp src/js8/*.cpp src/ftx/*.cpp src/ftx/ft8_lib/common/*.c src/ftx/ft8_lib/fft/*.c src/ftx/ft8_lib/ft8/*.c)
+	$(wildcard src/audio/*.cpp src/radio/*.cpp src/rtty/*.cpp src/js8/*.cpp src/ftx/*.cpp src/ftx/ft8_lib/common/*.c src/ftx/ft8_lib/fft/*.c src/ftx/ft8_lib/ft8/*.c)
 
 all: build
 

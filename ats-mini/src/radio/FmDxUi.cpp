@@ -8,8 +8,6 @@
 
 extern bool updateFrequency(int newFreq, bool wrap);
 extern bool consumeAbortPending();
-extern void clearStationInfo();
-extern bool identifyFrequency(uint32_t freq, bool background = false);
 
 namespace {
   bool pageActive = false;
@@ -273,8 +271,8 @@ void drawFmDxPage() {
   spr.drawString("CLICK: ACTIONS  HOLD: EXIT", 313, 155, FONT_DEFAULT);
 
   if(actionsOpen) {
-    spr.fillRoundRect(65, 23, 190, 124, 5, 0x0841);
-    spr.drawRoundRect(65, 23, 190, 124, 5, CYAN);
+    spr.fillRoundRect(65, 17, 190, 136, 5, 0x0841);
+    spr.drawRoundRect(65, 17, 190, 136, 5, CYAN);
     spr.setTextDatum(TC_DATUM);
     spr.setTextColor(CYAN, 0x0841);
     spr.drawString("FM-DX ACTIONS", 160, 21, FONT_DEFAULT);
@@ -283,11 +281,11 @@ void drawFmDxPage() {
     snprintf(stepText, sizeof(stepText), "STEP: %u.%02u MHz",
              static_cast<unsigned>(stepValue / 100),
              static_cast<unsigned>(stepValue % 100));
-    const char *items[] = { fmDxActive() ? "PAUSE AUTO" : "START AUTO", "FILTER: CHANGE", stepText, "BACK" };
-    for(uint8_t n=0;n<4;++n) {
-      int y=47+n*22;
+    const char *items[] = { "SHORT SCAN", fmDxActive() ? "PAUSE AUTO" : "START AUTO", "FILTER: CHANGE", stepText, "BACK" };
+    for(uint8_t n=0;n<5;++n) {
+      int y=41+n*21;
       if(n==actionSelection) {
-        spr.fillRoundRect(75,y-2,170,19,3,0x2104);
+        spr.fillRoundRect(75,y-2,170,18,3,0x2104);
         spr.setTextColor(GREEN,0x2104);
       } else spr.setTextColor(WHITE,0x0841);
       spr.drawString(items[n],160,y,FONT_DEFAULT);

@@ -1,9 +1,6 @@
 name: Build Firmware
 
 on:
-  push:
-    branches:
-      - development
   workflow_dispatch:
     inputs:
       revision:
@@ -80,7 +77,7 @@ jobs:
           retention-days: 14
 
   release:
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.revision != '') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.revision != '' }}
     needs: build
     runs-on: ubuntu-24.04
     permissions:
@@ -109,7 +106,7 @@ jobs:
           slug = os.environ["SLUG"]
           changelog = Path("CHANGELOG.md").read_text()
           version = re.escape(slug.removeprefix("v"))
-          match = re.search(rf"(^## {version} .*?)(?=^## \d|\Z)", changelog, re.MULTILINE | re.DOTALL)
+          match = re.search(rf"(^## {version} .*?)(?=^## \\d|\\Z)", changelog, re.MULTILINE | re.DOTALL)
           Path("release-notes.md").write_text(match.group(0) if match else f"OSPI-DE test firmware {slug}")
           PY
 

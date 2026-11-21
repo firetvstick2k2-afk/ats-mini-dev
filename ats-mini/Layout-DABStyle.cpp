@@ -1,4 +1,4 @@
-#include <LittleFS.h>
+#include "StationLogoClient.h"
 #include "Common.h"
 #include "Menu.h"
 #include "Draw.h"
@@ -7,50 +7,50 @@
 // FM-only DAB-style screen ported from the ATS Mini OS FM layout.
 // Sender images are read from the existing LittleFS /Logos directory.
 namespace {
-static uint16_t cachedPi = 0xFFFF;
-static char cachedLogoPath[96] = {};
+bool getLogoDimensions(const uint8_t* data, size_t length, uint16_t& width, uint16_t& height) {
+  width = height = 0;
+  if (!data || length < 10) return false;
 
-static bool isPngName(const String &name)
-{
-  String lower = name;
-  lower.toLowerCase();
-  return lower.endsWith(".png");
-}
-
-static void findStationLogo(uint16_t pi)
-{
-  if(pi == cachedPi) return;
-  cachedPi = pi;
-  cachedLogoPath[0] = 0;
-  if(!pi || !LittleFS.exists("/Logos")) return;
-
-  char piText[5];
-  snprintf(piText, sizeof(piText), "%04X", static_cast<unsigned>(pi));
-  String needle(piText);
-  File dir = LittleFS.open("/Logos", "r");
-  if(!dir || !dir.isDirectory()) { if(dir) dir.close(); return; }
-
-  File entry = dir.openNextFile();
-  while(entry)
-  {
-    if(!entry.isDirectory())
-    {
-      String path = entry.name();
-      String filename = path.substring(path.lastIndexOf('/') + 1);
-      String upper = filename;
-      upper.toUpperCase();
-      if(isPngName(filename) && upper.indexOf(needle) >= 0)
-      {
-        String fullPath = String("/Logos/") + filename;
-        fullPath.toCharArray(cachedLogoPath, sizeof(cachedLogoPath));
-        entry.close();
-        break;
-      }
-    }
-    entry.close();
-    entry = dir.openNextFile();
+  // PNG stores its dimensions as big-endian integers in the IHDR chunk.
+  static const uint8_t pngSignature[8] = {137, 80, 78, 71, 13, 10, 26, 10};
+  if (length >= 24 && memcmp(data, pngSignature, sizeof(pngSignature)) == 0) {
+    const uint32_t w = (static_cast<uint32_t>(data[16]) << 24) |
+                       (static_cast<uint32_t>(data[17]) << 16) |
+                       (static_cast<uint32_t>(data[18]) << 8) | data[19];
+    const uint32_t h = (static_cast<uint32_t>(data[20]) << 24) |
+                       (static_cast<uint32_t>(data[21]) << 16) |
+                       (static_cast<uint32_t>(data[22]) << 8) | data[23];
+    if (!w || !h || w > 65535 || h > 65535) return false;
+    width = static_cast<uint16_t>(w);
+    height = static_cast<uint16_t>(h);
+    return true;
   }
-  dir.close();
+
+  // JPEG dimensions are carried by a Start Of Frame marker.
+  if (length < 4 || data[0] != 0xFF || data[1] != 0xD8) return false;
+  size_t pos = 2;
+  while (pos + 4 <= length) {
+    if (data[pos] != 0xFF) { ++pos; continue; }
+    while (pos < length && data[pos] == 0xFF) ++pos;
+    if (pos >= length) break;
+    const uint8_t marker = data[pos++];
+    if (marker == 0xD9 || marker == 0xDA) break;
+    if (marker == 0x01 || (marker >= 0xD0 && marker <= 0xD7)) continue;
+    if (pos + 2 > length) break;
+    const uint16_t segmentLength = (static_cast<uint16_t>(data[pos]) << 8) | data[pos + 1];
+    if (segmentLength < 2 || pos + segmentLength > length) break;
+    const bool isSof = (marker >= 0xC0 && marker <= 0xC3) ||
+                       (marker >= 0xC5 && marker <= 0xC7) ||
+                       (marker >= 0xC9 && marker <= 0xCB) ||
+                       (marker >= 0xCD && marker <= 0xCF);
+    if (isSof && segmentLength >= 7) {
+      height = (static_cast<uint16_t>(data[pos + 3]) << 8) | data[pos + 4];
+      width = (static_cast<uint16_t>(data[pos + 5]) << 8) | data[pos + 6];
+      return width > 0 && height > 0;
+    }
+    pos += segmentLength;
+  }
+  return false;
 }
 }
 
@@ -92,22 +92,56 @@ void drawLayoutDABStyle()
     spr.clearClipRect();
   }
 
-  // Local PI-matched PNG logo. The image is scaled into the square viewport.
+  // Mini_OS StationLogoClient: local /logos lookup first, then online fallback.
   constexpr int logoX=8,logoY=29,logoW=108,logoH=108;
   spr.fillRoundRect(logoX,logoY,logoW,logoH,5,WHITE);
-  findStationLogo(getRdsPiCode());
-  bool logoDrawn=false;
-  if(cachedLogoPath[0])
+
+  StationLogoState logoState{};
+  logoState.piCode = getRdsPiCode();
+  logoState.frequencyKHz = static_cast<uint32_t>(currentFrequency) * 10UL;
+  const char *rawStation = getStationName();
+  if(rawStation && static_cast<uint8_t>(*rawStation)==0xFF) ++rawStation;
+  if(rawStation) snprintf(logoState.stationName,sizeof(logoState.stationName),"%s",rawStation);
+  const char *rawRadioText = getRadioText();
+  if(rawRadioText) snprintf(logoState.radioText,sizeof(logoState.radioText),"%s",rawRadioText);
+
+  StationLogoClient& logoClient = dabLogoClient();
+  logoClient.update(logoState,getWiFiStatus()>0);
+
+  char logoKey[40] = {};
+  if(logoState.piCode && logoState.frequencyKHz)
+    snprintf(logoKey,sizeof(logoKey),"%04X_%lu",
+      static_cast<unsigned>(logoState.piCode),static_cast<unsigned long>(logoState.frequencyKHz));
+
+  const uint8_t *logoData = nullptr;
+  size_t logoLength = 0;
+  bool logoIsJpg = false;
+  const bool logoLocked = logoKey[0] &&
+    logoClient.lockLogo(logoKey,logoData,logoLength,logoIsJpg);
+  const bool logoSearching = !logoLocked && logoKey[0] &&
+    logoClient.isLookupPending(logoKey);
+
+  bool logoDrawn = false;
+  if(logoLocked && logoData && logoLength)
   {
-    // LovyanGFX Sprite cannot use the filesystem overload directly here.
-    // Decode from the LittleFS File stream instead.
-    File logoFile = LittleFS.open(cachedLogoPath, "r");
-    if(logoFile)
+    uint16_t sourceW=0,sourceH=0;
+    if(getLogoDimensions(logoData,logoLength,sourceW,sourceH))
     {
-      logoDrawn = spr.drawPng(&logoFile, logoX+4, logoY+4, logoW-8, logoH-8);
-      logoFile.close();
+      const float sx=static_cast<float>(logoW-8)/sourceW;
+      const float sy=static_cast<float>(logoH-8)/sourceH;
+      const float scale=sx<sy?sx:sy;
+      const int drawW=static_cast<int>(sourceW*scale+0.5f);
+      const int drawH=static_cast<int>(sourceH*scale+0.5f);
+      const int drawX=logoX+(logoW-drawW)/2;
+      const int drawY=logoY+(logoH-drawH)/2;
+      if(logoIsJpg)
+        logoDrawn=spr.drawJpg(logoData,logoLength,drawX,drawY,0,0,0,0,scale,scale);
+      else
+        logoDrawn=spr.drawPng(logoData,logoLength,drawX,drawY,0,0,0,0,scale,scale);
     }
   }
+  if(logoLocked) logoClient.unlockLogo();
+
   if(!logoDrawn)
   {
     spr.fillRoundRect(logoX,logoY,logoW,logoH,5,BG);
@@ -115,7 +149,13 @@ void drawLayoutDABStyle()
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(WHITE);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-    spr.drawString(cachedLogoPath[0] ? "LOGO ERROR" : "NO LOGO",logoX+logoW/2,logoY+logoH/2);
+    if(logoSearching)
+    {
+      spr.drawString("SEARCHING",logoX+logoW/2,logoY+42);
+      spr.drawString("LOGO...",logoX+logoW/2,logoY+62);
+    }
+    else
+      spr.drawString(logoData ? "LOGO ERROR" : "NO LOGO",logoX+logoW/2,logoY+logoH/2);
   }
 
   // FM frequency, large digital font.

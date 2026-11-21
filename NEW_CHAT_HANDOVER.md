@@ -3,7 +3,7 @@
 Stand: 21.11.2026  
 Repository: `firetvstick2k2-afk/ats-mini-dev` (privat)  
 Arbeitsbranch: `development`  
-Letzter Code-Commit: 866a7798908eafe729a34b03b9489b0b53b4e2a7 (CW UI final refinement).
+Letzter Code-Commit: 5c8cbdbdee7047b3875f9e28316578cbc8627b06 (RTTY preset preview submenu).
 
 ## 1. Wichtige Arbeitsregeln
 
@@ -89,7 +89,7 @@ Layout-Indizes (bestehende Indizes erhalten):
 
 ### FT8/FT4
 - FT8/FT4 Decoder-/Audio-/DSP-Quellen und UI-Service sind integriert; eigener Decoder-Bildschirm, Audio-Capture-Service, UTC-Gate, Wi-Fi-Aus-/Wiederherstellungslogik.
-- Nur FT8 und FT4 öffnen den Decoder. CW/RTTY bleiben normale Hör-/Frequenz-Presets; keine CW-/RTTY-Decoder starten.
+- FT8/FT4 öffnen den FT8/FT4-Decoder. CW startet den CW-Decoder; RTTY startet den RTTY-Decoder. RTTY besitzt im laufenden Decoder ein eigenes Preset-Untermenü (siehe unten).
 - UTC kann offline über gültige RDS CT gesetzt werden; Decoder-Einstieg wartet auf `clockAvailable()`.
 - Decoder-Waterfall ist noch nicht implementiert.
 - Empfang/Decodierung auf echter Hardware ist nicht bestätigt. Timing, Audio-Pfad und UTC müssen nach erfolgreichem Build weiter geprüft werden.
@@ -350,3 +350,13 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Wichtiger Quellcodebefund: `RttyService.cpp` besitzt aktuell weiterhin einen eigenen 8-kSamples/s ADC-Capture-Task. Er wurde absichtlich nicht verändert, um RTTY nicht zu gefährden. Die frühere Annahme, RTTY nutze bereits den gemeinsamen 4-kSamples/s Subscriber, stimmt mit dem tatsächlich abgerufenen `development`-Code nicht überein.
 - Keine Actions, kein Build, kein Flash und kein Hardwaretest durch ChatGPT. Nachfolgend Nutzer-Build und Gerätetest erforderlich.
 - Relevante Code-Commits: `25775d1dfba9519ce04be67e05903340a5b4a54d`, `401eb98d99d5f2219e57496d8d64f9f4b9e44ab3`, `3dbdad4d9925ddd737aa6a18c2f1b55ebb5a965d`, `2d917e58a06943fcf39c68941a6ee169658da470`, `a764c87925b5e0387e234de4ebc5e962ad5f83fb`, `9ac9dc1633ff2c21c73b1d92802a64a2dc239a25`, `965adc959e29ddacf222934c4a6883fd01d3b4d8`, `bbed86448b7b99f61ca02df08d0cef07f32d312c`, `2559340c50e8444459ebc7346da96131a089222d`, `e970b9cf5a71e8e85e5a01ca687bfce9967e3ac2`, `cbda87aa0f2b404b69e34be4bae752644916f09f`, `cdbff5f06915a8934237464aa67b1f1da6dc5a92`, `9b98c518ce01848e2922f3ae69af4b4dad5b1538`, `04d595c9c5205d0dadf5e99a8dc438ff72ef911a`, `9de4ceda973e6e25c1060eaf74670a3bedfddd97`, `faff7cd6ff8695ae5511935d6a9240388d7f4a09f`, `256098b22d8572f5a1d4f309971f816f113f2610`, `866a7798908eafe729a34b03b9489b0b53b4e2a7`.
+
+
+## RTTY-Preset-Untermenü im laufenden Decoder (21.11.2026)
+- Beim kurzen Encoderklick auf der RTTY-Empfangsseite öffnet sich `RTTY ACTIONS`; erster Eintrag ist `RTTY PRESETS`. Das ist ausdrücklich nicht der Hauptmenüpunkt `Decoder Frequencies`.
+- Die Liste zieht alle 11 mit `DecoderKind::RTTY` markierten Einträge aus `DecoderFrequencyList.h`: fünf Amateurfunk-Presets (80/40/20/15/10 m) und sechs DWD/Pinneberg-RTTY-Frequenzen (147, 4583, 7646, 10101, 11039, 14467 kHz). Reine DWD-FAX-Presets ohne RTTY-Markierung bleiben außen vor.
+- Bedienung wie FT8: drehen wählt, nach 2 Sekunden wird die Frequenz probeweise abgestimmt (WAIT → LISTEN), erneutes Drehen stellt die vorherige Frequenz wieder her und wechselt zur nächsten Vorauswahl. Kurzer Klick übernimmt die Frequenz und setzt die zum Preset gehörige Baudrate (45.45/50 Bd), AUTO-Polarität und Decoder-Reset. Klick vor Ablauf der 2 Sekunden übernimmt direkt.
+- Während der Vorschau werden Lautsprecher-Mute und Verstärker nur falls nötig temporär aktiviert und anschließend auf den vorherigen Zustand zurückgesetzt. Beim Verlassen während einer Vorschau wird auch der ursprüngliche VFO/BFO wiederhergestellt.
+- Nur das RTTY-Aktions-/Preset-Untermenü wurde optisch an FT8 angepasst; die RTTY-Empfangsseite bleibt unverändert.
+- Quellcode-Commits: `5941a11ea95a2c0f12ce0f8d28c030dda44036ba`, `d9361fd80c40b7852e78780a3ceb7d2c4eaab1a3`, `5c8cbdbdee7047b3875f9e28316578cbc8627b06`.
+- Build und Hardwaretest stehen noch aus. Nächster Schritt: manueller OSPI-DE-Build auf `development`; anschließend alle 11 Presets, 2-s-Vorschau, Audio, Auswahl/Abbruch, Baudrate, BFO- und Exit-Wiederherstellung testen.

@@ -4,6 +4,7 @@
 
 namespace {
   bool active = false;
+  bool sessionActive = false;
   uint8_t savedBandwidth = 0;
   uint8_t currentBandwidth = 3; // 60 kHz starting point
   uint32_t lastChangeAt = 0;
@@ -22,22 +23,21 @@ namespace {
 
 bool fmDxStart() {
   if(currentMode != FM || active) return active;
-  const Bandwidth *bandwidth = getCurrentBandwidth();
-  if(!bandwidth) return false;
-  savedBandwidth = bandwidth->idx;
-  currentBandwidth = 3;
+  if(!sessionActive) {
+    const Bandwidth *bandwidth = getCurrentBandwidth();
+    if(!bandwidth) return false;
+    savedBandwidth = bandwidth->idx;
+    sessionActive = true;
+    currentBandwidth = 3;
+    rx.setFmBandwidth(currentBandwidth);
+  }
   active = true;
   lastChangeAt = millis();
   narrowSamples = wideSamples = normalSamples = 0;
-  rx.setFmBandwidth(currentBandwidth);
   return true;
 }
 
 void fmDxStop() {
-  if(!active) return;
-  // The receiver may already have switched to AM/SSB through a remote action.
-  // Restore the saved FM filter only while the tuner is still in FM mode.
-  if(currentMode == FM) rx.setFmBandwidth(savedBandwidth);
   active = false;
   narrowSamples = wideSamples = normalSamples = 0;
 }
@@ -62,6 +62,27 @@ void fmDxTick(uint8_t signalRssi, uint8_t signalSnr, uint32_t now) {
   } else {
     narrowSamples = wideSamples = normalSamples = 0;
   }
+}
+
+void fmDxSetManualBandwidth(uint8_t index) {
+  if(index < 2 || index > 4 || currentMode != FM) return;
+  if(!sessionActive) {
+    const Bandwidth *bandwidth = getCurrentBandwidth();
+    if(!bandwidth) return;
+    savedBandwidth = bandwidth->idx;
+    sessionActive = true;
+  }
+  active = false;
+  currentBandwidth = index;
+  rx.setFmBandwidth(index);
+  narrowSamples = wideSamples = normalSamples = 0;
+}
+
+void fmDxEndSession() {
+  active = false;
+  if(sessionActive && currentMode == FM) rx.setFmBandwidth(savedBandwidth);
+  sessionActive = false;
+  narrowSamples = wideSamples = normalSamples = 0;
 }
 
 bool fmDxActive() { return active; }

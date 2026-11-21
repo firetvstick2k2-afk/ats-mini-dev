@@ -1807,6 +1807,52 @@ static int drawXXLText(const char *text, int x, int y, uint16_t color, const lgf
   return cursor - x;
 }
 
+
+static int measureXXLText(const char *text, const lgfx::IFont *font)
+{
+  spr.setFont(font);
+  int width = 0;
+  while (*text)
+  {
+    char glyph[2] = {0, 0};
+    bool sharpS = false;
+    char base = *text++;
+    if ((uint8_t)base == 0xC3 && *text)
+    {
+      uint8_t next = (uint8_t)*text++;
+      switch (next)
+      {
+        case 0x84: base='A'; break;
+        case 0x96: base='O'; break;
+        case 0x9C: base='U'; break;
+        case 0xA4: base='a'; break;
+        case 0xB6: base='o'; break;
+        case 0xBC: base='u'; break;
+        case 0x9F: base='s'; sharpS=true; break;
+        default: base='?'; break;
+      }
+    }
+    glyph[0] = base;
+    const int glyphWidth = spr.textWidth(glyph);
+    width += sharpS ? glyphWidth * 2 : glyphWidth;
+  }
+  return width;
+}
+
+static int drawXXLTextCentered(const char *text, int centerX, int y, uint16_t color, const lgfx::IFont *font)
+{
+  const int width = measureXXLText(text, font);
+  drawXXLText(text, centerX - width / 2, y, color, font);
+  return width;
+}
+
+static int drawXXLTextRight(const char *text, int rightX, int y, uint16_t color, const lgfx::IFont *font)
+{
+  const int width = measureXXLText(text, font);
+  drawXXLText(text, rightX - width, y, color, font);
+  return width;
+}
+
 void drawFullScreenMenu(uint16_t cmd)
 {
   const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF, white = 0xFFFF;
@@ -1881,7 +1927,7 @@ void drawFullScreenMenu(uint16_t cmd)
   spr.setTextDatum(TR_DATUM);
   spr.setFont(FONT_DEFAULT);
   spr.setTextColor(cyan);
-  spr.drawString("KLICK: OK", 307, 151);
+  drawXXLTextRight("KLICK: OK",307,151,cyan,FONT_DEFAULT);
 }
 
 void drawVolumePopup()
@@ -1909,7 +1955,7 @@ void drawVolumePopup()
   spr.setTextColor(cyan);
   drawXXLText("DREHEN: EINSTELLEN",12,151,cyan,FONT_SMALL);
   spr.setTextDatum(TR_DATUM);
-  spr.drawString("KLICK: BESTÄTIGEN", 308, 151, FONT_SMALL);
+  drawXXLTextRight("KLICK: BESTÄTIGEN",308,151,cyan,FONT_SMALL);
 }
 
 void drawBrightnessPopup()
@@ -1935,9 +1981,9 @@ void drawBrightnessPopup()
   if(width > 0) spr.fillRoundRect(42, 103, width, 10, 5, 0xFFFF);
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(cyan);
-  spr.drawString("DREHEN: EINSTELLEN", 12, 151, FONT_SMALL);
+  drawXXLText("DREHEN: EINSTELLEN",12,151,cyan,FONT_SMALL);
   spr.setTextDatum(TR_DATUM);
-  spr.drawString("KLICK: ZURÜCK", 308, 151, FONT_SMALL);
+  drawXXLTextRight("KLICK: ZURÜCK",308,151,cyan,FONT_SMALL);
 }
 
 
@@ -1965,6 +2011,29 @@ static int settingsIndexForCommand(uint16_t cmd)
     case CMD_ABOUT: return MENU_ABOUT;
     default: return -1;
   }
+}
+
+
+static void drawDateTimePopupLine(const char *text, uint8_t start, uint8_t length,
+                                  int centerX, int y, bool active,
+                                  uint16_t textColor, uint16_t highlightColor)
+{
+  char prefix[12], field[8];
+  snprintf(prefix,sizeof(prefix),"%.*s",start,text);
+  snprintf(field,sizeof(field),"%.*s",length,text + start);
+  spr.setFont(FONT_SMALL);
+  spr.setTextDatum(MC_DATUM);
+  spr.setTextColor(textColor);
+  spr.drawString(text,centerX,y,FONT_SMALL);
+  if(!active) return;
+
+  const int left = centerX - spr.textWidth(text,FONT_SMALL) / 2;
+  const int fieldX = left + spr.textWidth(prefix,FONT_SMALL);
+  const int fieldWidth = spr.textWidth(field,FONT_SMALL);
+  spr.fillRoundRect(fieldX - 3,y - 8,fieldWidth + 6,16,3,highlightColor);
+  spr.setTextDatum(ML_DATUM);
+  spr.setTextColor(0x0000,highlightColor);
+  spr.drawString(field,fieldX,y,FONT_SMALL);
 }
 
 void drawSettingsPopup(uint16_t cmd)
@@ -2013,19 +2082,31 @@ void drawSettingsPopup(uint16_t cmd)
   spr.drawFastHLine(10,34,300,blue);
   spr.fillRoundRect(20,48,280,88,8,0x0821);
   spr.drawRoundRect(20,48,280,88,8,cyan);
-  const int labelWidth=drawXXLText(label,160,60,0xBDF7,FONT_SMALL);
-  (void)labelWidth;
-  spr.setTextDatum(TC_DATUM);
-  spr.setTextColor(white);
-  spr.setFont(FONT_LARGE);
-  const int valueWidth=spr.textWidth(valueText);
-  drawXXLText(valueText,max(30,(320-valueWidth)/2),88,white,FONT_LARGE);
+  drawXXLTextCentered(label,160,60,0xBDF7,FONT_SMALL);
+  if(cmd == CMD_DATETIME)
+  {
+    static const uint8_t starts[] = { 0, 5, 8, 0, 3, 6 };
+    static const uint8_t lengths[] = { 4, 2, 2, 2, 2, 2 };
+    char date[16], time[16];
+    snprintf(date,sizeof(date),"%04u-%02u-%02u",
+      (unsigned)dateTimeYear,(unsigned)dateTimeMonth,(unsigned)dateTimeDay);
+    snprintf(time,sizeof(time),"%02u:%02u:%02u",
+      (unsigned)dateTimeHour,(unsigned)dateTimeMinute,(unsigned)dateTimeSecond);
+    drawDateTimePopupLine(date,starts[dateTimeField],lengths[dateTimeField],
+      160,88,dateTimeField <= DATETIME_DAY,white,cyan);
+    drawDateTimePopupLine(time,starts[dateTimeField],lengths[dateTimeField],
+      160,112,dateTimeField >= DATETIME_HOUR,white,cyan);
+  }
+  else
+  {
+    drawXXLTextCentered(valueText,160,88,white,FONT_LARGE);
+  }
   spr.drawFastHLine(10,143,300,blue);
   drawXXLText("DREHEN: ÄNDERN",12,151,cyan,FONT_DEFAULT);
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(cyan);
   spr.setFont(FONT_DEFAULT);
-  spr.drawString("KLICK: AUSWÄHLEN",308,151);
+  drawXXLTextRight("KLICK: AUSWÄHLEN",308,151,cyan,FONT_DEFAULT);
 }
 
 void drawSideBar(uint16_t cmd, int x, int y, int sx)
@@ -2232,13 +2313,13 @@ void drawDecoderFrequencyMenu()
     }
   }
   spr.setTextColor(cyan);
-  spr.setTextDatum(TL_DATUM); spr.drawString("DREHEN: WÄHLEN", 10, 151, FONT_SMALL);
-  spr.setTextDatum(TR_DATUM); spr.drawString("HALTEN: ZURÜCK", 310, 151, FONT_SMALL);
+  drawXXLText("DREHEN: WÄHLEN",10,151,cyan,FONT_SMALL);
+  drawXXLTextRight("HALTEN: ZURÜCK",310,151,cyan,FONT_SMALL);
   spr.setTextDatum(MC_DATUM);
   if(decoderPresetView)
   {
     spr.setTextColor(decoderLastTunedPreset == decoderPresetIndex ? green : cyan);
     spr.drawString(decoderLastTunedPreset == decoderPresetIndex ? "ABGESTIMMT" : "ABSTIMMUNG IN 2 SEKUNDEN", 160, 137, FONT_SMALL);
   }
-  else { spr.setTextColor(cyan); spr.drawString("KLICK: ÖFFNEN", 160, 137, FONT_SMALL); }
+  else { drawXXLTextCentered("KLICK: ÖFFNEN",160,137,cyan,FONT_SMALL); }
 }

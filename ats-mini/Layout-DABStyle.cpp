@@ -1,11 +1,12 @@
 #include "StationLogoClient.h"
+#include <string.h>
 #include "Common.h"
 #include "Menu.h"
 #include "Draw.h"
 #include <ctype.h>
 
 // FM-only DAB-style screen ported from the ATS Mini OS FM layout.
-// Sender images are read from the existing LittleFS /Logos directory.
+// Sender images are loaded by the Mini_OS-compatible client from /logos or online.
 namespace {
 bool getLogoDimensions(const uint8_t* data, size_t length, uint16_t& width, uint16_t& height) {
   width = height = 0;

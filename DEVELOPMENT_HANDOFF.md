@@ -1223,3 +1223,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The recovery was committed on `development` only. `main` was not modified.
 - Recovery commit triggered OSPI-DE Build #21, run `44941837830`; status was in progress at the time of this entry. Build result/artifact must be appended after completion.
 - Outstanding work: inspect the restored settings-menu implementation against all command handlers, finish the UTF-8 menu audit, and implement RDS-CT automatic RTC/UTC-offset synchronization with minute precision before claiming those tasks complete.
+
+
+## Build #21/#22 compiler correction — 2026-11-21
+- Build #21 (run 44941837830) failed; Build #22 (run 44941872277) also failed during OSPI-DE compilation. Build #22 confirmed the restored 238-entry source tree was present; the compiler stopped at a linkage mismatch in the new Settings popup.
+- Root cause: `drawSettingsPopup(uint16_t)` was declared with external linkage in `Menu.h`, but defined as `static` in the German and English menu source templates. The German build generated `Menu.cpp` from the German template and failed with “declared extern and later static”.
+- Correction: remove `static` from the function definition in both `Menu_german.cpp.src` and `Menu_english.cpp.src`, matching the declaration in `Menu.h`. No settings behavior or radio logic is changed.
+- Correction committed to `development` only. Build #23 is triggered by this push; compilation and artifact availability remain unverified until CI completes.
+- Main remains untouched. The full source tree is preserved; verify recursive tree entry count after the commit.

@@ -1943,7 +1943,7 @@ static int settingsIndexForCommand(uint16_t cmd)
   }
 }
 
-static void drawSettingsPopup(uint16_t cmd)
+void drawSettingsPopup(uint16_t cmd)
 {
   const uint16_t bg=0x0000, blue=0x001F, cyan=0x07FF, white=0xFFFF;
   const int settingIndex=settingsIndexForCommand(cmd);

@@ -76,7 +76,7 @@ bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
 void Js8AudioMonitor::stop() {
   active_ = false;
   testPlayback_ = false;
-  ++sourceGeneration_;
+  advanceSourceGeneration();
   if (capture_) capture_->unsubscribe(this);
   if (queue_) xQueueReset(queue_);
 }
@@ -84,7 +84,7 @@ void Js8AudioMonitor::stop() {
 bool Js8AudioMonitor::startTestPlayback() {
   if (!initialized_ || !active_ || !capture_ || testPlayback_) return false;
   capture_->unsubscribe(this);
-  ++sourceGeneration_; // invalidate callbacks already snapshotted by the capture task
+  advanceSourceGeneration(); // invalidate callbacks already snapshotted by the capture task
   if (queue_) xQueueReset(queue_);
   resetRequested_ = true;
   testSampleIndex_ = 0;
@@ -96,7 +96,7 @@ bool Js8AudioMonitor::startTestPlayback() {
 void Js8AudioMonitor::stopTestPlayback() {
   if (!testPlayback_) return;
   testPlayback_ = false;
-  ++sourceGeneration_; // discard any callback that began during synthetic playback
+  advanceSourceGeneration(); // discard any callback that began during synthetic playback
   if (queue_) xQueueReset(queue_);
   resetRequested_ = true;
   if (active_ && capture_) capture_->subscribe(this, onAudioSamples);
@@ -132,7 +132,7 @@ void Js8AudioMonitor::onAudioSamples(void* context, const int16_t* samples,
   if (!self || !self->active_ || self->testPlayback_ || !self->queue_ ||
       !samples || count == 0 || count > AudioCaptureService::kBlockSamples) return;
 
-  const uint32_t sourceGeneration = self->sourceGeneration_;
+  const uint32_t sourceGeneration = self->currentSourceGeneration();
   if (self->testPlayback_) return;
 
   AudioBlock block{};
@@ -146,7 +146,7 @@ void Js8AudioMonitor::onAudioSamples(void* context, const int16_t* samples,
   portEXIT_CRITICAL(&self->metricsMux_);
 
   // A source switch may have happened while this callback copied its block.
-  if (self->testPlayback_ || sourceGeneration != self->sourceGeneration_) return;
+  if (self->testPlayback_ || sourceGeneration != self->currentSourceGeneration()) return;
   if (xQueueSend(self->queue_, &block, 0) != pdTRUE) {
     portENTER_CRITICAL(&self->metricsMux_);
     ++self->queueDrops_;
@@ -160,7 +160,7 @@ void Js8AudioMonitor::taskEntry(void* arg) {
 
 void Js8AudioMonitor::makeTestBlock(AudioBlock& block) {
   block.count = AudioCaptureService::kBlockSamples;
-  block.sourceGeneration = sourceGeneration_;
+  block.sourceGeneration = currentSourceGeneration();
   block.callbackTimeUs = esp_timer_get_time();
   for (size_t i = 0; i < block.count; ++i) {
     if (testSampleIndex_ < kTestSymbolCount * kTestSymbolSamples) {
@@ -197,7 +197,7 @@ void Js8AudioMonitor::workerTask() {
       processBlock(block);
       if (testSampleIndex_ >= kTestSymbolCount * kTestSymbolSamples) {
         testPlayback_ = false;
-        ++sourceGeneration_; // invalidate any late synthetic/live block before resubscribe
+        advanceSourceGeneration(); // invalidate any late synthetic/live block before resubscribe
         resetRequested_ = true;
         if (active_ && capture_) capture_->subscribe(this, onAudioSamples);
       }
@@ -210,11 +210,25 @@ void Js8AudioMonitor::workerTask() {
         resetMeasurementState();
         resetRequested_ = false;
       } else if (active_ && !testPlayback_ &&
-                 block.sourceGeneration == sourceGeneration_) {
+                 block.sourceGeneration == currentSourceGeneration()) {
         processBlock(block);
       }
     }
   }
+}
+
+uint32_t Js8AudioMonitor::currentSourceGeneration() const {
+  portENTER_CRITICAL(&metricsMux_);
+  const uint32_t generation = sourceGeneration_;
+  portEXIT_CRITICAL(&metricsMux_);
+  return generation;
+}
+
+uint32_t Js8AudioMonitor::advanceSourceGeneration() {
+  portENTER_CRITICAL(&metricsMux_);
+  const uint32_t generation = ++sourceGeneration_;
+  portEXIT_CRITICAL(&metricsMux_);
+  return generation;
 }
 
 void Js8AudioMonitor::resetMeasurementState() {

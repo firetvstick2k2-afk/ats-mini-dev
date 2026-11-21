@@ -777,3 +777,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - BFO AUTO mode estimates the detected FSK pair's center and gently adjusts the radio BFO toward the conventional 2210 Hz audio center, with an 18 Hz deadband, 8 Hz maximum correction per adjustment, and a 500 ms adjustment interval. It is an initial automatic centering strategy and requires RF validation; non-standard tone plans (including the 85 Hz DDH47 shift) still need separate testing.
 - The RTTY screen footer displays the active encoder mode and current BFO offset. On decoder exit, the entry BFO and original volume are restored. RTTY remains isolated from FT8/FT4; no FTX files, shared audio capture, TEF6686 layout, or LittleFS code were changed.
 - Source-only implementation on development; no compiler build, Actions run, flash, or hardware test was performed. The automatic correction direction/response and audible result must be confirmed on the ATS Mini V4 with a known RTTY signal before calling this validated.
+
+
+## RTTY preset baud defaults — 2026-11-21
+- Added a recommended baud-rate field to each decoder frequency preset. The five amateur HF RTTY presets default to **45.45 baud**; all six DWD/Pinneberg RTTY presets (including DDH47) default to **50 baud**.
+- When the user opens an RTTY preset, the selected preset's baud rate is passed into the RTTY UI, selected in the encoder's BAUD mode, applied to the decoder service immediately, and shown in the top-right RX/NO RX status (e.g. `NO RX 50.00Bd`). Encoder selection remains available for manual override.
+- The RTTY decoder API retains a 45.45 baud default for any non-preset entry. No FT8/FT4 files, DSP, audio capture, TEF6686 layout, or LittleFS/storage code changed.
+- Source-only change on `development`; no build, Actions run, flash, or hardware test performed. User starts the manual OSPI-DE workflow.

@@ -15,6 +15,10 @@ public:
   void update();
   void setBaud(float baud);
   float baud() const { return baud_; }
+  void setPolarity(uint8_t polarity);
+  uint8_t polarity() const { return polarity_; }
+  void clearText();
+  void resetDecoder();
   float markHz() const { return markHz_; }
   float spaceHz() const { return spaceHz_; }
   float toneCenterHz() const { return (toneLowHz_ + toneHighHz_) * 0.5f; }
@@ -37,6 +41,7 @@ private:
   bool initialized_=false;
   volatile bool signal_=false;
   float baud_=45.45f,markHz_=0,spaceHz_=0,toneLowHz_=0,toneHighHz_=0;
+  uint8_t polarity_=0;
   float dc_=2048.0f;
   float frame_[512]{};
   size_t frameCount_=0;

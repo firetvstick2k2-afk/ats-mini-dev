@@ -6,6 +6,7 @@ Arbeitsbranch: `development`
 Letzter Code-Commit: b036dbcd234f7fc5577b46d7bfc4335a205fe19a (RTTY preset preview submenu and action-menu polish).
 
 ## 1. Wichtige Arbeitsregeln
+- **Bugfixes haben Vorrang:** Meldet der Nutzer während geplanter Feature-Arbeit einen Fehler, zuerst diesen Bug beheben und danach mit der zuletzt priorisierten Roadmap-Aufgabe fortfahren.
 
 - Ausschließlich im privaten Repo `firetvstick2k2-afk/ats-mini-dev` auf Branch `development` arbeiten.
 - `main` und das öffentliche Repo `13HN2709/ats-mini` niemals ändern, außer der Nutzer fordert es ausdrücklich.

@@ -100,23 +100,21 @@ Layout-Indizes (bestehende Indizes erhalten):
 - FT8/FT4-Presets öffnen den Decoder, normale Presets kehren zur aktiven Layoutanzeige zurück.
 - Keine Presets stillschweigend entfernen oder die Quellanzahl auf 74 ändern.
 
-## 7. Nächste Prioritäten — ausdrücklich vereinbart
+## 7. Verbindliche neue Entwicklungsreihenfolge — 2026-11-21
 
-Der Nutzer möchte zunächst die **Grundfunktionen stabilisieren**, bevor neue Extras dazukommen:
+Diese Reihenfolge wurde vom Nutzer neu festgelegt und ersetzt die vorherige Priorisierung in diesem Dokument:
 
-1. **Speichermanagement prüfen und verbessern:** LittleFS-Nutzung, Logos, Speicherbedarf, Dateizugriffe, Fehlerfälle und mögliche Speicherknappheit analysieren. Bestehende Nutzerdaten schützen; keine Formatierung.
-2. **Halbfertige Übernahmen richtigstellen:** Übernommene Mini-OS-/Decoder-Funktionen einzeln inventarisieren, tatsächliche Integration prüfen, fehlende Verbindungen/Fehler sauber fertigstellen und als integriert / teilweise integriert / offen kennzeichnen.
-3. Danach Kernfunktionen systematisch testen und erst dann weitere Komfortfunktionen/Layouts angehen.
+1. **FM DX** – eigener FM-DX-Menümodus mit den real unterstützten SI4735-Bandbreiten und AUTO; Fokus auf Selektivität/Trennschärfe. Keine nicht vorhandenen TEF6686-Bandbreiten nachbilden oder vortäuschen.
+   - Danach als separater Prototyp ein Audio-FFT-Spektrum testen: weiße, schmale Peaks auf dunklem Hintergrund, schnelle Reaktion und weicher Abfall. Eigenes Testlayout; bestehende Layouts bleiben unverändert. Auch normales demoduliertes FM-Audio (Sprache/Musik) prüfen. Erst den Audio-Datenpfad untersuchen und vorhandene Samples nutzen; keinen zweiten ADC-Sampler starten.
+2. **Wetter portieren** – aus Mini_OS, Branch `dev/first-build-preparation`.
+3. **Newsticker portieren** – aus Mini_OS, demselben Quellbranch.
+4. **Mondphase portieren** – aus Mini_OS, demselben Quellbranch.
+5. **NAVTEX** – separater SITOR-B/CCIR-476-Decoder mit FEC, Synchronisation, Nachrichtenrahmen, 518/490/4209.5-kHz-Presets, Live-Text und LittleFS-Archiv; vollständige/unvollständige Nachrichten unterscheiden und Duplikate erkennen.
+6. **Übrige Decoder** – danach WEFAX, DSC, SSTV, PSK31/63, Olivia/Contestia, JS8Call und weitere geeignete Empfangsmodi.
 
-Keine größere neue Funktion anfangen, bevor diese Basis mit dem Nutzer abgestimmt und die aktuellen offenen Punkte priorisiert wurden.
+**JS8Call ist Punkt 6 zugeordnet** und wird dort als erster Decoder-Unterpunkt umgesetzt. Es bleibt ausdrücklich ein reiner Empfangsdecoder ohne Senden, Encoder, PTT, TX-Menü oder TX-Hardware. Der technische Plan liegt in `JS8CALL_RECEIVE_DECODER.md`; Planung ist erfolgt, Firmwarecode noch nicht implementiert. Wegen MIT-Projektlizenz und GPLv3-Referenzcode keine direkte GPL-Codeübernahme ohne vorherige Lizenzentscheidung; unabhängige Implementierung anhand der Protokolldokumentation bevorzugen.
 
-## 8. Unmittelbare nächste Schritte im neuen Chat
-
-1. Nutzer führt den korrigierten manuellen OSPI-DE-Build auf `development` aus und meldet das Ergebnis.
-2. Bei erfolgreichem Build: Hardwaretest DAB Style FM → Nicht-FM/TinyRadio → FM sowie Logo-/Farbprüfung abwarten.
-3. Anschließend `DEVELOPMENT_HANDOFF.md` mit echtem Build-/Hardware-Ergebnis ergänzen.
-4. Danach mit dem Nutzer den ersten Schritt der Grundfunktionen beginnen: strukturierte Bestandsaufnahme des Speichermanagements und LittleFS, ohne Änderungen an funktionierender Format-/Mount-Logik.
-5. Bei jeder Codeänderung ausschließlich `development` verwenden; `main` bleibt unangetastet und das ausführliche Handover wird aktualisiert.
+Die Reihenfolge ist verbindlich: keine NAVTEX- oder sonstigen Decoderarbeiten vor Abschluss der Punkte 1–4. Alle Arbeiten ausschließlich im privaten Repo `firetvstick2k2-afk/ats-mini-dev`, Branch `development`; `main` bleibt unangetastet. Nutzer startet Builds/Actions manuell und testet selbst. Keine Build- oder Hardware-Erfolge behaupten, wenn sie nicht bestätigt sind.
 
 ## 9. Ton und Zusammenarbeit
 

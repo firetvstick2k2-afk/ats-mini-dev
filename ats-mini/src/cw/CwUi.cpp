@@ -129,13 +129,13 @@ void drawCwDecoderPage() {
   snprintf(info, sizeof(info), "CW TONE  %.0f Hz", toneChoices[toneIndex]);
   spr.drawString(info, 15, 50);
   spr.setTextDatum(TR_DATUM);
-  snprintf(info, sizeof(info), "LEVEL %u%%", static_cast<unsigned>(service.audioLevel() > 100 ? 100 : service.audioLevel()));
+  snprintf(info, sizeof(info), "LEVEL %u", static_cast<unsigned>(service.audioLevel()));
   spr.drawString(info, 304, 50);
 
   // A compact level bar gives immediate feedback from the shared audio input.
-  const uint16_t level = service.audioLevel() > 100 ? 100 : service.audioLevel();
+  const uint16_t level = service.audioLevel() > 500 ? 500 : service.audioLevel();
   spr.drawRect(8, 64, 304, 5, border);
-  if (level) spr.fillRect(9, 65, (302 * level) / 100, 3, active ? green : blueB);
+  if (level) spr.fillRect(9, 65, (302 * level) / 500, 3, active ? green : blueB);
 
   const char* decoded = service.text();
   const size_t len = strlen(decoded);

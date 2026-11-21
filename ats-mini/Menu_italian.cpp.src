@@ -14,6 +14,7 @@
 #include "AllBandSpectrum.h"
 #include "src/radio/DecoderFrequencyList.h"
 #include "src/ftx/FtxUi.h"
+#include "src/radio/FmDxController.h"
 #include "src/radio/FmDxUi.h"
 #include "Storage.h"
 

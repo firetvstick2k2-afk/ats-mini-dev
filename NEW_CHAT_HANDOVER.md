@@ -368,3 +368,8 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Important scope: the USB preset is defined locally in `RttyUi.cpp`; `DecoderFrequencyList.h` and the top-level `Decoder Frequencies` browser are unchanged.
 - Both 147 kHz paths are experimental and unverified on hardware. No build, Actions run or flash was performed. Next step is the user's manual OSPI-DE build on `development`, then test 147 kHz AM audio after USB→AM switching and RTTY decoding on 147 kHz USB. Also verify preview rollback restores the original band state and 150 kHz minimum.
 
+## FT8 country-code fallback (21.11.2026)
+- Latest UI styling commit: `5605a3b672421f6b450f326a4cb7cc53c93e25eb`.
+- Country codes shown when no flag graphic exists (e.g. `PL`) are now plain cyan two-letter text without the surrounding frame. Actual flag graphics keep their prior styling.
+- Changed only the fallback drawing branch in `ats-mini/src/ftx/FtxUi.cpp`; no FT8 decoding/timing behavior changed. No build or hardware test performed.
+

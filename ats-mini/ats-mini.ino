@@ -907,7 +907,7 @@ void loop()
     // Do not let the generic click handler clear CMD_SPECTRUM_INPUT first.
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_RTTY_DECODER)
     {
-      rttyUiExit();
+      rttyUiClick();
       needRedraw = true;
       elapsedSleep = elapsedCommand = currentTime = millis();
       pb1st.wasClicked = pb1st.wasShortPressed = false;

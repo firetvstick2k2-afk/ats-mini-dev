@@ -1284,3 +1284,14 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Added `ats-mini/mini_os_app_desc.cpp`: strong descriptor in `.rodata_desc`, `project_name = "Mini OS"`, `version = "BETA"`; preserves ESP-IDF compatibility fields (magic word, IDF version, efuse revision limits, MMU page size, build date/time). Does not change partitions, APP0, recovery, radio/DSP behavior, or internal `VER_APP`.
 - Source commit: `9aa0b87921c5bccdeb7c5a05977efe3b252ed99a` (intermediate commit with `[skip ci]`).
 - Final handoff commit will trigger the OSPI-DE build. Build and hardware verification are pending; confirm the APP1 card shows Mini OS / Version BETA after flashing.
+
+
+## FM-DX adaptive FM filter and dedicated screen — 2026-11-21
+
+- Temporarily changed `.github/workflows/build.yml` on `development` to `workflow_dispatch` only. Push events no longer start the firmware workflow; the OSPI-DE build remains manually startable. Workflow change commit: `e14df4ad19c661cca25eaceb3a1d210cf3ea7751`. `main` was not changed.
+- Added `ats-mini/src/radio/FmDxController.h/.cpp`: FM-only adaptive bandwidth control. It saves the current hardware bandwidth, starts at 60 kHz, and uses consecutive RSSI/SNR samples plus a 6-second dwell interval to select 40 kHz (strong signal), 84 kHz (weak signal), or return to 60 kHz. It restores the saved hardware bandwidth on stop and does not overwrite the band's saved bandwidth preference.
+- Added `ats-mini/src/radio/FmDxUi.h/.cpp`: separate 320×170 FM-DX screen with dark navy panels, cyan framing, neon-green frequency/status, live RSSI/SNR, and current filter width. Short click toggles auto control/pause; long press exits and restores the saved filter. Existing TEF6686 and other radio layouts are untouched.
+- Added the FM DX entry at the end of the German, English, and Italian main menus, preserving all previous menu indices. Added `CMD_FM_DX`, drawing dispatch, encoder/button lifecycle, inactivity exclusion, RSSI/SNR sampling hook, and stop-before-band-switch handling. Makefile source wildcard now includes `src/radio/*.cpp`.
+- Static source checks: balanced braces in the modified main sketch and three menu sources and new radio files; no accidental literal newline escapes remain; FM DX is present in all three main menu arrays. No compiler/build/Actions/flash/hardware test was run. This code is not yet compiler-verified; the user will start the build manually.
+- Known tuning note: the adaptive thresholds are an initial software heuristic based on the existing receiver RSSI/SNR values, not calibrated RF measurements. Validate actual thresholds and audio behavior on hardware before treating them as final.
+- All changes are on `development`; `main` remains untouched.

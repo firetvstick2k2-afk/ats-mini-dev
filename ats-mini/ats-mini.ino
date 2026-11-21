@@ -258,6 +258,9 @@ void setup()
     while(digitalRead(ENCODER_PUSH_BUTTON)==LOW) delay(100);
   }
 
+  // Always start quietly, regardless of the volume saved from the previous session.
+  volume = 10;
+
   webDiagLog("BOOT: startup");
 
   if(!prefsLoad(SAVE_MEMORIES|SAVE_VERIFY)) prefsSave(SAVE_MEMORIES);

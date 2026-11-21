@@ -105,7 +105,7 @@ void drawFmDxPage() {
   // Frequency stays left aligned; the unit is separate to preserve room on the right.
   char frequency[16];
   snprintf(frequency, sizeof(frequency), "%u.%02u",
-           currentFrequency / 100, currentFrequency % 100);
+           static_cast<unsigned>(currentFrequency / 100),\n           static_cast<unsigned>(currentFrequency % 100));
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(WHITE, BLACK);
   spr.drawString(frequency, 7, 17, FONT_LARGE);
@@ -130,7 +130,7 @@ void drawFmDxPage() {
   drawRssiMeter(43, 76, rssi);
   drawLabel("SNR", 237, 73);
   char snrText[12];
-  snprintf(snrText, sizeof(snrText), "%u dB", snr);
+  snprintf(snrText, sizeof(snrText), "%u dB", static_cast<unsigned>(snr));
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(WHITE, BLACK);
   spr.drawString(snrText, 313, 73, FONT_SMALL);
@@ -140,7 +140,7 @@ void drawFmDxPage() {
   drawLabel("PI", 7, 97);
   uint16_t pi = getRdsPiCode();
   char piText[8];
-  if(pi) snprintf(piText, sizeof(piText), "%04X", pi);
+  if(pi) snprintf(piText, sizeof(piText), "%04X", static_cast<unsigned>(pi));
   else piText[0] = '\0';
   drawValueOrDash(piText, 25, 95);
 

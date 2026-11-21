@@ -3,7 +3,7 @@
 
 // Fixed receiver presets. SI4735 AM/SSB tuning is expressed in whole kHz;
 // decimal-kHz carriers are rounded to the nearest receiver kHz.
-enum class DecoderKind : uint8_t { None, FT8, FT4, RTTY };
+enum class DecoderKind : uint8_t { None, CW, FT8, FT4, RTTY };
 
 struct DecoderFrequencyPreset {
   const char* label;
@@ -16,15 +16,15 @@ struct DecoderFrequencyPreset {
 
 static constexpr DecoderFrequencyPreset kDecoderFrequencyPresets[] = {
   // CW activity
-  {"CW 160m QRP", 1836, USB, 0, DecoderKind::None},
-  {"CW 80m QRP", 3560, USB, 0, DecoderKind::None},
-  {"CW 40m QRP", 7030, USB, 0, DecoderKind::None},
-  {"CW 30m QRP", 10116, USB, 0, DecoderKind::None},
-  {"CW 20m QRP", 14060, USB, 0, DecoderKind::None},
-  {"CW 17m", 18096, USB, 0, DecoderKind::None},
-  {"CW 15m", 21060, USB, 0, DecoderKind::None},
-  {"CW 12m", 24906, USB, 0, DecoderKind::None},
-  {"CW 10m", 28060, USB, 0, DecoderKind::None},
+  {"CW 160m QRP", 1836, USB, 0, DecoderKind::CW},
+  {"CW 80m QRP", 3560, USB, 0, DecoderKind::CW},
+  {"CW 40m QRP", 7030, USB, 0, DecoderKind::CW},
+  {"CW 30m QRP", 10116, USB, 0, DecoderKind::CW},
+  {"CW 20m QRP", 14060, USB, 0, DecoderKind::CW},
+  {"CW 17m", 18096, USB, 0, DecoderKind::CW},
+  {"CW 15m", 21060, USB, 0, DecoderKind::CW},
+  {"CW 12m", 24906, USB, 0, DecoderKind::CW},
+  {"CW 10m", 28060, USB, 0, DecoderKind::CW},
 
   // FT8
   {"FT8 160m", 1840, USB, 4, DecoderKind::FT8},

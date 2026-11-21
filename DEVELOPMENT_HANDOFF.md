@@ -12,7 +12,7 @@ Active work branch: `development` (never modify `main` unless explicitly request
 - Build workflow is manual (`workflow_dispatch`). Do not claim a build/device test passed unless verified. User launches build and tests on ATS Mini.
 - Keep branch hygiene simple; development first. User manages copying approved README/release changes to main unless explicitly asked.
 
-## Current task: CW decoder port (implemented; device validation pending)
+## Previous task: native VHF Spectrum Scanner
 ### Intended user experience
 1. Main menu has XXL `SPECTRUM` category.
 2. Spectrum submenu has `VHF Spectrum` and `ALL Band Spectrum`. The all-band item is a future implementation and must not accidentally start the VHF scan.

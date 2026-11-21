@@ -25,7 +25,6 @@ FtxMode pageMode = FtxMode::FT8;
 
 FtxDecodedMessage recentMessages[3]{};
 uint32_t decodedMessageCount = 0;
-uint32_t ldpcErrorCount = 0;
 uint64_t lastProcessedSlot = 0;
 bool haveProcessedSlot = false;
 
@@ -498,7 +497,6 @@ void addRecentMessage(const FtxDecodedMessage& message)
   for(int i=2;i>0;--i) recentMessages[i]=recentMessages[i-1];
   recentMessages[0]=message;
   ++decodedMessageCount;
-  if(message.ldpcErrors>0) ldpcErrorCount += static_cast<uint32_t>(message.ldpcErrors);
 }
 
 void refreshRecentMessages()
@@ -589,7 +587,7 @@ bool ftxUiOpen(FtxMode mode)
   digitalWrite(AUDIO_MUTE, ftxSpeakerEnabled ? LOW : HIGH);
 
   memset(recentMessages,0,sizeof(recentMessages));
-  decodedMessageCount=ldpcErrorCount=0;
+  decodedMessageCount=0;
   lastProcessedSlot=0;
   haveProcessedSlot=false;
   pageActive = true;
@@ -720,7 +718,6 @@ void ftxUiClick()
       case 5: // Clear displayed station history/counters
         memset(recentMessages, 0, sizeof(recentMessages));
         decodedMessageCount = 0;
-        ldpcErrorCount = 0;
         break;
       case 6: // Toggle per-session log
         if(ftxLogEnabled) ftxLogStop();
@@ -742,7 +739,7 @@ void ftxUiClick()
       case 1: ftxAutoScroll = !ftxAutoScroll; break;
       case 2:
         memset(recentMessages, 0, sizeof(recentMessages));
-        decodedMessageCount = ldpcErrorCount = 0;
+        decodedMessageCount = 0;
         break;
       case 3:
         if(ftxLogEnabled) ftxLogStop(); else ftxLogStart();
@@ -776,22 +773,24 @@ void drawFtxDecoderPage()
   spr.fillSprite(bg);
   spr.drawRect(2,2,316,166,0x001F);
 
-  // Compact top row: tuned frequency on the left, decode/error counters on the right.
+  // Compact top row: frequency and unit on the left, speaker centered, OK count on the right.
   char frequencyText[24];
   snprintf(frequencyText,sizeof(frequencyText),"%u.%03u",
     currentFrequency/1000,currentFrequency%1000);
-  spr.setTextDatum(TL_DATUM);
   spr.setTextColor(0xFFFF);
-  spr.drawString(frequencyText,8,5,&lgfx::fonts::Orbitron_Light_24);
+  spr.setTextDatum(BL_DATUM);
+  spr.drawString("kHz",8,29,FONT_SMALL);
   spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(ftxSpeakerEnabled?0x07E0:0xF800);
-  spr.drawString(ftxSpeakerEnabled?"SPK ON":"SPK OFF",126,13,FONT_SMALL);
-  char counters[32];
-  snprintf(counters,sizeof(counters),"DEC %lu ERR %lu",
-    static_cast<unsigned long>(decodedMessageCount),
-    static_cast<unsigned long>(ldpcErrorCount));
-  spr.setTextDatum(TR_DATUM);
+  spr.drawString(frequencyText,43,5,&lgfx::fonts::Orbitron_Light_24);
+
+  spr.setTextDatum(MC_DATUM);
   spr.setTextColor(cyan);
+  spr.drawString(ftxSpeakerEnabled?"SPK ON":"SPK OFF",205,19,FONT_SMALL);
+
+  char counters[16];
+  snprintf(counters,sizeof(counters),"OK %03lu",
+    static_cast<unsigned long>(decodedMessageCount));
+  spr.setTextDatum(TR_DATUM);
   spr.drawString(counters,311,10,FONT_SMALL);
 
   // FT8 slot progress bar: cyan fill advances with collected decoder blocks.

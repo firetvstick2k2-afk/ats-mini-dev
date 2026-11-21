@@ -678,6 +678,17 @@ void loop()
   ButtonTracker::State pb1st = pb1.update(digitalRead(ENCODER_PUSH_BUTTON) == LOW);
   if(!pb1st.isPressed) decoderMenuLongPressHandled = false;
 
+  // Handle RTTY exit immediately after sampling the physical button. Keep this
+  // ahead of encoder/remote input processing so a long hold cannot be consumed
+  // by another input path before the decoder gets a chance to close cleanly.
+  if(currentCmd == CMD_RTTY_DECODER && pb1st.isLongPressed && !decoderMenuLongPressHandled)
+  {
+    decoderMenuLongPressHandled = true;
+    pb1st.wasClicked = pb1st.wasShortPressed = false;
+    rttyUiExit();
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime = millis();
+  }
 
   int ser_event = serialLoop(usbModeIdx);
   needRedraw |= !!(ser_event & REMOTE_CHANGED);

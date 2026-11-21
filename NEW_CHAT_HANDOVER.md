@@ -410,3 +410,16 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Reuse existing receiver/audio infrastructure only after checking its sample-rate, bandwidth, capture ownership and lifecycle constraints. Do not assume the shared 4 kHz FT8/CW audio service or the separate 8 kHz RTTY capture is automatically suitable; do not modify existing CW, FT8/FT4 or RTTY behavior to make NAVTEX work.
 - Keep the implementation isolated in NAVTEX-specific service, decoder and UI files, with localized German/English menu strings. No changes to TEF6686/Clean layouts or unrelated radio features.
 - No code has been written, no build/Actions run, no flash and no hardware test performed. User will port/test after current ATS Mini Dev ports.
+
+
+## JS8Call Receive-Only Decoder – added 2026-11-21
+
+- New top-priority project: native JS8Call receive-only decoder; no transmit UI, encoder, PTT or TX path.
+- Work only on `development`; leave `main` untouched. Do not compile or start Actions unless the user explicitly asks.
+- Research/architecture plan: `JS8CALL_RECEIVE_DECODER.md`.
+- Existing shared audio input: `ats-mini/src/audio/AudioCaptureService.h/.cpp`, GPIO11, 4 kHz, 24-sample blocks; JS8 should subscribe to this service and must not create a second ADC sampler.
+- JS8 is related to FT8 but has its own 8-FSK synchronization/Costas patterns, channel decoding and six frame classes. Do not reuse FT8 payload parsing as if it were JS8.
+- First milestone is JS8 NORMAL, then SLOW/FAST; JS8 40/60 only after performance validation. USB and accurate 15/10/6/30-second frame timing matter.
+- Preserve existing FT8/FT4, CW, RTTY and all radio layouts/presets. Preserve the LILYGO GPIO11/SPI exclusion.
+- Licensing: ATS Mini is MIT; JS8Call reference source is GPLv3. Do not directly copy upstream GPL source into this repo without an explicit licensing decision.
+- No build or hardware test has been performed for JS8; user will perform firmware build and on-device reception tests.

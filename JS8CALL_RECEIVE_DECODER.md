@@ -14,25 +14,25 @@ The existing FT8/FT4 and CW/RTTY implementations must remain functional and unch
 
 ## 2. Protocol facts
 
-JS8Call combines a custom 8-FSK physical layer (JS8) with a higher-level directed messaging protocol. It is not an FT8 text decoder and FT8 payload parsing cannot be reused as-is.
+JS8Call is two layers: the JS8 8-FSK physical transport and a separate directed/free-text messaging protocol. It is not an FT8 text decoder. Some physical-layer ancestry is shared with FT8, but the JS8 synchronization patterns, information-bit layout, error-checking and message layer must be implemented explicitly. FT8 payload parsing cannot be reused as-is.
 
 The current JS8Call-improved guide documents these modes:
 
-| Mode | Frame interval | TX waveform | Symbol rate | Tone spacing | Approx. bandwidth |
-|---|---:|---:|---:|---:|---:|
-| SLOW | 30 s | 25.28 s | 3.125 baud | 3.125 Hz | 25 Hz |
-| NORMAL | 15 s | 12.64 s | 6.25 baud | 6.25 Hz | 50 Hz |
-| FAST | 10 s | 7.90 s | 10 baud | 10 Hz | 80 Hz |
-| JS8 40 | 6 s | 3.95 s | 20 baud | 20 Hz | 160 Hz |
-| JS8 60 | 4 s | 3.0 s | experimental | experimental | approx. 250 Hz |
+| Mode | Frame interval | TX waveform | Symbol rate / tone spacing | Approx. bandwidth |
+|---|---:|---:|---:|---:|
+| SLOW | 30 s | 25.28 s | 3.125 baud / 3.125 Hz | 25 Hz |
+| NORMAL | 15 s | 12.64 s | 6.25 baud / 6.25 Hz | 50 Hz |
+| FAST | 10 s | 7.90 s | 10 baud / 10 Hz | 80 Hz |
+| JS8 40 | 6 s | 3.95 s | 20 baud / 20 Hz | 160 Hz |
+| JS8 60 | 4 s | 3.0 s | experimental | approx. 250 Hz |
 
-All published modes use 8 tones and 79 symbols per transmitted waveform. NORMAL is the first implementation target because it is the baseline mode and supports the heartbeat network. JS8 40 and JS8 60 are not suitable for heartbeat-network participation according to the current guide.
+The four established modes use 8 tones and 79 symbols per waveform. JS8 60 is experimental and its specifications/performance may change; it is not part of the initial implementation. NORMAL is first. SLOW and FAST follow only after NORMAL is validated; JS8 40 is later and JS8 60 last. The guide states that JS8 40/60 do not participate in the Heartbeat network.
 
-The guide states USB operation and accurate frame timing are important. A clock error greater than about two seconds can prevent decoding. The ATS Mini should use its existing UTC/NTP state when available; no fake UTC timestamps or guessed slot alignment should be introduced. A receive-only fallback using signal-based timing can be considered separately if the existing hardware timing permits it.
+Synchronization is mode-specific. NORMAL retains the three 7-symbol Costas blocks used for backwards compatibility; SLOW, FAST and JS8 40 use three unique 7×7 Costas arrays. Do not reuse FT8's Costas sequence or assume that an FT8 decoder will synchronize JS8. The JS8 frame contains 79 symbols and its protocol layer classifies decoded frames as heartbeat, compound callsign partial, compound callsign directed command, directed command, data Huffman, or data dictionary. A 2-bit transmission flag distinguishes default, first, last and reserved frame roles. Data frames carry a 75-bit variable-encoded payload; callsigns, prefixes/suffixes, signal reports and Maidenhead grids have dedicated encodings. Multi-frame text must be assembled with the first/last semantics respected.
 
-The message protocol includes six principal frame types: heartbeat, compound callsign partial, compound callsign directed command, directed command, data Huffman, and data dictionary. A decoded transport payload must therefore pass through a distinct JS8 frame parser and message assembler before it is displayed as readable text.
+USB is required. The official guide warns that clock error greater than about two seconds can prevent decoding; timing is relative to the transmission-window start (15/10/6/30 seconds), not merely a cosmetic timestamp. Use valid existing UTC when available and expose the timing state. Do not fabricate UTC or silently pretend that arbitrary audio alignment is slot-synchronized. A separate signal-derived/manual timing fallback may be investigated after the synchronized NORMAL path works.
 
-## 3. Existing ATS Mini infrastructure
+## 3. Existing ATS Mini infrastructure## 3. Existing ATS Mini infrastructure
 
 Inspected on `development`:
 
@@ -54,6 +54,8 @@ Create a separate JS8 subsystem, initially under `ats-mini/src/js8/`:
 - `Js8DecoderService.h/.cpp`: FreeRTOS worker and bounded audio queue; subscribe to `sharedAudioCapture()` rather than creating a second ADC sampler.
 - `Js8Protocol.h/.cpp`: parse decoded frame type/flags, callsigns, grids, directed commands and text/data payloads; reassemble multi-frame messages.
 - `Js8Ui.h/.cpp`: receive-only screen, decoded message history, signal/audio status and controls limited to RX options.
+
+The UI must be text-first on the 320×170 display. Incoming messages are appended line-by-line; in live-follow mode, new lines appear at the bottom and older lines move upward automatically. Provide a pause/resume control and manual history scrolling so the user can stop the automatic movement and read older messages. Keep the capture/logging pipeline independent from the visible scroll position: pausing or leaving the live-follow view must never pause reception or lose messages. Logging is a separate opt-in action and must persist decoded messages independently of the UI refresh cycle.
 - Add the new files to `ats-mini/Makefile` SRC/HEADERS lists as required by repository development instructions.
 
 The UI must not contain a transmit text box, Send button, TX enable, PTT action, encoder/modulator or any call into transmit code. Do not add TX capability as a hidden future option.
@@ -81,10 +83,11 @@ Network behavior should match the existing digital decoder convention: disable W
    - Reassemble fragmented messages and discard invalid/incomplete frames safely.
    - Display unknown or unsupported frame types diagnostically rather than fabricating text.
 
-4. **Receive-only UI**
-   - Show frequency, USB, JS8 mode, audio/signal state and decoded messages.
-   - Include clear/history behavior and optional bounded LittleFS logging only after the live decoder is stable.
-   - Keep display text readable on the 320×170 screen.
+4. **Receive-only UI and history**
+   - Show frequency, USB, JS8 mode, UTC/timing lock and audio/signal state.
+   - Append decoded messages line-by-line and auto-scroll older lines upward in live-follow mode.
+   - Add pause/resume and manual back-scroll/history navigation; reception and logging continue while the display is paused or scrolled back.
+   - Add a separate logging toggle and bounded LittleFS message archive only after valid live decoding is stable.
 
 5. **Additional submodes**
    - Add SLOW and FAST after NORMAL is stable.
@@ -113,7 +116,7 @@ The ATS Mini repository is MIT-licensed. The JS8Call reference implementation is
 
 ## References
 
-- JS8Call-improved User Guide: https://js8call.com/JS8Call-improved/d6/d14/md_docs_2user__guide_2JS8Call__User__Guide.html
+- JS8Call-improved User Guide (mode timing, USB/clock requirements, protocol and message behavior): https://js8call.com/JS8Call-improved/d6/d14/md_docs_2user__guide_2JS8Call__User__Guide.html
 - JS8Call-improved source file index: https://js8call.com/JS8Call-improved/files.html
 - JS8Call source and license notice: https://github.com/JS8Call-improved/JS8Call-improved
 - Original JS8Call repository: https://github.com/js8call/js8call

@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-bool rttyUiOpen();
+bool rttyUiOpen(float initialBaud = 45.45f);
 void rttyUiExit();
 bool rttyUiTick(uint32_t now);
 void rttyUiRotate(int16_t delta);

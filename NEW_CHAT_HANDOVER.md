@@ -488,3 +488,10 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - LILYGO GPIO11/SPI-Ausschluss bleibt erhalten. Bestehende FT8/FT4-, CW-, RTTY- und Layout-Dateien wurden nicht geändert.
 - Noch kein Build, kein prek, keine GitHub Actions, kein Flash und keine Hardwaremessung. Code ist nicht compiler-verifiziert.
 - Nächster Schritt: Menü-/UI-/Lifecycle-Integration source-seitig prüfen; danach kontrollierte Tonmessungen auf echter Hardware, Spektralanalyse und reale JS8-NORMAL-Aufnahmen. Noch kein JS8-NORMAL-Decoder.
+
+
+### JS8 synthetic test playback update — 2026-11-21
+- JS8 RX Monitor short-click now starts/stops a built-in deterministic 8-FSK test waveform; long press exits. It generates 79 × 160 ms symbols at nominal 4 kHz, eight tones spaced 6.25 Hz around 1 kHz, with ADC-offset samples. Only the JS8 monitor subscriber is paused; live capture resumes after playback.
+- Not a valid JS8 frame and not decodable yet. No verified Costas sync, LDPC, CRC or message payload is included. This tests monitor block processing/levels/timing only. A protocol-valid NORMAL golden frame and decoder sample-consumer hook are still required.
+- Commits on development: 25d2723c6a97e92b48671481b1395b279d73d16f, b889bd8d3dbc36917097823ce79365110b969762, 0ed599949f1ed0b5f428b36ec501bdad7e9db337, fa04aa000084fd63524753addd412689600e8436, fd822658bd84d152f8b299ed13788fb266b4343e.
+- No compile, Actions, flash or hardware test.

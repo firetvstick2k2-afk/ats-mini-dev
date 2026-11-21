@@ -1312,3 +1312,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The forced-mono setting is respected in the display even if a pilot is detected. In automatic mode, pilot presence and the chip's blend percentage are shown.
 - Source change committed on `development`: `7898b6999726e7644c03688f7207c91b87171fcc`.
 - No build, GitHub Actions run, flash or hardware test was performed. User should verify on a known mono station, a strong stereo station, a weak/blended station, and with forced mono enabled. No change to `main`.
+
+
+## Quiet startup volume and silent FT8/FT4 monitoring — 2026-11-21
+- On every boot, the runtime receiver volume is now forced to 10/63 after saved settings are loaded. This deliberately overrides the previous session's saved volume for startup only; the user can raise it manually after boot.
+- FT8/FT4 still raises the SI473x output volume to 50/63 while the decoder is active, then restores the pre-decoder volume on exit. Decoder capture/DSP samples are unchanged.
+- FT8/FT4 now always enters with the external speaker muted (speaker toggle OFF), while the amplifier remains powered for the existing GPIO11 decoder audio tap. The user can turn the speaker ON explicitly in the decoder Actions menu. On exit, the speaker mute/amplifier state from before entering the decoder is restored.
+- Scope: `development` only. No build, GitHub Actions, flash or hardware test was run; user performs the OSPI-DE build and device verification. `main` remains untouched.

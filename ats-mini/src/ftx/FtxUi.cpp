@@ -236,9 +236,9 @@ void drawFlag(const char* country, int x, int y)
   } else if(!strcmp(country,"CH")) {
     spr.fillRect(x+1,y+1,20,12,red); spr.fillRect(x+9,y+3,4,8,white); spr.fillRect(x+7,y+5,8,4,white);
   } else {
-    // Unknown/unmapped flag: show the country code as a deliberate cyan badge.
-    spr.fillRect(x+1,y+1,20,12,0x1036);
-    spr.drawRect(x,y,22,14,0x07FF);
+    // Unknown/unmapped flag: show only the two-letter country code.
+    // Paint over the generic flag outline above so no badge/frame remains.
+    spr.fillRect(x,y,22,14,0x1036);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(0x07FF);

@@ -6,6 +6,7 @@
 #include <math.h>
 #include <ctype.h>
 #include <LittleFS.h>
+#include <Preferences.h>
 
 #include "FtxDecoderService.h"
 #include "../audio/AudioCaptureService.h"
@@ -25,7 +26,7 @@ FtxMode pageMode = FtxMode::FT8;
 FtxDecodedMessage recentMessages[3]{};
 uint32_t decodedMessageCount = 0;
 uint32_t ldpcErrorCount = 0;
-time_t lastProcessedSlot = 0;
+uint64_t lastProcessedSlot = 0;
 bool haveProcessedSlot = false;
 
 // Temporarily raise receiver audio while the digital decoder is active.
@@ -56,7 +57,9 @@ bool ftxPresetPreviewSpeakerWasEnabled = true;
 bool ftxPresetPreviewSpeakerForced = false;
 bool ftxAutoScroll = true;
 uint8_t ftxMenuSelection = 0;
-constexpr uint8_t kFtxMenuItems = 8;
+constexpr uint8_t kFtxMenuItems = 9;
+bool ftxOfflineSyncPreference = false;
+bool ftxOfflineSyncActive = false;
 bool ftxLogEnabled = false;
 char ftxLogPath[40] = {};
 
@@ -406,14 +409,32 @@ bool applyFtxPreset(const DecoderFrequencyPreset& preset)
   return currentFrequency == preset.frequencyKHz;
 }
 
+bool loadFtxOfflineSyncPreference()
+{
+  Preferences preferences;
+  if(!preferences.begin("ftx", true)) return false;
+  const bool offline = preferences.getBool("offline", false);
+  preferences.end();
+  return offline;
+}
+
+bool saveFtxOfflineSyncPreference(bool offline)
+{
+  Preferences preferences;
+  if(!preferences.begin("ftx", false)) return false;
+  const size_t written = preferences.putBool("offline", offline);
+  preferences.end();
+  return written > 0;
+}
+
 uint8_t ftxActionCount()
 {
-  return pageMode == FtxMode::FT8 ? kFtxMenuItems : kFtxMenuItems - 2;
+  return pageMode == FtxMode::FT8 ? kFtxMenuItems : kFtxMenuItems - 3;
 }
 
 bool ftxLogStart()
 {
-  if(!clockAvailable()) return false;
+  if(ftxOfflineSyncActive || !clockAvailable()) return false;
   uint16_t year = 0;
   uint8_t month = 0, day = 0;
   if(!clockGetDate(&year, &month, &day, nullptr)) return false;
@@ -447,7 +468,7 @@ void ftxLogStop()
 
 void ftxLogMessage(const FtxDecodedMessage& message)
 {
-  if(!ftxLogEnabled || !ftxLogPath[0] || !message.text[0]) return;
+  if(!ftxLogEnabled || !ftxLogPath[0] || !message.text[0] || !message.utcValid) return;
   File file = LittleFS.open(ftxLogPath, "a");
   if(!file) { ftxLogStop(); return; }
   struct tm stamp = {};
@@ -485,12 +506,12 @@ void refreshRecentMessages()
   FtxDecodedMessage messages[FtxDecoderService::kResultCapacity]{};
   const size_t count=decoderService.copyResults(messages,FtxDecoderService::kResultCapacity);
   if(!count) return;
-  time_t newestSlot=lastProcessedSlot;
+  uint64_t newestSlot=lastProcessedSlot;
   for(size_t i=0;i<count;++i)
-    if(messages[i].slotUtc>newestSlot) newestSlot=messages[i].slotUtc;
+    if(messages[i].slotId>newestSlot) newestSlot=messages[i].slotId;
   if(!haveProcessedSlot || newestSlot>lastProcessedSlot) {
     for(size_t i=0;i<count;++i) {
-      if(messages[i].slotUtc != newestSlot) continue;
+      if(messages[i].slotId != newestSlot) continue;
       // Logging is independent of the visible auto-scroll setting.
       ftxLogMessage(messages[i]);
       if(ftxAutoScroll) addRecentMessage(messages[i]);
@@ -517,13 +538,17 @@ void drawClippedText(const char* value, int x, int y, int maxWidth, uint16_t col
 
 bool ftxUiOpen(FtxMode mode)
 {
-  if(!clockAvailable())
+  pageMode = mode;
+  ftxOfflineSyncPreference = loadFtxOfflineSyncPreference();
+  // Signal-derived synchronization is currently an FT8-only receive mode.
+  // FT4 retains its existing UTC-boundary behavior.
+  ftxOfflineSyncActive = mode == FtxMode::FT8 && ftxOfflineSyncPreference;
+  if(!ftxOfflineSyncActive && !clockAvailable())
   {
     statusShow("UTC time not available", "Wait for NTP or RDS CT");
     return false;
   }
 
-  pageMode = mode;
   ftxActionsOpen = false;
   ftxPresetMenuOpen = false;
   ftxPresetSelection = ftxPresetScroll = 0;
@@ -535,12 +560,13 @@ bool ftxUiOpen(FtxMode mode)
   restoreNetworkMode = wifiModeIdx;
   netStop();
 
-  if(getWiFiStatus() != 0 || !clockAvailable() ||
-     !decoderService.enter(mode, true, clockAvailable(), sharedAudioCapture()))
+  if(getWiFiStatus() != 0 || (!ftxOfflineSyncActive && !clockAvailable()) ||
+     !decoderService.enter(mode, true, clockAvailable(), ftxOfflineSyncActive, sharedAudioCapture()))
   {
     decoderService.exit();
     netInit(restoreNetworkMode);
-    statusShow("Decoder start failed", "Check UTC and audio input");
+    ftxOfflineSyncActive = false;
+    statusShow("Decoder start failed", ftxOfflineSyncPreference ? "Check audio / PSRAM" : "Check UTC and audio input");
     return false;
   }
 
@@ -580,6 +606,7 @@ void ftxUiExit()
   ftxPresetMenuOpen = false;
   ftxLogStop();
   decoderService.exit();
+  ftxOfflineSyncActive = false;
   digitalWrite(AUDIO_MUTE, ftxAudioMuteBefore ? HIGH : LOW);
   if(PIN_AMP_EN >= 0) digitalWrite(PIN_AMP_EN, ftxSpeakerAmpBefore ? HIGH : LOW);
   ftxSpeakerEnabled = ftxSpeakerAmpBefore && !ftxAudioMuteBefore;
@@ -650,27 +677,55 @@ void ftxUiClick()
         ftxPresetSelection = ftxPresetScroll = 0;
         scheduleFtxPresetPreview(millis());
         break;
-      case 2: // Speaker
+      case 2: { // Toggle and persist FT8 time synchronization mode
+        const bool requestedOffline = !ftxOfflineSyncPreference;
+        if(!requestedOffline && !clockAvailable()) {
+          statusShow("UTC time not available", "Enable Wi-Fi / NTP first");
+          break;
+        }
+        const bool previousPreference = ftxOfflineSyncPreference;
+        const bool previousActive = ftxOfflineSyncActive;
+        if(!saveFtxOfflineSyncPreference(requestedOffline)) {
+          statusShow("Setting not saved", "Preferences storage error");
+          break;
+        }
+        ftxOfflineSyncPreference = requestedOffline;
+        ftxOfflineSyncActive = requestedOffline;
+        if(!decoderService.enter(pageMode, true, clockAvailable(), ftxOfflineSyncActive, sharedAudioCapture())) {
+          ftxOfflineSyncPreference = previousPreference;
+          ftxOfflineSyncActive = previousActive;
+          saveFtxOfflineSyncPreference(previousPreference);
+          decoderService.enter(pageMode, true, clockAvailable(), previousActive, sharedAudioCapture());
+          statusShow("Sync mode switch failed", "Previous mode restored");
+        } else {
+          lastProcessedSlot = 0;
+          haveProcessedSlot = false;
+          statusShow(requestedOffline ? "Offline signal sync" : "Online UTC sync",
+                     requestedOffline ? "Scanning for FT8 slot" : "UTC slot timing active");
+        }
+        break;
+      }
+      case 3: // Speaker
         ftxSpeakerEnabled = !ftxSpeakerEnabled;
         // Mute only the L/R speaker output; leave AMP_EN and GPIO11 capture live.
         digitalWrite(AUDIO_MUTE, ftxSpeakerEnabled ? LOW : HIGH);
         break;
-      case 3: // Auto-scroll
+      case 4: // Auto-scroll
         ftxAutoScroll = !ftxAutoScroll;
         break;
-      case 4: // Clear displayed station history/counters
+      case 5: // Clear displayed station history/counters
         memset(recentMessages, 0, sizeof(recentMessages));
         decodedMessageCount = 0;
         ldpcErrorCount = 0;
         break;
-      case 5: // Toggle per-session log
+      case 6: // Toggle per-session log
         if(ftxLogEnabled) ftxLogStop();
-        else ftxLogStart();
+        else if(!ftxLogStart()) statusShow("Logging unavailable", "UTC date required");
         break;
-      case 6: // Back
+      case 7: // Back
         ftxActionsOpen = false;
         break;
-      case 7: // Exit decoder
+      case 8: // Exit decoder
         ftxUiExit();
         break;
     }
@@ -824,6 +879,7 @@ void drawFtxDecoderPage()
       const char* labels[kFtxMenuItems] = {
         "FT8 PRESETS",
         "FT4 PRESETS",
+        ftxOfflineSyncPreference ? "TIME SYNC   OFFLINE" : "TIME SYNC   ONLINE",
         ftxSpeakerEnabled ? "SPEAKER       ON" : "SPEAKER       OFF",
         ftxAutoScroll ? "AUTO SCROLL   ON" : "AUTO SCROLL   OFF",
         "CLEAR STATIONS",
@@ -837,7 +893,7 @@ void drawFtxDecoderPage()
         const int y=menuY+27+i*17;
         if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,18,0x0359);
         spr.setTextColor(i==ftxMenuSelection?0xFFFF:0xBDF7);
-        spr.drawString(labels[i+(pageMode==FtxMode::FT4?2:0)],menuX+14,y);
+        spr.drawString(labels[i+(pageMode==FtxMode::FT4?3:0)],menuX+14,y);
       }
     }
   }

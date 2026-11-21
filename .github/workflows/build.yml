@@ -1,6 +1,12 @@
 name: Build Firmware
 
 on:
+  push:
+    branches:
+      - development
+    # Editing the workflow itself must not launch a build.
+    paths-ignore:
+      - ".github/workflows/build.yml"
   workflow_dispatch:
     inputs:
       revision:

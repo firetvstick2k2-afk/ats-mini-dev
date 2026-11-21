@@ -289,3 +289,13 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Geändert: ats-mini/Menu_german.cpp.src und ats-mini/Menu_english.cpp.src.
 - Code-Commits: 43afc499742ee4a7c96d8fa3770a3e16676e4dd1 (Deutsch), e1ff8b954fd796a7e2475c89fe4c9b424f6a1717 (Englisch).
 - Source-only; kein GitHub Actions Build, kein Flash und kein Hardwaretest durch den Assistant. Nutzer startet den OSPI-DE-Build manuell auf development.
+
+
+## RTTY actions menu and SWL-friendly defaults — 2026-11-21
+- Replaced the old short-click BAUD/BFO mode cycle with a dedicated RTTY actions overlay. Short click opens the menu; encoder rotation selects an item; click activates it. Long physical press still exits immediately through the existing handler in `ats-mini.ino`.
+- Default on every RTTY entry is beginner-friendly: use the selected frequency preset's recommended baud rate, BFO AUTO, and polarity AUTO. Amateur RTTY presets keep 45.45 baud; DWD/Pinneberg RTTY presets keep their configured 50 baud. Manual changes are session-only; reopening a preset reapplies its recommended baud.
+- Actions: BFO MODE toggles AUTO/MANUAL; when MANUAL is selected, encoder rotation on the decoder page adjusts BFO in 5 Hz steps, bounded to ±250 Hz from entry. BAUD RATE opens an edit state for 45.45 / 50 / 75 baud. POLARITY opens an edit state for AUTO / NORMAL / REVERSE. CLEAR TEXT clears displayed and queued decoded text. RESET DECODER resets decoder framing/state while retaining the current baud, polarity and detected tone pair. BACK closes the overlay; EXIT RTTY leaves the decoder.
+- The existing automatic BFO correction target/deadband/step limits and original-BFO restoration on exit are retained. Receiver volume restoration and Wi-Fi/network restoration are unchanged.
+- Tone-pair detection remains automatic. There is no manual tone-frequency editor or true automatic baud-rate detector in the current decoder, so neither is presented as a feature. Mark/space tone display is not added in this change.
+- Changed only `ats-mini/src/rtty/RttyUi.cpp`, `RttyService.h`, and `RttyService.cpp`. FT8/FT4 files and DSP, the main Decoder Frequencies menu, TEF6686, LittleFS, and shared audio capture were not changed.
+- Source-only changes on `development`. No compile, GitHub Actions run, flash, or hardware test was performed. User must manually build OSPI-DE on `development`; test preset baud defaults, manual baud and polarity edits, AUTO/MANUAL BFO behavior, clear/reset, BACK/EXIT, and restoration of BFO, volume and Wi-Fi.

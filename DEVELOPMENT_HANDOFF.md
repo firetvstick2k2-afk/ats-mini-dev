@@ -769,3 +769,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - 7.880 MHz (DDK3) and 13.8825 MHz (DDK6) are also FAX and remain outside the RTTY decoder.
 - Pinneberg RTTY presets are the text services: 147.3, 4583, 7646, 10100.8, 11039 and 14467.3 kHz. RTTY 147.3 kHz uses a narrower 85 Hz shift and needs a suitable detector configuration/test.
 - Source checked: DWD maritime weather service frequency table and DWD RTTY transmission plan. Keep weather fax and RTTY as distinct decoder types.
+
+
+## RTTY BFO control — 2026-11-21
+- Added a three-state encoder control cycle on the RTTY page: **BAUD → BFO AUTO → BFO MANUAL → BAUD**. A short click changes the control mode; long press still exits the decoder.
+- In BAUD mode, encoder rotation selects 45.45 / 50 / 75 baud as before. In BFO MANUAL mode, rotation changes the receiver's real SI4735 SSB BFO in 5 Hz increments. The manual range is limited to ±250 Hz from the BFO value present on decoder entry.
+- BFO AUTO mode estimates the detected FSK pair's center and gently adjusts the radio BFO toward the conventional 2210 Hz audio center, with an 18 Hz deadband, 8 Hz maximum correction per adjustment, and a 500 ms adjustment interval. It is an initial automatic centering strategy and requires RF validation; non-standard tone plans (including the 85 Hz DDH47 shift) still need separate testing.
+- The RTTY screen footer displays the active encoder mode and current BFO offset. On decoder exit, the entry BFO and original volume are restored. RTTY remains isolated from FT8/FT4; no FTX files, shared audio capture, TEF6686 layout, or LittleFS code were changed.
+- Source-only implementation on development; no compiler build, Actions run, flash, or hardware test was performed. The automatic correction direction/response and audible result must be confirmed on the ATS Mini V4 with a known RTTY signal before calling this validated.

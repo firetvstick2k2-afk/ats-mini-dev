@@ -17,6 +17,7 @@
 #include "src/rtty/RttyUi.h"
 #include "src/cw/CwUi.h"
 #include "src/js8/Js8Ui.h"
+#include "src/radio/FmDxUi.h"
 #include "Storage.h"
 
 #include <time.h>
@@ -126,6 +127,7 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_ALL_SPECTRUM 18
 #define MENU_DECODER_MENU 19
 #define MENU_SETTINGS    20
+#define MENU_FM_DX       21
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -157,7 +159,7 @@ static const char *menu[] =
   "Steps", "Seek", "Scan", "Memory", "Squelch",
   "Bandwidth", "Frequency", "AGC/ATTN", "AVC",
   "SoftMute", "DUAL RX", "VFO A/B", "VHF Spectrum",
-  "ALL Band Spectrum", "Decoder", "Settings",
+  "ALL Band Spectrum", "Decoder", "Settings", "FM DX",
 };
 
 #define MENU_BRIGHTNESS   0
@@ -945,6 +947,7 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
     case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
+    case MENU_FM_DX: fmDxUiOpen(); break;
   }
 }
 
@@ -1085,6 +1088,7 @@ bool clickHandler(uint16_t cmd, bool shortPress)
 
 void selectBand(uint8_t idx, bool drawLoadingPatch)
 {
+  fmDxStop();
   // Expose the last reached stage to the web tune diagnostic endpoint.
   extern volatile uint8_t webTunePhase;
   webTunePhase = 8;

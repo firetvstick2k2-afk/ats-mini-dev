@@ -275,6 +275,9 @@ bool ftxUiOpen(FtxMode mode)
   }
 
   pageMode = mode;
+  ftxActionsOpen = false;
+  ftxMenuSelection = 0;
+  ftxAutoScroll = true;
   restoreNetworkMode = wifiModeIdx;
   netStop();
 
@@ -460,8 +463,8 @@ void drawFtxDecoderPage()
       "BACK",
       "EXIT FT8 + FT4"
     };
-    spr.fillRoundRect(menuX,menuY,menuW,menuH,4,blueDark);
-    spr.drawRoundRect(menuX,menuY,menuW,menuH,4,cyan);
+    spr.fillRect(menuX,menuY,menuW,menuH,blueDark);
+    spr.drawRect(menuX,menuY,menuW,menuH,cyan);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);

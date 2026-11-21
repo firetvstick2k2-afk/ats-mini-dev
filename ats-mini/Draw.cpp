@@ -602,6 +602,13 @@ void drawScreen()
     return;
   }
 
+  if(currentCmd == CMD_BRT)
+  {
+    drawBrightnessPopup();
+    spr.pushSprite(0, 0);
+    return;
+  }
+
   if(currentCmd == CMD_FTX_DECODER)
   {
     drawFtxDecoderPage();

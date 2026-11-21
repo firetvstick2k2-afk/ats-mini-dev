@@ -1071,6 +1071,7 @@ bool clickHandler(uint16_t cmd, bool shortPress)
     case CMD_BLEMODE:  clickBleMode(bleModeMenuIdx, shortPress);break;
     case CMD_WIFIMODE: clickWiFiMode(wifiModeIdx, shortPress);break;
     case CMD_VOLUME:   clickVolume(shortPress);break;
+    case CMD_BRT:      currentCmd = CMD_SETTINGS; break;
     case CMD_AVC:      clickAvc(shortPress);break;
     case CMD_SQUELCH:  clickSquelch(shortPress);break;
     case CMD_SEEK:     clickSeek(shortPress);break;
@@ -1795,47 +1796,41 @@ void drawFullScreenMenu(uint16_t cmd)
      (decoderPage ? ITEM_COUNT(decoderMenu) : ITEM_COUNT(menu)));
   const char *title = settingsPage ? "SETTINGS" :
     (spectrumPage ? "SPECTRUM" : (decoderPage ? "DECODER" : "MENU"));
-  const int first = max(0, min(count - 5, selected - 2));
+  constexpr int visibleRows = 3;
+  const int first = max(0, min(count - visibleRows, selected - 1));
 
   spr.fillSprite(bg);
   spr.fillRect(8, 7, 4, 22, cyan);
-  spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(white);
-  spr.setFont(FONT_LARGE);
-  spr.drawString(title, 18, 7);
-  spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(white);
-  spr.setFont(FONT_SMALL);
-  spr.drawString("DR / ATS MINI", 160, 17);
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(cyan);
+  drawXXLText(title, 18, 10, white, FONT_SMALL);
+  // The former "DR / ATS MINI" was an unexplained placeholder. Keep only
+  // the product name, in a smaller font, clear of the page title/counter.
+  drawXXLText("ATS MINI", 164, 14, 0xBDF7, FONT_DEFAULT);
   char counter[16];
   snprintf(counter, sizeof(counter), "%02d / %02d", selected + 1, count);
-  spr.drawString(counter, 308, 17);
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(cyan);
+  spr.setFont(FONT_SMALL);
+  spr.drawString(counter, 308, 10);
   spr.drawFastHLine(10, 34, 300, blue);
 
-  for(int row = 0; row < 5; ++row)
+  for(int row = 0; row < visibleRows; ++row)
   {
     const int item = first + row;
     if(item >= count) break;
-    const int y = 39 + row * 25;
+    const int y = 40 + row * 36;
     const bool active = item == selected;
     const int settingsItem = item == 0 ? -1 : (item <= MENU_ZOOM ? item - 1 : item);
     const char *label = settingsPage ? (item == 0 ? "BACK" : settingLabel(settingsItem)) :
       (spectrumPage ? spectrumMenu[item] :
        (decoderPage ? decoderMenu[item] : menu[item]));
     if(active) {
-      spr.fillRect(9, y, 298, 24, blue);
-      spr.fillRect(9, y, 3, 24, cyan);
+      spr.fillRoundRect(9, y, 298, 31, 3, blue);
+      spr.fillRect(9, y, 3, 31, cyan);
     }
-    spr.setTextDatum(ML_DATUM);
-    spr.setTextColor(active ? white : cyan);
-    spr.setFont(FONT_SMALL);
     char number[5];
     snprintf(number, sizeof(number), "%02d", item + 1);
-    spr.drawString(number, 18, y + 12);
-    spr.setTextColor(active ? white : 0xBDF7);
-    spr.drawString(label, 52, y + 12);
+    drawXXLText(number, 18, y + 8, active ? white : cyan, FONT_SMALL);
+    drawXXLText(label, 52, y + 8, active ? white : 0xBDF7, FONT_SMALL);
     if(!settingsPage && !decoderPage && !spectrumPage) {
       char value[24] = "";
       switch(item) {
@@ -1847,21 +1842,22 @@ void drawFullScreenMenu(uint16_t cmd)
         default: break;
       }
       if(value[0]) {
-        spr.setTextDatum(MR_DATUM);
+        spr.setTextDatum(TR_DATUM);
         spr.setTextColor(active ? white : cyan);
-        spr.drawString(value, 298, y + 12);
+        spr.setFont(FONT_SMALL);
+        spr.drawString(value, 298, y + 8);
       }
     }
-    spr.drawFastHLine(52, y + 24, 255, blue);
+    spr.drawFastHLine(52, y + 31, 255, blue);
   }
-  spr.drawFastVLine(313, 39, 124, blue);
-  const int thumbY = 39 + (count > 5 ? selected * 99 / (count - 1) : 0);
-  spr.fillRect(311, thumbY, 5, 25, cyan);
-  spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(cyan);
-  spr.drawString("DREHEN: WÄHLEN", 12, 151, FONT_SMALL);
+  spr.drawFastVLine(313, 40, 105, blue);
+  const int thumbY = 40 + (count > visibleRows ? selected * 80 / (count - 1) : 0);
+  spr.fillRoundRect(311, thumbY, 5, 25, 2, cyan);
+  drawXXLText("TURN: SELECT", 12, 151, cyan, FONT_DEFAULT);
   spr.setTextDatum(TR_DATUM);
-  spr.drawString("KLICK: OK", 307, 151, FONT_SMALL);
+  spr.setFont(FONT_DEFAULT);
+  spr.setTextColor(cyan);
+  spr.drawString("CLICK: OK", 307, 151);
 }
 
 void drawVolumePopup()
@@ -1890,6 +1886,34 @@ void drawVolumePopup()
   spr.drawString("DREHEN: EINSTELLEN", 12, 151, FONT_SMALL);
   spr.setTextDatum(TR_DATUM);
   spr.drawString("KLICK: BESTÄTIGEN", 308, 151, FONT_SMALL);
+}
+
+void drawBrightnessPopup()
+{
+  const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF;
+  spr.fillSprite(bg);
+  spr.fillRect(8, 7, 4, 22, cyan);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(0xFFFF);
+  spr.setFont(FONT_SMALL);
+  spr.drawString("SETTINGS / BRIGHTNESS", 18, 8);
+  spr.drawFastHLine(10, 34, 300, blue);
+  spr.fillRoundRect(24, 51, 272, 78, 8, 0x0821);
+  spr.drawRoundRect(24, 51, 272, 78, 8, cyan);
+  spr.setTextDatum(TL_DATUM);
+  spr.drawString("Brightness", 42, 62, FONT_SMALL);
+  spr.setTextDatum(TR_DATUM);
+  char value[8];
+  snprintf(value, sizeof(value), "%u", currentBrt);
+  spr.drawString(value, 274, 56, FONT_LARGE);
+  spr.fillRoundRect(42, 103, 236, 10, 5, 0x39E7);
+  const int width = static_cast<int>(currentBrt - 10) * 236 / 245;
+  if(width > 0) spr.fillRoundRect(42, 103, width, 10, 5, 0xFFFF);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(cyan);
+  spr.drawString("TURN: ADJUST", 12, 151, FONT_SMALL);
+  spr.setTextDatum(TR_DATUM);
+  spr.drawString("CLICK: BACK", 308, 151, FONT_SMALL);
 }
 
 void drawSideBar(uint16_t cmd, int x, int y, int sx)

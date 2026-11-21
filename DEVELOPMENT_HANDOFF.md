@@ -1189,3 +1189,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Selecting Volume opens a compact overlay slider immediately. Encoder rotation adjusts volume; encoder click returns to the same main-menu selection.
 - Existing radio layouts and decoder implementations are not intentionally changed by this menu work.
 - JS8 compile cleanup: duplicate Costas include/constant and repeated test-metric declarations/assignments removed after Build #17 exposed these compile errors.
+
+
+## Menu follow-up from hardware photos (2026-11-21)
+- Main/settings/decoder/spectrum menu now shows three larger rows at a time, with scrolling and a clearer footer to prevent the last row from colliding with instructions.
+- Full-screen menu labels and German text use the explicit UTF-8 umlaut renderer (Ä/Ö/Ü/ä/ö/ü and ß rendered as ss).
+- Removed the unexplained "DR /" placeholder from the header; the small product subtitle now reads "ATS MINI".
+- Brightness now opens a dedicated full-screen slider popup. Encoder rotation adjusts the existing brightness value; encoder click returns to Settings.

@@ -1952,7 +1952,7 @@ bool decoderFrequencyClick()
   }
   if(decoder == DecoderKind::RTTY)
   {
-    if(rttyUiOpen()) currentCmd = CMD_RTTY_DECODER;
+    if(rttyUiOpen(kDecoderFrequencyPresets[presetIndex].recommendedBaud)) currentCmd = CMD_RTTY_DECODER;
     return true;
   }
   currentCmd = CMD_NONE;

@@ -462,3 +462,17 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Callback timestamp uses gettimeofday() at block delivery and back-calculates a block start; it is not a monotonic per-sample hardware timestamp. Sample-rate stability/jitter remains unverified.
 - Next: JS8-owned non-invasive capture diagnostic subscriber. Measure callback cadence/drift estimate, missing blocks/overruns, ADC min/max/DC/RMS/clipping, then spectral response using controlled tones and real legally usable JS8 NORMAL recordings. Keep DSP out of callback and do not modify shared capture or existing decoders until evidence requires it.
 - Detailed plan: JS8CALL_RECEIVE_DECODER.md section 2c. No firmware code or build/Actions/flash/hardware validation yet.
+
+
+## Kurze Chat-Übergabe – JS8 (21.11.2026)
+**Fortsetzen:** `firetvstick2k2-afk/ats-mini-dev`, Branch `development` בלבד. `main` nicht ändern.
+
+**Priorität:** nativer JS8Call-Empfangsdecoder (RX-only; kein TX/Encoder/PTT). Zuerst NORMAL. Danach ggf. SLOW/FAST; JS8 40/60 erst nach Performanceprüfung.
+
+**Aktueller Stand:** bisher Planung/Dokumentation, noch kein JS8-Firmwarecode. Zuletzt wurde `AudioCaptureService.cpp` geprüft: GPIO11 softwaregetaktetes `analogRead()`, kein I2S/DMA; 4 kHz nur Sollwert. 24 Samples je Block, nominal 6 ms; Blockzeitstempel wird bei Übergabe aus `gettimeofday()` zurückgerechnet; periodischer yield/Zeitbasisreset alle 2.000 Samples. Sample-Jitter und Drift sind unbestätigt.
+
+**Nächster Schritt:** eigenen JS8-Diagnose-Subscriber an den vorhandenen AudioCaptureService hängen. Im Worker Callback-Abstände (monotone Zeit), Drift-Schätzung, Aussetzer/Queue-Overruns, ADC min/max/DC/RMS/Clipping erfassen. Danach kontrollierte 4-kHz-Tontests und rechtmäßig nutzbare JS8-NORMAL-Referenzaufnahmen. Callback nur kopieren/enqueue; keine DSP-Arbeit darin.
+
+**Schutzregeln:** keinen zweiten ADC-Sampler; gemeinsamen Audiopfad nicht vor Messung verändern; FT8/FT4, CW, RTTY und bestehende Layouts nicht beeinträchtigen; LILYGO GPIO11/SPI-Guard erhalten. Keine GPLv3-Übernahme aus JS8Call in MIT-Repo ohne Lizenzentscheidung. Kein Build/Actions/Flash ohne ausdrückliche Bitte; Nutzer baut und testet Hardware.
+
+**Letzte Commits:** Plan 2c `3de3b88495ddfde2d52d6f763a1392054f28e108`; vorherige Handoff-Updates `29f6ed05530332acfbf305e91aaef273e064fe64` und `4a96910b5c75ca9e0c1c711e6dca10f4cb38aa1b`. Details: `JS8CALL_RECEIVE_DECODER.md`, Abschnitt 2c.

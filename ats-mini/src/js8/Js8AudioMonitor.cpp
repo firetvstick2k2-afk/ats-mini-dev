@@ -12,6 +12,9 @@ constexpr uint32_t kNominalBlockUs =
 constexpr uint32_t kWorkerStackBytes = 4096;
 constexpr UBaseType_t kWorkerPriority = 1;
 constexpr BaseType_t kWorkerCore = 1;
+constexpr float kPi = 3.14159265358979323846f;
+constexpr float kTestBaseHz = 1000.0f;
+constexpr float kTestToneSpacingHz = 6.25f;
 }
 
 bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
@@ -19,8 +22,6 @@ bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
   (void)capture;
   return false; // GPIO11 is SPI MOSI on this profile; keep the board guard.
 #else
-  // Start/confirm the shared sampler before allocating the JS8 worker. If the
-  // hardware capture cannot start, do not leave an idle JS8 task behind.
   if (!capture.begin()) return false;
 
   if (initialized_) {
@@ -60,6 +61,7 @@ bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
   }
 
   active_ = false;
+  testPlayback_ = false;
   xQueueReset(queue_);
   resetRequested_ = true;
   active_ = true;
@@ -73,8 +75,28 @@ bool Js8AudioMonitor::begin(AudioCaptureService& capture) {
 
 void Js8AudioMonitor::stop() {
   active_ = false;
+  testPlayback_ = false;
   if (capture_) capture_->unsubscribe(this);
   if (queue_) xQueueReset(queue_);
+}
+
+bool Js8AudioMonitor::startTestPlayback() {
+  if (!initialized_ || !active_ || !capture_ || testPlayback_) return false;
+  capture_->unsubscribe(this);
+  if (queue_) xQueueReset(queue_);
+  resetRequested_ = true;
+  testSampleIndex_ = 0;
+  testPhase_ = 0.0f;
+  testPlayback_ = true;
+  return true;
+}
+
+void Js8AudioMonitor::stopTestPlayback() {
+  if (!testPlayback_) return;
+  testPlayback_ = false;
+  if (queue_) xQueueReset(queue_);
+  resetRequested_ = true;
+  if (active_ && capture_) capture_->subscribe(this, onAudioSamples);
 }
 
 bool Js8AudioMonitor::copyMetrics(Metrics& out) const {
@@ -102,10 +124,10 @@ size_t Js8AudioMonitor::copyRecentSamples(int16_t* out, size_t capacity) const {
 
 void Js8AudioMonitor::onAudioSamples(void* context, const int16_t* samples,
                                      size_t count, int64_t utcStartMicros) {
-  (void)utcStartMicros; // Wall-clock timestamps are not used for cadence analysis.
+  (void)utcStartMicros;
   auto* self = static_cast<Js8AudioMonitor*>(context);
-  if (!self || !self->active_ || !self->queue_ || !samples ||
-      count == 0 || count > AudioCaptureService::kBlockSamples) return;
+  if (!self || !self->active_ || self->testPlayback_ || !self->queue_ ||
+      !samples || count == 0 || count > AudioCaptureService::kBlockSamples) return;
 
   AudioBlock block{};
   memcpy(block.samples, samples, count * sizeof(int16_t));
@@ -127,13 +149,51 @@ void Js8AudioMonitor::taskEntry(void* arg) {
   static_cast<Js8AudioMonitor*>(arg)->workerTask();
 }
 
+void Js8AudioMonitor::makeTestBlock(AudioBlock& block) {
+  block.count = AudioCaptureService::kBlockSamples;
+  block.callbackTimeUs = esp_timer_get_time();
+  for (size_t i = 0; i < block.count; ++i) {
+    if (testSampleIndex_ < kTestSymbolCount * kTestSymbolSamples) {
+      const uint32_t symbol = testSampleIndex_ / kTestSymbolSamples;
+      // Deterministic 8-tone sequence for repeatable DSP plumbing tests.
+      // This is deliberately NOT represented as a CRC/LDPC-valid JS8 frame.
+      const uint32_t tone = (symbol * 5U + (symbol * symbol + 3U) % 7U) & 7U;
+      const float frequency = kTestBaseHz + tone * kTestToneSpacingHz;
+      testPhase_ += 2.0f * kPi * frequency / AudioCaptureService::kSampleRate;
+      if (testPhase_ >= 2.0f * kPi) testPhase_ -= 2.0f * kPi;
+      block.samples[i] = static_cast<int16_t>(sinf(testPhase_) * 12000.0f);
+      ++testSampleIndex_;
+    } else {
+      block.samples[i] = 0;
+    }
+  }
+}
+
 void Js8AudioMonitor::workerTask() {
   AudioBlock block{};
+  TickType_t nextPlaybackTick = xTaskGetTickCount();
   for (;;) {
     if (resetRequested_) {
       resetMeasurementState();
       resetRequested_ = false;
+      nextPlaybackTick = xTaskGetTickCount();
     }
+
+    if (testPlayback_ && active_) {
+      makeTestBlock(block);
+      portENTER_CRITICAL(&metricsMux_);
+      ++callbackBlocks_;
+      portEXIT_CRITICAL(&metricsMux_);
+      processBlock(block);
+      if (testSampleIndex_ >= kTestSymbolCount * kTestSymbolSamples) {
+        testPlayback_ = false;
+        resetRequested_ = true;
+        if (active_ && capture_) capture_->subscribe(this, onAudioSamples);
+      }
+      vTaskDelayUntil(&nextPlaybackTick, pdMS_TO_TICKS(6));
+      continue;
+    }
+
     if (xQueueReceive(queue_, &block, pdMS_TO_TICKS(100)) == pdTRUE) {
       if (resetRequested_) {
         resetMeasurementState();
@@ -244,14 +304,10 @@ void Js8AudioMonitor::publishWindow(int64_t endTimeUs) {
     : 0.0f;
 
   portENTER_CRITICAL(&metricsMux_);
-  const uint32_t callbacks = callbackBlocks_;
-  const uint32_t drops = queueDrops_;
-  const uint32_t discontinuities = discontinuities_;
-  const uint32_t missing = estimatedMissingBlocks_;
-  next.callbackBlocks = callbacks;
-  next.queueDrops = drops;
-  next.discontinuities = discontinuities;
-  next.estimatedMissingBlocks = missing;
+  next.callbackBlocks = callbackBlocks_;
+  next.queueDrops = queueDrops_;
+  next.discontinuities = discontinuities_;
+  next.estimatedMissingBlocks = estimatedMissingBlocks_;
   published_ = next;
   portEXIT_CRITICAL(&metricsMux_);
 

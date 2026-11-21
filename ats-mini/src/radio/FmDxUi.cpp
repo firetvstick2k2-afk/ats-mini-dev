@@ -228,12 +228,12 @@ void drawFmDxPage() {
     line2[remaining] = '\0';
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(WHITE, BLACK);
-    spr.drawString(line1, 7, 131, FONT_SMALL);
-    if(line2[0]) spr.drawString(line2, 7, 141, FONT_SMALL);
+    spr.drawString(line1, 7, 128, FONT_DEFAULT);
+    if(line2[0]) spr.drawString(line2, 7, 139, FONT_DEFAULT);
   } else {
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(GREY, BLACK);
-    spr.drawString("--", 7, 131, FONT_SMALL);
+    spr.drawString("--", 7, 128, FONT_DEFAULT);
   }
 
   // Footer: selected filter and operation hint.

@@ -47,6 +47,7 @@ private:
     int16_t samples[AudioCaptureService::kBlockSamples];
     int64_t callbackTimeUs = 0; // monotonic time at subscriber entry
     uint8_t count = 0;
+    uint32_t sourceGeneration = 0;
   };
 
   static void onAudioSamples(void* context, const int16_t* samples,
@@ -74,6 +75,7 @@ private:
   volatile bool active_ = false;
   volatile bool resetRequested_ = false;
   volatile bool testPlayback_ = false;
+  volatile uint32_t sourceGeneration_ = 0;
   bool initialized_ = false;
 
   uint32_t testSampleIndex_ = 0;

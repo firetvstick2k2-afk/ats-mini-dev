@@ -122,14 +122,14 @@ void drawRttyDecoderPage() {
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   char freq[40];
   snprintf(freq,sizeof(freq),"%lu kHz  %s",static_cast<unsigned long>(currentFrequency),currentMode==USB?"USB":currentMode==LSB?"LSB":"AM");
-  spr.drawString(freq,16,13);
+  spr.drawString(freq,16,20);
   const bool active=service.signal();
   spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(active?green:red,blueA);
-  spr.setFont(FONT_SMALL);
+  spr.setTextColor(0xFFFF,blueA);
+  spr.setFont(&lgfx::fonts::FreeSans9pt7b);
   char status[32];
   snprintf(status,sizeof(status),"%s %.2fBd",active?"RX":"NO RX",service.baud());
-  spr.drawString(status,302,16);
+  spr.drawString(status,286,20);
 
   const char* decoded=service.text();
   const size_t len=strlen(decoded);
@@ -152,20 +152,20 @@ void drawRttyDecoderPage() {
       spr.setTextDatum(ML_DATUM);
       spr.setTextColor(0xFFFF,panel);
       spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-      spr.drawString(line,14,panelY[row]+5);
+      spr.drawString(line,14,panelY[row]+12);
     } else if(row==0 && !active) {
-      spr.setTextDatum(ML_DATUM); spr.setTextColor(0xBDF7,panel);
+      spr.setTextDatum(ML_DATUM); spr.setTextColor(0xFFFF,panel);
       spr.setFont(&lgfx::fonts::FreeSans9pt7b);
-      spr.drawString("WAITING FOR RTTY SIGNAL...",14,panelY[row]+5);
+      spr.drawString("WAITING FOR RTTY SIGNAL...",14,panelY[row]+12);
     }
   }
   const uint16_t led=active?green:red;
-  if((millis()/350)&1) spr.fillCircle(296,20,5,led); else spr.drawCircle(296,20,5,led);
+  if((millis()/350)&1) spr.fillCircle(300,10,3,led); else spr.drawCircle(300,10,3,led);
   char footer[80];
   const char* mode=controlMode==RTTY_CONTROL_BAUD?"BAUD":controlMode==RTTY_CONTROL_BFO_AUTO?"BFO AUTO":"BFO MANUAL";
   snprintf(footer,sizeof(footer),"ROTATE: %s  BFO %+d Hz  CLICK: MODE  LONG: EXIT",mode,static_cast<int>(currentBFO));
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(0xBDF7,navy);
+  spr.setTextColor(0xFFFF,navy);
   spr.setFont(FONT_SMALL);
   spr.drawString(footer,160,163);
 }

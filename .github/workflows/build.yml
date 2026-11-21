@@ -1,12 +1,7 @@
 name: Build Firmware
 
 on:
-  push:
-    branches:
-      - development
-    # Editing the workflow itself must not launch a build.
-    paths-ignore:
-      - ".github/workflows/build.yml"
+  # Builds are started manually by the repository owner during FM-DX development.
   workflow_dispatch:
     inputs:
       revision:
@@ -26,7 +21,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          # Development builds do not need the full Git history or all tags.
           fetch-depth: 1
           fetch-tags: false
           ref: "${{ github.ref }}"
@@ -50,7 +44,7 @@ jobs:
           key: arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-${{ hashFiles('ats-mini/sketch.yaml', 'ats-mini/arduino-cli.yaml') }}
           restore-keys: |
             arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-
- 
+
       - name: Compile OSPI-DE firmware
         uses: arduino/compile-sketches@v1
         with:
@@ -108,7 +102,6 @@ jobs:
           import os
           import re
           from pathlib import Path
-
           slug = os.environ["SLUG"]
           changelog = Path("CHANGELOG.md").read_text()
           version = re.escape(slug.removeprefix("v"))

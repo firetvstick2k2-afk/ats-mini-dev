@@ -12,7 +12,7 @@ public:
   static constexpr size_t kResultCapacity = FtxDecoder::kMaxResults;
 
   bool begin(AudioCaptureService& capture);
-  bool enter(FtxMode mode, bool wifiOff, bool utcSynchronized, AudioCaptureService& capture);
+  bool enter(FtxMode mode, bool wifiOff, bool utcSynchronized, bool offlineSignalSync, AudioCaptureService& capture);
   void exit();
   bool active() const { return active_; }
   uint16_t audioLevel() const { return audioLevel_; }
@@ -42,7 +42,7 @@ public:
 private:
   struct AudioChunk {
     int16_t samples[AudioCaptureService::kBlockSamples];
-    int64_t utcStartMicros = 0;
+    int64_t startMicros = 0;
     uint8_t count = 0;
   };
 
@@ -50,6 +50,7 @@ private:
   static void taskEntry(void* arg);
   void workerTask();
   void processChunk(const AudioChunk& chunk);
+  void scanOfflineWindow(int64_t nowUs);
   void decodeAndPublish();
 
   AudioCaptureService* capture_ = nullptr;
@@ -59,6 +60,16 @@ private:
   TaskHandle_t task_ = nullptr;
   FtxDecoder decoder_;
   FtxDecodedMessage published_[kResultCapacity]{};
+  static constexpr size_t kOfflineWindowSamples = 60000;
+  int16_t* offlineSamples_ = nullptr;
+  size_t offlineWriteIndex_ = 0;
+  size_t offlineSampleCount_ = 0;
+  int64_t offlineWindowStartUs_ = 0;
+  int64_t offlineLastScanUs_ = 0;
+  int64_t offlineGridOriginUs_ = 0;
+  bool offlineSignalSync_ = false;
+  bool offlineLocked_ = false;
+  uint8_t offlineMissedSlots_ = 0;
   FtxMode mode_ = FtxMode::FT8;
   volatile bool active_ = false;
   volatile uint16_t audioLevel_ = 0;

@@ -98,7 +98,7 @@ bool cwUiTick(uint32_t now) {
 
 void drawCwDecoderPage() {
   constexpr uint16_t navy = 0x0008, blueA = 0x0359, blueB = 0x047D;
-  constexpr uint16_t border = 0x04BF, green = 0x07E0, red = 0xF800, white = 0xFFFF;
+  constexpr uint16_t border = 0x04BF, green = 0x07E0, white = 0xFFFF;
   spr.fillSprite(navy);
   spr.drawRect(2, 2, 316, 166, 0x001F);
 
@@ -110,7 +110,7 @@ void drawCwDecoderPage() {
   char header[48];
   snprintf(header, sizeof(header), "%lu kHz  %s",
            static_cast<unsigned long>(currentFrequency),
-           currentMode == USB ? "USB" : currentMode == LSB ? "LSB" : "AM");
+           currentMode == FM ? "FM" : currentMode == USB ? "USB" : currentMode == LSB ? "LSB" : "AM");
   spr.drawString(header, 15, 19);
 
   const bool active = service.signal();

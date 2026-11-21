@@ -3,6 +3,7 @@
 #include "Common.h"
 #include "Menu.h"
 #include "Utils.h"
+#include "../radio/DecoderFrequencyList.h"
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
@@ -15,7 +16,22 @@ RttyService service;
 bool pageActive=false;
 bool menuOpen=false;
 bool menuEditing=false;
+bool presetMenuOpen=false;
 uint8_t menuIndex=0;
+uint8_t presetSelection=0;
+uint8_t presetScroll=0;
+constexpr uint32_t kRttyPresetPreviewDelayMs=2000;
+VfoState presetOriginalState{};
+int16_t presetOriginalBfo=0;
+bool presetOriginalValid=false;
+Band presetTargetBandOriginal{};
+int presetTargetBandIndex=-1;
+bool presetTargetBandSnapshotValid=false;
+bool presetPreviewPending=false;
+bool presetPreviewActive=false;
+uint32_t presetPreviewStartedAt=0;
+bool presetPreviewSpeakerWasEnabled=true;
+bool presetPreviewSpeakerForced=false;
 uint8_t restoreNetworkMode=NET_OFF;
 uint32_t lastRefresh=0;
 uint32_t lastAutoBfoAdjust=0;
@@ -32,13 +48,159 @@ constexpr int kBfoLimit=250;
 constexpr int kManualBfoStep=5;
 constexpr float kTargetToneCenterHz=2210.0f;
 constexpr float kAutoDeadbandHz=18.0f;
-constexpr uint8_t kMenuCount=7;
+constexpr uint8_t kMenuCount=8;
 
 void applyBfo(int value) {
   int low=bfoAtEntry-kBfoLimit, high=bfoAtEntry+kBfoLimit;
   if(value<low) value=low;
   if(value>high) value=high;
   updateBFO(value,true);
+}
+
+uint8_t rttyPresetCount() {
+  uint8_t count=0;
+  for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i)
+    if(kDecoderFrequencyPresets[i].decoder==DecoderKind::RTTY) ++count;
+  return count;
+}
+
+const DecoderFrequencyPreset* rttyPresetAt(uint8_t wanted) {
+  uint8_t index=0;
+  for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) {
+    if(kDecoderFrequencyPresets[i].decoder!=DecoderKind::RTTY) continue;
+    if(index++==wanted) return &kDecoderFrequencyPresets[i];
+  }
+  return nullptr;
+}
+
+void restoreRttyPresetPreviewSpeaker() {
+  if(!presetPreviewSpeakerForced) return;
+  digitalWrite(AUDIO_MUTE,presetPreviewSpeakerWasEnabled?LOW:HIGH);
+  presetPreviewSpeakerForced=false;
+}
+
+void clearRttyPresetPreviewState() {
+  presetOriginalValid=false;
+  presetTargetBandIndex=-1;
+  presetTargetBandSnapshotValid=false;
+  presetPreviewPending=false;
+  presetPreviewActive=false;
+  presetPreviewStartedAt=0;
+  restoreRttyPresetPreviewSpeaker();
+}
+
+void restoreRttyPresetOriginal(bool clearSnapshot=true) {
+  if(presetOriginalValid && presetPreviewActive) {
+    if(presetTargetBandSnapshotValid && presetTargetBandIndex>=0 &&
+       presetTargetBandIndex<getTotalBands())
+      bands[presetTargetBandIndex]=presetTargetBandOriginal;
+    Band& savedBand=bands[presetOriginalState.band];
+    savedBand.currentFreq=presetOriginalState.freq;
+    savedBand.bandMode=presetOriginalState.mode;
+    savedBand.currentStepIdx=presetOriginalState.stepIdx;
+    savedBand.bandwidthIdx=presetOriginalState.bandwidthIdx;
+    selectBand(presetOriginalState.band,false);
+    if(currentBFO!=presetOriginalBfo) updateBFO(presetOriginalBfo,true);
+  }
+  if(clearSnapshot) clearRttyPresetPreviewState();
+  else {
+    presetPreviewPending=false;
+    presetPreviewActive=false;
+    presetPreviewStartedAt=0;
+    restoreRttyPresetPreviewSpeaker();
+  }
+}
+
+void scheduleRttyPresetPreview(uint32_t now) {
+  if(!presetOriginalValid) {
+    presetOriginalState=captureVfo();
+    presetOriginalBfo=currentBFO;
+    presetOriginalValid=true;
+  }
+  presetPreviewPending=true;
+  presetPreviewActive=false;
+  presetPreviewStartedAt=now;
+}
+
+bool applyRttyPreset(const DecoderFrequencyPreset& preset) {
+  int bestBand=-1;
+  uint16_t bestSpan=UINT16_MAX;
+  for(int i=0;i<getTotalBands();++i) {
+    if(bands[i].bandType==FM_BAND_TYPE ||
+       preset.frequencyKHz<bands[i].minimumFreq ||
+       preset.frequencyKHz>bands[i].maximumFreq) continue;
+    const uint16_t span=bands[i].maximumFreq-bands[i].minimumFreq;
+    if(span<bestSpan) { bestSpan=span; bestBand=i; }
+  }
+  if(bestBand<0) return false;
+
+  presetTargetBandIndex=bestBand;
+  presetTargetBandOriginal=bands[bestBand];
+  presetTargetBandSnapshotValid=true;
+  bands[bestBand].currentFreq=static_cast<uint16_t>(preset.frequencyKHz);
+  bands[bestBand].bandMode=preset.modulation;
+  bands[bestBand].bandwidthIdx=preset.bandwidthChoice;
+  currentBFO=0;
+  selectBand(static_cast<uint8_t>(bestBand),false);
+  currentMode=preset.modulation;
+  currentFrequency=rx.getFrequency();
+  return currentFrequency==preset.frequencyKHz;
+}
+
+void startRttyPresetPreview() {
+  const DecoderFrequencyPreset* preset=rttyPresetAt(presetSelection);
+  if(!preset || !presetOriginalValid) {
+    presetPreviewPending=false;
+    return;
+  }
+  presetPreviewActive=true;
+  if(!applyRttyPreset(*preset)) {
+    restoreRttyPresetOriginal(false);
+    return;
+  }
+  presetPreviewPending=false;
+  if(digitalRead(AUDIO_MUTE)!=LOW) {
+    presetPreviewSpeakerWasEnabled=false;
+    presetPreviewSpeakerForced=true;
+    digitalWrite(AUDIO_MUTE,LOW);
+  }
+}
+
+void commitRttyPresetPreview() {
+  restoreRttyPresetPreviewSpeaker();
+  presetOriginalValid=false;
+  presetTargetBandIndex=-1;
+  presetTargetBandSnapshotValid=false;
+  presetPreviewPending=false;
+  presetPreviewActive=false;
+  presetPreviewStartedAt=0;
+}
+
+void acceptRttyPreset() {
+  const DecoderFrequencyPreset* preset=rttyPresetAt(presetSelection);
+  bool applied=presetPreviewActive;
+  if(!applied && preset) {
+    presetPreviewActive=true;
+    applied=applyRttyPreset(*preset);
+  }
+  if(applied && preset) {
+    commitRttyPresetPreview();
+    float baud=preset->recommendedBaud;
+    if(baud!=45.45f && baud!=50.0f && baud!=75.0f) baud=45.45f;
+    baudIndex=0;
+    for(uint8_t i=0;i<3;++i)
+      if(fabsf(baudChoices[i]-baud)<0.01f) baudIndex=i;
+    service.setBaud(baudChoices[baudIndex]);
+    polarityIndex=0;
+    service.setPolarity(polarityIndex);
+    service.resetDecoder();
+    bfoAtEntry=currentBFO;
+  } else {
+    restoreRttyPresetOriginal();
+    statusShow("RTTY preset tune failed","No matching receiver band");
+  }
+  presetMenuOpen=false;
+  menuOpen=false;
 }
 }
 
@@ -60,7 +222,10 @@ bool rttyUiOpen(float initialBaud) {
   service.setPolarity(polarityIndex);
   menuOpen=false;
   menuEditing=false;
+  presetMenuOpen=false;
   menuIndex=0;
+  presetSelection=presetScroll=0;
+  clearRttyPresetPreviewState();
   lastAutoBfoAdjust=0;
   pageActive=true;
   lastRefresh=0;
@@ -77,8 +242,10 @@ bool rttyUiOpen(float initialBaud) {
 void rttyUiExit() {
   if(!pageActive) return;
   pageActive=false;
+  restoreRttyPresetOriginal();
   menuOpen=false;
   menuEditing=false;
+  presetMenuOpen=false;
   service.exit();
   if(currentBFO!=bfoAtEntry) updateBFO(bfoAtEntry,true);
   if(volumeBoost) { volume=volumeBefore; rx.setVolume(volume); volumeBoost=false; }
@@ -89,13 +256,25 @@ void rttyUiExit() {
 void rttyUiRotate(int16_t delta) {
   if(!pageActive || !delta) return;
   if(menuOpen) {
+    if(presetMenuOpen) {
+      const int count=rttyPresetCount();
+      if(presetPreviewActive) restoreRttyPresetOriginal();
+      int next=static_cast<int>(presetSelection)+(delta>0?1:-1);
+      if(next<0) next=count-1;
+      if(next>=count) next=0;
+      presetSelection=static_cast<uint8_t>(next);
+      if(presetSelection<presetScroll) presetScroll=presetSelection;
+      if(presetSelection>=presetScroll+6) presetScroll=presetSelection-5;
+      scheduleRttyPresetPreview(millis());
+      return;
+    }
     if(menuEditing) {
-      if(menuIndex==1) {
+      if(menuIndex==2) {
         int next=static_cast<int>(baudIndex)+delta;
         while(next<0) next+=3;
         baudIndex=static_cast<uint8_t>(next%3);
         service.setBaud(baudChoices[baudIndex]);
-      } else if(menuIndex==2) {
+      } else if(menuIndex==3) {
         int next=static_cast<int>(polarityIndex)+delta;
         while(next<0) next+=3;
         polarityIndex=static_cast<uint8_t>(next%3);
@@ -121,37 +300,53 @@ void rttyUiClick() {
     menuIndex=0;
     return;
   }
+  if(presetMenuOpen) {
+    acceptRttyPreset();
+    return;
+  }
   if(menuEditing) {
     menuEditing=false;
     return;
   }
   switch(menuIndex) {
     case 0:
+      presetMenuOpen=true;
+      presetSelection=presetScroll=0;
+      scheduleRttyPresetPreview(millis());
+      break;
+    case 1:
       bfoAuto=!bfoAuto;
       lastAutoBfoAdjust=0;
       break;
-    case 1:
     case 2:
+    case 3:
       menuEditing=true;
       break;
-    case 3:
+    case 4:
       service.clearText();
       break;
-    case 4:
+    case 5:
       service.resetDecoder();
       lastAutoBfoAdjust=0;
       break;
-    case 5:
+    case 6:
       menuOpen=false;
       break;
-    case 6:
+    case 7:
       rttyUiExit();
       break;
   }
 }
 
 bool rttyUiTick(uint32_t now) {
-  if(!pageActive || static_cast<uint32_t>(now-lastRefresh)<100) return false;
+  if(!pageActive) return false;
+  bool changed=false;
+  if(presetMenuOpen && presetPreviewPending &&
+     static_cast<uint32_t>(now-presetPreviewStartedAt)>=kRttyPresetPreviewDelayMs) {
+    startRttyPresetPreview();
+    changed=true;
+  }
+  if(static_cast<uint32_t>(now-lastRefresh)<100) return changed;
   lastRefresh=now;
   service.update();
   if(bfoAuto && service.signal() &&
@@ -227,40 +422,74 @@ void drawRttyDecoderPage() {
   spr.drawString(footer,160,163);
 
   if(menuOpen) {
-    constexpr uint16_t panel=0x0008,highlight=0x0359,border=0x07E0;
-    spr.fillRect(28,27,264,130,panel);
-    spr.drawRect(28,27,264,130,border);
-    spr.setTextDatum(MC_DATUM);
-    spr.setTextColor(0xFFFF,panel);
+    const int menuX=20,menuY=8,menuW=280,menuH=154;
+    constexpr uint16_t panel=0x1036,cyan=0x07FF;
+    spr.fillRect(menuX,menuY,menuW,menuH,panel);
+    spr.drawRect(menuX,menuY,menuW,menuH,cyan);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-    spr.drawString("RTTY ACTIONS",160,35);
-    char toneStatus[48];
-    if(service.markHz()>0 && service.spaceHz()>0)
-      snprintf(toneStatus,sizeof(toneStatus),"MARK %.0f  SPACE %.0f Hz",service.markHz(),service.spaceHz());
-    else snprintf(toneStatus,sizeof(toneStatus),"TONE PAIR: SEARCHING...");
-    spr.setFont(FONT_SMALL);
-    spr.drawString(toneStatus,160,47);
-    const char* labels[kMenuCount]={"BFO MODE","BAUD RATE","POLARITY","CLEAR TEXT","RESET DECODER","BACK","EXIT RTTY"};
-    char value[32];
-    for(uint8_t i=0;i<kMenuCount;++i) {
-      const int y=59+i*12;
-      const uint16_t bg=(i==menuIndex)?highlight:panel;
-      spr.fillRect(36,y-6,248,13,bg);
-      spr.setTextDatum(ML_DATUM);
-      spr.setTextColor(0xFFFF,bg);
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(cyan);
+    if(presetMenuOpen) {
+      spr.drawString("RTTY PRESETS",menuX+12,menuY+7);
+      const uint8_t count=rttyPresetCount();
+      for(uint8_t row=0;row<6;++row) {
+        const uint8_t index=presetScroll+row;
+        if(index>=count) break;
+        const DecoderFrequencyPreset* preset=rttyPresetAt(index);
+        if(!preset) continue;
+        const char* name=!strncmp(preset->label,"RTTY ",5)?preset->label+5:preset->label;
+        char label[52];
+        snprintf(label,sizeof(label),"%-15s %2u.%03u MHz %s",name,
+          static_cast<unsigned>(preset->frequencyKHz/1000),
+          static_cast<unsigned>(preset->frequencyKHz%1000),
+          preset->modulation==USB?"USB":preset->modulation==LSB?"LSB":"AM");
+        const int y=menuY+29+row*20;
+        if(index==presetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x0359);
+        spr.setTextColor(index==presetSelection?0xFFFF:0xBDF7);
+        spr.drawString(label,menuX+13,y);
+        if(index==presetSelection && (presetPreviewPending || presetPreviewActive)) {
+          spr.setTextDatum(TR_DATUM);
+          spr.setTextColor(presetPreviewActive?0x07E0:0xFFE0);
+          spr.drawString(presetPreviewActive?"LISTEN":"WAIT",menuX+menuW-12,y);
+          spr.setTextDatum(TL_DATUM);
+        }
+      }
+      char page[12];
+      snprintf(page,sizeof(page),"%02u/%02u",static_cast<unsigned>(presetSelection+1),static_cast<unsigned>(count));
+      spr.setTextDatum(TR_DATUM);
+      spr.setTextColor(0xFFFF);
+      spr.drawString(page,menuX+menuW-10,menuY+7);
+    } else {
+      const char* labels[kMenuCount]={
+        "RTTY PRESETS",
+        bfoAuto?"BFO MODE       AUTO":"BFO MODE       MANUAL",
+        "BAUD RATE",
+        "POLARITY",
+        "CLEAR TEXT",
+        "RESET DECODER",
+        "BACK",
+        "EXIT RTTY"
+      };
+      spr.drawString("RTTY ACTIONS",menuX+12,menuY+7);
+      for(uint8_t i=0;i<kMenuCount;++i) {
+        const int y=menuY+27+i*17;
+        if(i==menuIndex) spr.fillRect(menuX+7,y-2,menuW-14,18,0x0359);
+        spr.setTextColor(i==menuIndex?0xFFFF:0xBDF7);
+        spr.drawString(labels[i],menuX+14,y);
+        char value[24]={};
+        if(i==2) snprintf(value,sizeof(value),"%.2f Bd",baudChoices[baudIndex]);
+        else if(i==3) snprintf(value,sizeof(value),"%s",polarityNames[polarityIndex]);
+        if(value[0]) {
+          spr.setTextDatum(TR_DATUM);
+          spr.setTextColor(i==menuIndex?0xFFFF:0xBDF7);
+          spr.drawString(value,menuX+menuW-14,y);
+          spr.setTextDatum(TL_DATUM);
+        }
+      }
+      spr.setTextColor(cyan);
       spr.setFont(FONT_SMALL);
-      spr.drawString(labels[i],43,y);
-      const char* state="";
-      if(i==0) state=bfoAuto?"AUTO":"MANUAL";
-      else if(i==1) { snprintf(value,sizeof(value),"%.2f Bd",baudChoices[baudIndex]); state=value; }
-      else if(i==2) state=polarityNames[polarityIndex];
-      spr.setTextDatum(MR_DATUM);
-      spr.drawString(state,277,y);
+      spr.drawString(menuEditing?"ROTATE: CHANGE  CLICK: DONE":"ROTATE: SELECT  CLICK: OPEN",menuX+12,menuY+137);
     }
-    spr.setTextDatum(MC_DATUM);
-    spr.setTextColor(0xFFFF,panel);
-    spr.setFont(FONT_SMALL);
-    const char* hint=menuEditing?"ROTATE: CHANGE  CLICK: DONE":"ROTATE: SELECT  CLICK: OPEN";
-    spr.drawString(hint,160,148);
   }
+}
 }

@@ -455,3 +455,10 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - New validation gates in `JS8CALL_RECEIVE_DECODER.md`: deterministic NORMAL vectors; host-side 4 kHz DSP tests with timing/carrier/noise offsets; independently verified LDPC bit ordering and CRC vectors; host performance/RAM tests; only then firmware integration.
 - Offline phase acquisition must use validated JS8 sync candidates and a monotonic 15-second phase grid, never fake UTC from the capture callback's wall-clock timestamp. Do not display OFFLINE LOCK before physical-layer validation passes.
 - Source-only documentation update. No firmware code, build, Actions, flash or hardware test performed.
+
+
+## JS8 audio capture audit (2026-11-21)
+- Actual AudioCaptureService source inspected: software-timed analogRead() on GPIO11 (not I2S/DMA), nominal 4 kHz scheduler, 24-sample callbacks, periodic vTaskDelay(1) and timing-base reset every 2,000 samples.
+- Callback timestamp uses gettimeofday() at block delivery and back-calculates a block start; it is not a monotonic per-sample hardware timestamp. Sample-rate stability/jitter remains unverified.
+- Next: JS8-owned non-invasive capture diagnostic subscriber. Measure callback cadence/drift estimate, missing blocks/overruns, ADC min/max/DC/RMS/clipping, then spectral response using controlled tones and real legally usable JS8 NORMAL recordings. Keep DSP out of callback and do not modify shared capture or existing decoders until evidence requires it.
+- Detailed plan: JS8CALL_RECEIVE_DECODER.md section 2c. No firmware code or build/Actions/flash/hardware validation yet.

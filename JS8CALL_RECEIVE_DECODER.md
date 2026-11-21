@@ -50,6 +50,33 @@ The upstream implementation processes 12 kHz audio, while the ATS Mini shared ca
 
 Source provenance: these frame dimensions, code parameters and CRC parameters were checked against the public JS8Call source and user guide. The ATS Mini implementation must be independently written; do not copy GPL-licensed source code or source-derived tables into this MIT repository without an explicit licensing decision.
 
+## 2b. Receive-chain constraints and validation gates
+
+### Audio passband
+
+The ATS Mini capture is 4 kHz, so its Nyquist limit is 2 kHz. The upstream JS8 decoder's baseline-estimation window reaches 2.5 kHz; that full upstream window cannot be copied to this device. The 4 kHz stream must be treated as a distinct receive front end, not as a drop-in 12 kHz stream.
+
+For NORMAL, the symbol interval is 160 ms and the 4 kHz capture contains 640 samples per symbol. The eight orthogonal tone bins are separated by 6.25 Hz. A practical first experiment should place the received JS8 signal well inside the actual ATS Mini audio passband (for example, around a 1 kHz audio center), then measure tone-bin separation, audio filter response, frequency drift, clipping, and symbol-edge stability on the GPIO11 capture. The chosen audio center must be confirmed on the real radio; it is not a hard-coded assumption.
+
+### Processing and memory
+
+- Keep the 15-second NORMAL receive window bounded. At 4 kHz mono signed 16-bit, a full 15-second raw window is 120,000 bytes; use PSRAM where available and avoid copying the whole window for every candidate.
+- The 24-sample AudioCaptureService callback is a producer only: enqueue/copy into a bounded ring buffer and return quickly. FFT/Goertzel, sync search, LDPC and message parsing must run in a decoder worker, never inside the ADC sampling task.
+- Add explicit overrun counters and recover cleanly after dropped audio. A partial or discontinuous frame must never be reported as a valid decode.
+- Keep JS8 independent of the FT8 decoder and parser. Share only the established audio capture service and small generic helpers where their contracts are genuinely identical.
+
+### Validation gates before firmware integration
+
+1. Generate deterministic NORMAL 8-FSK reference frames independently from the decoder and retain exact symbol, tone-frequency, timing and payload metadata. Do not use a JS8Call GPL implementation as an embedded dependency.
+2. Test the receive DSP offline against synthetic 4 kHz PCM with known carrier offset, start-time offset, gain, noise and small sample-clock error. Verify sync acquisition and soft tone decisions before implementing LDPC.
+3. Verify the LDPC(174,87) bit order, interleaving/permutation, CRC-12 augmentation and XOR convention against independently generated golden bit vectors. A CRC pass alone is not enough: the recovered 75-bit payload must match the exact test vector.
+4. Test the complete NORMAL decode path on host before moving it to the ESP32-S3. Record CPU time, peak RAM and worst-case candidate count.
+5. Only then integrate the shared audio subscriber and run live receiver tests. No build/Actions run is started by the assistant unless the user explicitly asks.
+
+### Timing modes
+
+NORMAL is the only first target. Its signal starts 500 ms after the 15-second slot boundary and lasts 12.64 seconds. Offline mode must acquire the phase from real JS8 sync candidates and establish a monotonic 15-second grid; it must not infer a UTC timestamp from the capture callback's wall-clock field. Do not claim OFFLINE LOCK until a candidate passes the physical-layer validation threshold. SLOW/FAST/JS8 40 follow after NORMAL passes the same validation gates.
+
 ## 3. JS8 frequency presets
 
 Add a dedicated **JS8 PRESETS** submenu inside the JS8 decoder Actions menu. It is separate from the general `Decoder Frequencies` browser and should use the same preview/accept interaction as the existing FT8 preset submenu.

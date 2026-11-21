@@ -127,7 +127,6 @@ bool StationLogoClient::storeLogoInRam(const String& logo, const char* key, cons
   }
   uint8_t* copy=static_cast<uint8_t*>(logoAllocate(logo.length()));
   if (!copy) { Serial.println("[LOGO] not enough RAM for image"); return false; }
-  if (!copy) { Serial.println("[LOGO] not enough RAM for image"); return false; }
   memcpy(copy, logo.c_str(), logo.length());
   if (!logoMutex_ || xSemaphoreTake(logoMutex_, pdMS_TO_TICKS(100)) != pdTRUE) {
     logoFree(copy); return false;

@@ -301,3 +301,24 @@ References reviewed:
 - JS8Call User Guide / current improved guide: https://js8call.com/JS8Call-improved/d6/d14/md_docs_2user__guide_2JS8Call__User__Guide.html
 - JS8Call source was consulted only to understand the provenance boundary; no source or tables were copied into the repository.
 - Third-party technical write-up was rejected as a table source because it states that its LDPC tables were generated from the JS8Call reference source: https://patrick.lidstone.net/js8-native-keyboard-keyboard-weak-signal-messaging-mode/
+
+
+## 11. Independent NORMAL Costas pilot metric — first DSP code (2026-11-21)
+
+Added two standalone source files under `ats-mini/src/js8/`:
+- `Js8NormalSync.h`
+- `Js8NormalSync.cpp`
+
+The new `Js8NormalSync::evaluate()` function evaluates one caller-proposed NORMAL frame start and one caller-proposed lowest-tone frequency/common frequency offset. It uses a Goertzel energy measurement over each 640-sample symbol, removes each symbol's DC mean, and evaluates the 21 known NORMAL pilot symbols at positions 0–6, 36–42 and 72–78. The documented NORMAL Costas sequence is repeated in each block. It reports mean expected-tone/best-tone ratio, mean expected-tone/total-tone ratio, minimum pilot ratio, mean expected pilot energy and a count of pilots whose expected tone is at least half the strongest measured tone.
+
+Scope limits are explicit in the API: this is a pilot metric only. It does not search candidate start times or frequencies, demodulate the 58 data symbols, generate soft bits, decode LDPC, validate CRC or produce message text. It must not be used alone as a valid-frame acceptance decision. The public guide supports the 79-symbol NORMAL frame, 6.25 baud / 6.25 Hz spacing and repeated 7×7 Costas synchronization description; the numeric NORMAL Costas sequence was cross-checked against public technical documentation. No JS8Call source or table was copied.
+
+A separate numerical sanity check generated a 4 kHz, 79-symbol continuous-phase 8-FSK signal with the NORMAL pilot tones and arbitrary data tones. The independent Goertzel metric returned 21/21 pilot matches and 1.0 mean expected-to-best ratio in the clean, exactly aligned, zero-offset case. This validates only the mathematical metric in an ideal synthetic case; it is not a firmware compile, protocol-valid message vector, noisy-signal sensitivity test or JS8Call interoperability test.
+
+Next engineering gates:
+1. Add host-side C++ tests for start-time offset, common frequency offset, gain variation, additive noise and wrong Costas/noise-only rejection; determine thresholds empirically rather than hard-coding an optimistic threshold.
+2. Add bounded frame-window ownership to the JS8 worker. The existing 4,096-sample diagnostic snapshot is only about 1.024 seconds and cannot hold a 12.64-second NORMAL waveform (50,560 samples, about 101 kB at int16); do not try to decode from that short ring.
+3. Implement coarse candidate search around proposed frame start/frequency, with CPU-budget measurements before any live scanning integration.
+4. Keep LDPC/CRC and message output blocked until the exact interoperable LDPC construction is available from a legally independent source.
+
+No Makefile changes are required because the existing wildcard includes `src/js8/*.h/.cpp`. No build, GitHub Actions run, flash or hardware test was started. Source has not been compiler-verified on the ESP32 toolchain.

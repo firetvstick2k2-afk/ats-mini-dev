@@ -1261,3 +1261,15 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Source changes are in commits `d8e211950c5642cfeafa3b0db8a0385d80491726` and `e395890a49d7f7455eeb8e73c4d664bcf33391bc`; both target `development` only. The source commits used `[skip ci]` so the automatic workflow would start exactly once after this handoff update.
 - This handoff update is intentionally pushed without `[skip ci]` to start the OSPI-DE Development workflow. Build and hardware behavior must be confirmed from the resulting run; no compile result is claimed yet.
 - `main` remains untouched.
+
+
+## FT8/FT4 distance fallback without locator — 2026-11-21
+- Extended `ats-mini/src/ftx/FtxUi.cpp` so decoded messages use the existing Maidenhead locator distance whenever a valid locator is present. Locator-based distance has priority and remains unchanged (QTH reference: JO31TV).
+- When no locator is present but the callsign resolves to a country code, calculate a fallback great-circle distance from the approximate geographic center of that country to JO31TV. A country-center table covers the countries and territories represented by the current callsign-prefix mapping where coordinates are available.
+- Estimated distances are explicitly prefixed with `~` on the FT8/FT4 display and in the session log. Exact locator distances remain unprefixed. If neither a locator nor a supported country center is available, the display continues to show `---`.
+- The fallback is a country-level estimate, not a claimed station position: portable/mobile operation, remote operation, and callsign exceptions can make the actual station location differ substantially. No estimate is fabricated for unknown country codes.
+- The common great-circle calculation is shared by locator and country-center paths. No decoder DSP, audio capture, synchronization, slot timing, message parsing, or receiver behavior was changed.
+- Source commits: `8235e369a294b0bc8bb22d25721cd8fc74ecbcbd` (distance fallback) and `32727561cc70a70ed9c632a8b081e26452f67072` (coordinate correction). Both were pushed to `development` with `[skip ci]` so the workflow starts once after this handoff update.
+- Static source checks confirmed the JO31TV reference remains in use, both display and log mark estimated values with `~`, all metadata call sites use the extended signature, braces are balanced, and no temporary coordinate placeholder remains. No local firmware compilation was run.
+- The user confirmed the preceding country-prefix/flag-code build worked successfully. This handoff update is pushed without `[skip ci]` to start the next OSPI-DE Development build for the distance fallback.
+- `main` remains untouched.

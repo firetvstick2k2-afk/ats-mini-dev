@@ -36,12 +36,13 @@ static void findStationLogo(uint16_t pi)
     if(!entry.isDirectory())
     {
       String path = entry.name();
-      String upper = path;
+      String filename = path.substring(path.lastIndexOf('/') + 1);
+      String upper = filename;
       upper.toUpperCase();
-      if(isPngName(path) && upper.indexOf(needle) >= 0)
+      if(isPngName(filename) && upper.indexOf(needle) >= 0)
       {
-        if(path[0] != '/') path = String("/Logos/") + path;
-        path.toCharArray(cachedLogoPath, sizeof(cachedLogoPath));
+        String fullPath = String("/Logos/") + filename;
+        fullPath.toCharArray(cachedLogoPath, sizeof(cachedLogoPath));
         entry.close();
         break;
       }
@@ -55,8 +56,9 @@ static void findStationLogo(uint16_t pi)
 
 void drawLayoutDABStyle()
 {
-  constexpr uint16_t BG=0x0000, WHITE=0xFFFF, BLUE=0x07FF;
-  constexpr uint16_t CYAN=0x07FF, MUTED=0x7BEF, GRID=0x4208;
+  constexpr uint16_t BG=0x0000, WHITE=0xFFFF;
+  constexpr uint16_t BLUE=0x001F; // Match the vivid blue used by the main-menu frame.
+  constexpr uint16_t MUTED=0x7BEF;
   const int w=spr.width();
   spr.fillSprite(BG);
 
@@ -70,10 +72,10 @@ void drawLayoutDABStyle()
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(WHITE);
     spr.setFont(&lgfx::fonts::Font2);
-    spr.drawString(getRdsTime(), w/2, 4);
+    spr.drawString(getRdsTime(), w/2, 13);
   }
   bool hasVoltage=drawBattery(w-43, 3);
-  drawWiFiIndicator(hasVoltage ? w-73 : w-43, 3);
+  drawWiFiIndicator(hasVoltage ? w-100 : w-43, 3);
   spr.drawFastHLine(8,25,w-16,BLUE);
 
   // Sender name, with a reserved logo column on the left.
@@ -127,7 +129,7 @@ void drawLayoutDABStyle()
   spr.setTextSize(0.78f);
   spr.drawString(frequency,124,56);
   spr.setTextSize(1.0f);
-  spr.setTextColor(CYAN);
+  spr.setTextColor(BLUE);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   spr.drawRightString("MHz",w-8,85);
 
@@ -137,22 +139,23 @@ void drawLayoutDABStyle()
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(BLUE);
   spr.setFont(&lgfx::fonts::Font0);
-  spr.drawString("FM",163,badgeY+6);
+  spr.drawString("FM",163,badgeY+10);
   spr.drawRoundRect(210,badgeY,w-218,20,4,WHITE);
   const char *pty=getProgramInfo();
+  spr.setTextDatum(MC_DATUM);
   spr.setTextColor(WHITE);
-  spr.drawString((pty && *pty) ? pty : "FM",210+(w-218)/2,badgeY+6);
+  spr.drawString((pty && *pty) ? pty : "FM",210+(w-218)/2,badgeY+10);
 
   // RDS RadioText in a dedicated green ticker frame.
   constexpr int rtX=8,rtY=143,rtW=304,rtH=24;
   spr.drawRoundRect(rtX,rtY,rtW,rtH,6,BLUE);
   const char *rt=getRadioText();
-  spr.setTextDatum(ML_DATUM);
+  spr.setTextDatum(MC_DATUM);
   spr.setTextColor(WHITE);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   spr.setClipRect(rtX+8,rtY+2,rtW-16,rtH-4);
-  if(rt && *rt) spr.drawString(rt,rtX+12,rtY+4);
-  else spr.drawString("NO RADIO TEXT",rtX+12,rtY+4);
+  if(rt && *rt) spr.drawString(rt,rtX+rtW/2,rtY+rtH/2);
+  else spr.drawString("NO RADIO TEXT",rtX+rtW/2,rtY+rtH/2);
   spr.clearClipRect();
 
   if(currentCmd!=CMD_NONE && currentCmd!=CMD_SCAN && currentCmd!=CMD_FREQ)

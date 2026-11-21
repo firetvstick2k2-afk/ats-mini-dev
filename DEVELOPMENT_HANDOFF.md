@@ -1006,30 +1006,29 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Licensing: ATS Mini is MIT; JS8Call reference source is GPLv3. Do not directly copy upstream GPL source into this repo without an explicit licensing decision.
 - No build or hardware test has been performed for JS8; user will perform firmware build and on-device reception tests.
 
-## Verbindliche neue Entwicklungsreihenfolge — 2026-11-21
+## Korrigierte verbindliche Entwicklungsreihenfolge — 2026-11-21
 
-Diese Reihenfolge wurde vom Nutzer neu festgelegt und ersetzt ältere, abweichende Prioritätslisten in diesem Handoff:
+**Korrektur nach ausdrücklicher Klarstellung des Nutzers:** JS8Call ist Priorität **Nr. 1**. Danach folgt FM DX. Diese Reihenfolge ersetzt alle älteren Prioritätslisten und die unmittelbar vorherige, fehlerhafte Reihenfolge in diesem Handoff.
 
-1. **FM DX zuerst**
-   - Eigenständiger FM-DX-Menümodus mit den tatsächlich vom SI4735 unterstützten Bandbreiten sowie AUTO.
-   - Ziel: bestmögliche Trennschärfe/Selektivität für schwache und eng benachbarte UKW-Sender.
-   - Keine TEF6686-Bandbreiten vortäuschen: Der SI4735 bietet hier nur seine real unterstützten Einstellungen.
-   - Nach Abschluss von FM DX folgt als separater Versuch ein **Audio-FFT-Spektrum**: weiße, schmale Peaks auf dunklem Hintergrund, schnell ansprechend und weich abfallend. Zuerst als eigenes Testlayout/Prototyp; vorhandene Layouts bleiben unverändert. Der Test soll auch normales demoduliertes FM-Audio (Sprache/Musik) berücksichtigen. Vorher den tatsächlichen Audio-Datenpfad prüfen und vorhandene Samples wiederverwenden, keinen zweiten ADC-Capture starten.
-2. **Wetter portieren** – aus Mini_OS, Quellbranch `dev/first-build-preparation`.
-3. **Newsticker portieren** – aus Mini_OS, gleicher Quellbranch.
-4. **Mondphase portieren** – aus Mini_OS, gleicher Quellbranch.
-5. **NAVTEX** – eigener SITOR-B/CCIR-476-Empfangsdecoder mit Synchronisation, FEC, Nachrichtenrahmen, 518/490/4209.5-kHz-Presets, Live-Text und LittleFS-Archiv. Vollständige und unvollständige Nachrichten klar unterscheiden; Duplikate erkennen.
-6. **Übrige Decoder** – danach weitere digitale Empfangsarten untersuchen und integrieren (u. a. WEFAX, DSC, SSTV, PSK31/63, Olivia/Contestia, JS8Call und weitere geeignete Modi).
+1. **JS8Call – nativer Empfangsdecoder**
+   - Ausschließlich Empfang: keine Sendefunktion, kein Encoder, keine PTT, kein TX-Menü und keine TX-Hardware.
+   - Der technische Plan liegt in `JS8CALL_RECEIVE_DECODER.md`; die Firmware-Implementierung ist noch nicht begonnen.
+   - Zunächst JS8 NORMAL, danach SLOW/FAST; JS8 40/60 erst nach Leistungsprüfung.
+   - Bestehende Audio-Infrastruktur nach Prüfung verwenden und abonnieren, keinen zweiten ADC-Sampler starten. LILYGO-GPIO11/SPI-Ausschluss erhalten.
+   - ATS Mini ist MIT-lizenziert, JS8Call-Referenzcode GPLv3. Keine direkte GPL-Codeübernahme in das Repository ohne vorherige Lizenzentscheidung; unabhängige Implementierung anhand der Protokolldokumentation bevorzugen.
+   - FT8/FT4, CW, RTTY und bestehende Layouts schützen.
+2. **FM DX**
+   - Eigener FM-DX-Menümodus mit den tatsächlich vom SI4735 unterstützten Bandbreiten und AUTO.
+   - Fokus auf bestmögliche Selektivität/Trennschärfe; keine nicht unterstützten TEF6686-Bandbreiten vortäuschen.
+   - Im Anschluss separater Audio-FFT-Prototyp: weiße, schmale Peaks auf dunklem Hintergrund, schnelle Reaktion und weicher Abfall. Eigenes Testlayout, vorhandene Layouts unverändert lassen. Auch demoduliertes FM-Audio (Sprache/Musik) untersuchen. Erst den tatsächlichen Audio-Datenpfad prüfen und vorhandene Samples wiederverwenden, keinen zweiten ADC-Capture starten.
+3. **Wetter portieren** – aus Mini_OS, Branch `dev/first-build-preparation`.
+4. **Newsticker portieren** – aus Mini_OS, demselben Quellbranch.
+5. **Mondphase portieren** – aus Mini_OS, demselben Quellbranch.
+6. **NAVTEX** – eigener SITOR-B/CCIR-476-Empfangsdecoder mit Synchronisation, FEC, Nachrichtenrahmen, 518/490/4209.5-kHz-Presets, Live-Text und LittleFS-Archiv. Vollständige und unvollständige Nachrichten unterscheiden; Duplikate erkennen.
+7. **Übrige Decoder** – danach WEFAX, DSC, SSTV, PSK31/63, Olivia/Contestia und weitere geeignete Empfangsmodi.
 
-### JS8Call innerhalb von Punkt 6
-- JS8Call bleibt ein ausdrücklich gewünschter **reiner Empfangsdecoder**: keinerlei Senden, Encoder, PTT, TX-Menü oder TX-Hardware.
-- Der bereits angelegte Plan liegt in `JS8CALL_RECEIVE_DECODER.md`.
-- Die technische Vorarbeit/Planung ist erfolgt; die Firmware-Implementierung ist noch nicht begonnen. Wenn Punkt 6 an der Reihe ist, JS8Call als ersten Decoder-Unterpunkt bearbeiten.
-- ATS Mini ist MIT-lizenziert; JS8Call-Referenzcode ist GPLv3. Keine GPL-Codeübernahme in das öffentliche Repository ohne vorherige Lizenzentscheidung. Unabhängige Implementierung anhand der Protokolldokumentation bevorzugen.
-- Bestehende Audio-Infrastruktur, insbesondere GPIO11/4-kHz-`AudioCaptureService`, nur nach Prüfung verwenden und abonnieren statt einen zweiten ADC-Sampler anzulegen. LILYGO-GPIO11/SPI-Ausschluss erhalten. FT8/FT4, CW, RTTY und vorhandene Layouts nicht beschädigen.
-- Die Reihenfolge ist verbindlich: keine NAVTEX- oder sonstigen Decoderarbeiten vor Abschluss der Punkte 1–4. JS8Call ist dem Punkt 6 zugeordnet und wird nicht vorgezogen.
-
-### Arbeitsregeln bleiben bestehen
-- Ausschließlich `firetvstick2k2-afk/ats-mini-dev`, Branch `development`; niemals `main` ändern.
+### Verbindliche Arbeitsregeln
+- Ausschließlich `firetvstick2k2-afk/ats-mini-dev`, Branch `development`; `main` bleibt unangetastet.
+- Keine NAVTEX- oder weiteren Decoderarbeiten vor den Punkten 1–5.
 - Nutzer startet Builds/Actions manuell und testet auf dem ATS Mini V4. Assistant startet keine Builds/Actions und behauptet keine Hardwareprüfung.
-- Nach jedem wesentlichen Arbeitsschritt beide Handoff-Dateien aktuell halten.
+- Nach jedem wesentlichen Arbeitsschritt beide Handoff-Dateien aktualisieren.

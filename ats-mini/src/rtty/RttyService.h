@@ -17,6 +17,7 @@ public:
   float baud() const { return baud_; }
   float markHz() const { return markHz_; }
   float spaceHz() const { return spaceHz_; }
+  float toneCenterHz() const { return (toneLowHz_ + toneHighHz_) * 0.5f; }
   bool signal() const { return signal_; }
   const char* text() const { return shownText_; }
 

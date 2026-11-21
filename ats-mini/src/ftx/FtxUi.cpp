@@ -16,7 +16,6 @@
 #include "Utils.h"
 
 namespace {
-AudioCaptureService audioCapture;
 FtxDecoderService decoderService;
 bool pageActive = false;
 uint8_t restoreNetworkMode = NET_OFF;
@@ -537,7 +536,7 @@ bool ftxUiOpen(FtxMode mode)
   netStop();
 
   if(getWiFiStatus() != 0 || !clockAvailable() ||
-     !decoderService.enter(mode, true, clockAvailable(), audioCapture))
+     !decoderService.enter(mode, true, clockAvailable(), sharedAudioCapture()))
   {
     decoderService.exit();
     netInit(restoreNetworkMode);

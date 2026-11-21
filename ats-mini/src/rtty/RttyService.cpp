@@ -113,6 +113,8 @@ void RttyService::resetDecoder() {
   rtty_set_baud(baud_);
   rtty_set_polarity(static_cast<RttyPolarity>(polarity_));
   if(toneLowHz_>0 && toneHighHz_>0) rtty_set_tones(toneLowHz_,toneHighHz_);
+  frameCount_=0;
+  signal_=false;
   markHz_=spaceHz_=0;
   xSemaphoreGive(engineMutex_);
   clearText();

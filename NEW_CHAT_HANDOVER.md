@@ -1,6 +1,6 @@
 # ATS Mini Dev — Übergabe für neuen Chat
 
-Stand: 20.11.2026, abends  
+Stand: 21.11.2026  
 Repository: `firetvstick2k2-afk/ats-mini-dev` (privat)  
 Arbeitsbranch: `development`  
 Letzter bestätigter Commit: `2daa5a1a6df3b34e76d9466f03df21c51bfde989` (aktualisiertes Handover; der vorherige Code-/DAB-Stand ist in den darunter genannten Commits enthalten)
@@ -17,6 +17,14 @@ Letzter bestätigter Commit: `2daa5a1a6df3b34e76d9466f03df21c51bfde989` (aktuali
 - Nach jeder sinnvollen Änderung `DEVELOPMENT_HANDOFF.md` aktualisieren. Dieses Dokument ist die ausführliche technische Langzeitdokumentation.
 
 ## 2. Aktueller Stand / letzter Auftrag
+
+### DAB Layout (21.11.2026)
+- Layout-Menüeintrag heißt in Deutsch und Englisch nur noch **DAB**.
+- Index 8 rendert jetzt immer `drawLayoutDABStyle()`; der bisherige TinyRadio-Fallback bei Nicht-FM wurde entfernt.
+- Geänderte Dateien: `ats-mini/Draw.cpp`, `ats-mini/Menu_german.cpp.src`, `ats-mini/Menu_english.cpp.src`.
+- Source-only; Build und Hardwaretest stehen noch aus.
+
+
 
 Der Nutzer bat um zwei Anpassungen, die bereits auf `development` committed sind:
 

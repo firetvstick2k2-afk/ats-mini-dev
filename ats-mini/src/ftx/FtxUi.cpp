@@ -350,10 +350,9 @@ void drawFtxDecoderPage()
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(0xFFFF);
   spr.drawString(frequencyText,8,5,&lgfx::fonts::Orbitron_Light_24);
-  spr.setFont(FONT_SMALL);
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(ftxSpeakerEnabled?0x07E0:0xF800);
-  spr.drawString(ftxSpeakerEnabled?"SPK ON":"SPK OFF",151,13);
+  spr.drawString(ftxSpeakerEnabled?"SPK ON":"SPK OFF",151,13,FONT_SMALL);
   char counters[32];
   snprintf(counters,sizeof(counters),"DEC %lu ERR %lu",
     static_cast<unsigned long>(decodedMessageCount),

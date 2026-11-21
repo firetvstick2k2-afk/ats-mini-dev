@@ -1,6 +1,6 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-11-21 (FT8/FT4 preset delayed preview listening)
+Last updated: 2026-11-21 (main menu reorder and direct FT8/FT4 entry)
 Repository: https://github.com/13HN2709/ats-mini-dev (private development workspace); public release repository: https://github.com/13HN2709/ats-mini
 Active work branch: `development` (never modify `main` unless explicitly requested)
 
@@ -857,3 +857,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Implementation is isolated to `ats-mini/src/ftx/FtxUi.cpp`; no FT8/FT4 DSP, audio-capture, slot timing, RTTY, main Decoder Frequencies menu, TEF6686, or LittleFS code was changed.
 - Source-only review. No build, GitHub Actions run, flash or hardware test was started. User should manually build OSPI-DE on `development` and verify initial auto-preview, timer restart while scrolling, audible speaker override/restore, click-to-commit, and long-press restoration.
 - Commits: `e558f93714321ebab74f0fed7ae2710bc3a3a89a`, `c9f0d8b96aebf08f56c13057fa53b3bcafc49971`, `07f79ccc00169fbbfba9ad166274c6f78d150e6c`, `aac467d07b01c93133b92146b735099d09338834`, `8ab686ff8627ce888a60bbce5d97bffea36660a8`, `4fc3e4a2552dc94c5c451be8beef0bdaef22e143`.
+
+
+## Hauptmenü: neue Reihenfolge und direkter FT8/FT4-Einstieg (2026-11-21)
+- Hauptmenü auf exakt 22 Einträge umsortiert. Deutsche Reihenfolge: LAUTSTÄRKE, KEYPAD, BAND, MODULATION, BFO, STEPS, SUCHE, SCANNEN, SPEICHER, RAUSCHSPERRE, BANDBREITE, FREQUENZ-LINE, AGC/DÄMPFUNG, AUTO-LAUTSTÄRKE, SOFT-MUTE, DUAL RX, VFO A/B, VHF SPEKTRUM, ALL BAND SPEKTRUM, DECODER-FREQUENZEN, FT8 /FT4 DEKODER, EINSTELLUNGEN.
+- Der neue Menüpunkt FT8 /FT4 DEKODER startet direkt den bestehenden FT8-Decoder. Im vorhandenen Actions-Untermenü bleiben FT8 PRESETS und FT4 PRESETS verfügbar; FT4 kann dort wie bisher ausgewählt werden.
+- Alle bestehenden Menüaktionen wurden auf die neuen symbolischen Indizes umgestellt; MENU_SETTINGS ist jetzt Index 21. menuIdx startet weiterhin auf KEYPAD. Die englische Menüdatei erhielt dieselbe Struktur mit englischen Bezeichnungen.
+- Geändert: ats-mini/Menu_german.cpp.src und ats-mini/Menu_english.cpp.src.
+- Code-Commits: 43afc499742ee4a7c96d8fa3770a3e16676e4dd1 (Deutsch), e1ff8b954fd796a7e2475c89fe4c9b424f6a1717 (Englisch).
+- Source-only; kein GitHub Actions Build, kein Flash und kein Hardwaretest durch den Assistant. Nutzer startet den OSPI-DE-Build manuell auf development.

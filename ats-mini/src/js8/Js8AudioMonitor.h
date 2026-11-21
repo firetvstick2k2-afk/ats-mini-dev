@@ -33,6 +33,9 @@ public:
     bool testFrameComplete = false;
     bool testSyncPass = false;
     uint8_t testMatchedPilots = 0;
+    bool testFrameComplete = false;
+    bool testSyncPass = false;
+    uint8_t testMatchedPilots = 0;
   };
 
   bool begin(AudioCaptureService& capture);
@@ -84,6 +87,9 @@ private:
   bool initialized_ = false;
 
   uint32_t testSampleIndex_ = 0;
+  bool testFrameComplete_ = false;
+  bool testSyncPass_ = false;
+  uint8_t testMatchedPilots_ = 0;
   bool testFrameComplete_ = false;
   bool testSyncPass_ = false;
   uint8_t testMatchedPilots_ = 0;

@@ -1,5 +1,6 @@
 #include "Js8AudioMonitor.h"
 #include "Js8NormalSync.h"
+#include "Js8NormalSync.h"
 
 #include <esp_timer.h>
 #include <esp_heap_caps.h>
@@ -16,6 +17,7 @@ constexpr BaseType_t kWorkerCore = 1;
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kTestBaseHz = 1000.0f;
 constexpr float kTestToneSpacingHz = 6.25f;
+constexpr uint8_t kNormalCostas[7] = {4, 2, 5, 6, 1, 3, 0};
 constexpr uint8_t kNormalCostas[7] = {4, 2, 5, 6, 1, 3, 0};
 }
 
@@ -89,6 +91,9 @@ bool Js8AudioMonitor::startTestPlayback() {
   resetRequested_ = true;
   testSampleIndex_ = 0;
   testPhase_ = 0.0f;
+  testFrameComplete_ = false;
+  testSyncPass_ = false;
+  testMatchedPilots_ = 0;
   testFrameComplete_ = false;
   testSyncPass_ = false;
   testMatchedPilots_ = 0;
@@ -241,6 +246,8 @@ void Js8AudioMonitor::resetMeasurementState() {
   windowStartUs_ = firstCallbackUs_ = lastCallbackUs_ = 0;
   testFrameComplete_ = testSyncPass_ = false;
   testMatchedPilots_ = 0;
+  testFrameComplete_ = testSyncPass_ = false;
+  testMatchedPilots_ = 0;
   intervalSumUs_ = intervalSamples_ = 0;
   intervalCount_ = 0;
   minIntervalUs_ = UINT32_MAX;
@@ -335,6 +342,9 @@ void Js8AudioMonitor::publishWindow(int64_t endTimeUs) {
   next.adcMean = static_cast<float>(mean);
   next.adcRmsAc = static_cast<float>(sqrt(variance));
   next.windowDurationUs = static_cast<uint32_t>(endTimeUs - windowStartUs_);
+  next.testFrameComplete = testFrameComplete_;
+  next.testSyncPass = testSyncPass_;
+  next.testMatchedPilots = testMatchedPilots_;
   next.testFrameComplete = testFrameComplete_;
   next.testSyncPass = testSyncPass_;
   next.testMatchedPilots = testMatchedPilots_;

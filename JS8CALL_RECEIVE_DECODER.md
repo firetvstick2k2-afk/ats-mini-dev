@@ -347,3 +347,7 @@ This is a host compile/test of the standalone metric, not an ESP32 firmware comp
 
 ## 13. Local NORMAL hardware self-test
 The audio monitor now retains a complete 79-symbol NORMAL frame (50,560 samples at 4 kHz) and generates the three NORMAL Costas pilot blocks in its internal test waveform. It evaluates that known local waveform at the known frame start and nominal tone frequency; this is a deterministic self-test, not a blind acquisition search. The UI fixture text is labelled **TEST PAYLOAD (LOCAL ONLY)** and is not decoded from the waveform. PSRAM is required for the full-frame ring. LDPC/CRC and live-air text decoding remain unimplemented.
+
+
+## 13. Local NORMAL hardware self-test
+The audio monitor now retains a complete 79-symbol NORMAL frame (50,560 samples at 4 kHz) and generates the three NORMAL Costas pilot blocks in its internal test waveform. It evaluates that known local waveform at the known frame start and nominal tone frequency; this is a deterministic self-test, not a blind acquisition search. The UI fixture text is labelled **TEST PAYLOAD (LOCAL ONLY)** and is not decoded from the waveform. PSRAM is required for the full-frame ring. LDPC/CRC and live-air text decoding remain unimplemented.

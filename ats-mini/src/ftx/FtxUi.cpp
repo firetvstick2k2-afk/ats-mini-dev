@@ -776,7 +776,7 @@ bool ftxUiTick(uint32_t now)
 
 void drawFtxDecoderPage()
 {
-  const uint16_t bg=0x0000, blueDark=0x1036, cyan=0x07FF;
+  const uint16_t bg=0x0000, boxBg=0x0000, blue=0x001F, cyan=0x07FF;
   spr.fillSprite(bg);
   spr.drawRect(2,2,316,166,0x001F);
 
@@ -785,10 +785,11 @@ void drawFtxDecoderPage()
   snprintf(frequencyText,sizeof(frequencyText),"%u.%03u",
     currentFrequency/1000,currentFrequency%1000);
   spr.setTextColor(0xFFFF);
-  spr.setTextDatum(BL_DATUM);
-  spr.drawString("kHz",8,29,FONT_SMALL);
   spr.setTextDatum(TL_DATUM);
-  spr.drawString(frequencyText,43,5,&lgfx::fonts::Orbitron_Light_24);
+  const int frequencyWidth = spr.drawString(frequencyText,8,5,&lgfx::fonts::Orbitron_Light_24);
+  spr.setTextDatum(ML_DATUM);
+  spr.setTextColor(cyan);
+  spr.drawString("kHz",8+frequencyWidth+7,19,FONT_SMALL);
 
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(cyan);
@@ -800,19 +801,22 @@ void drawFtxDecoderPage()
   spr.setTextDatum(TR_DATUM);
   spr.drawString(counters,311,10,FONT_SMALL);
 
-  // FT8 slot progress bar: cyan fill advances with collected decoder blocks.
+  // FT8 slot meter: separated blue blocks, equalizer-style (not a solid line).
   const uint32_t maxBlocks=decoderService.decoderMaxBlocks();
   const uint32_t blocks=decoderService.decoderBlocks();
-  const int innerWidth=296;
-  int progress=maxBlocks ? static_cast<int>((blocks>maxBlocks?maxBlocks:blocks)*innerWidth/maxBlocks) : 0;
-  spr.drawRect(8,34,304,12,0x0359);
-  spr.fillRect(10,36,innerWidth,8,blueDark);
-  if(progress>0) spr.fillRect(10,36,progress,8,cyan);
-  // Three large, alternating blue message rows with flag and QTH distance.
+  constexpr int meterSegments=37;
+  const int activeSegments=maxBlocks ? static_cast<int>((blocks>maxBlocks?maxBlocks:blocks)*meterSegments/maxBlocks) : 0;
+  spr.drawRect(8,34,304,12,blue);
+  spr.fillRect(10,36,300,8,bg);
+  for(int segment=0;segment<meterSegments;++segment) {
+    const int x=10+segment*8;
+    if(segment<activeSegments) spr.fillRect(x,36,6,8,blue);
+  }
+  // Three black message rows with the blue outlines retained.
   for(int i=0;i<3;++i) {
     const int y=52+i*37;
-    spr.fillRect(7,y,306,34,blueDark);
-    spr.drawRect(7,y,306,34,0x0359);
+    spr.fillRect(7,y,306,34,boxBg);
+    spr.drawRect(7,y,306,34,blue);
     if(!recentMessages[i].text[0]) {
       if(i==0) {
         spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
@@ -851,8 +855,8 @@ void drawFtxDecoderPage()
 
   if(ftxActionsOpen) {
     const int menuX=20, menuY=8, menuW=280, menuH=154;
-    spr.fillRect(menuX,menuY,menuW,menuH,blueDark);
-    spr.drawRect(menuX,menuY,menuW,menuH,cyan);
+    spr.fillRect(menuX,menuY,menuW,menuH,bg);
+    spr.drawRect(menuX,menuY,menuW,menuH,blue);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);
@@ -870,7 +874,7 @@ void drawFtxDecoderPage()
                  static_cast<unsigned>(preset->frequencyKHz/1000),
                  static_cast<unsigned>(preset->frequencyKHz%1000));
         const int y=menuY+29+row*20;
-        if(index==ftxPresetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x0359);
+        if(index==ftxPresetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,blue);
         spr.setTextColor(index==ftxPresetSelection?0xFFFF:0xBDF7);
         spr.drawString(label,menuX+13,y);
         if(index==ftxPresetSelection && (ftxPresetPreviewPending || ftxPresetPreviewActive)) {
@@ -901,7 +905,7 @@ void drawFtxDecoderPage()
       spr.drawString(pageMode==FtxMode::FT4 ? "FT4 ACTIONS" : "FT8 ACTIONS",menuX+12,menuY+7);
       for(uint8_t i=0;i<count;++i) {
         const int y=menuY+27+i*14;
-        if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,15,0x0359);
+        if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,15,blue);
         spr.setTextColor(i==ftxMenuSelection?0xFFFF:0xBDF7);
         spr.drawString(labels[i+(pageMode==FtxMode::FT4?3:0)],menuX+14,y);
       }

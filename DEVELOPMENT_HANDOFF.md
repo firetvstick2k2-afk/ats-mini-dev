@@ -1168,3 +1168,15 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Internal test playback contains the NORMAL Costas sequence at symbols 0–6, 36–42 and 72–78, with deterministic non-protocol tones in data positions. The completed local frame is evaluated at its known start and nominal frequency using the existing independent Costas metric.
 - The UI fixture string `CQ ATS MINI - JS8 NORMAL TEST` is explicitly labelled **TEST PAYLOAD (LOCAL ONLY)**. It is a display fixture, not text encoded in or decoded from audio.
 - This milestone does not implement blind live-air acquisition, LDPC/CRC validation, or received-message decoding. GPIO11 audio quality, PSRAM, timing and display behavior still require hardware testing.
+
+
+## JS8 NORMAL hardware-test milestone (2026-11-21)
+- The JS8 monitor retains one complete 79-symbol NORMAL window (50,560 samples / 12.64 s at 4 kHz). The ~101 KB ring is allocated from PSRAM only; if PSRAM is unavailable, startup fails safely instead of consuming scarce internal heap. The existing LILYGO GPIO11/SPI guard remains.
+- Internal test playback contains the NORMAL Costas sequence at symbols 0–6, 36–42 and 72–78, with deterministic non-protocol tones in data positions. The completed local frame is evaluated at its known start and nominal frequency using the existing independent Costas metric.
+- The UI fixture string `CQ ATS MINI - JS8 NORMAL TEST` is explicitly labelled **TEST PAYLOAD (LOCAL ONLY)**. It is a display fixture, not text encoded in or decoded from audio.
+- This milestone does not implement blind live-air acquisition, LDPC/CRC validation, or received-message decoding. GPIO11 audio quality, PSRAM, timing and display behavior still require hardware testing.
+
+## FT8/FT4 display polish (2026-11-21)
+- FT8/FT4 message-row fills changed to black while retaining the blue row outlines and the blue outer display frame.
+- Frequency is now left-aligned first, followed by the kHz label on the same top row.
+- The receive progress indicator is rendered as separated blue equalizer-style blocks instead of a continuous blue bar.

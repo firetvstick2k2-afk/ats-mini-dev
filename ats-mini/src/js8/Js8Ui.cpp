@@ -40,7 +40,9 @@ void js8UiRotate(int16_t delta) {
 }
 
 void js8UiClick() {
-  // Reserved for JS8 decoder controls. The monitor remains read-only for now.
+  if (!pageActive) return;
+  if (audioMonitor.testPlaybackActive()) audioMonitor.stopTestPlayback();
+  else audioMonitor.startTestPlayback();
 }
 
 void drawJs8MonitorPage() {
@@ -61,12 +63,14 @@ void drawJs8MonitorPage() {
 
   Js8AudioMonitor::Metrics m{};
   const bool valid = audioMonitor.copyMetrics(m);
+  const bool playback = audioMonitor.testPlaybackActive();
   spr.fillRect(8, 35, 304, 27, panel);
   spr.drawRect(8, 35, 304, 27, border);
   spr.setTextColor(valid ? green : cyan, panel);
   spr.setTextDatum(ML_DATUM);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-  spr.drawString(valid ? "CAPTURE ACTIVE" : "WAITING FOR AUDIO...", 15, 48);
+  spr.drawString(playback ? "TEST PLAYBACK: 8-FSK" :
+                 (valid ? "LIVE AUDIO MONITOR" : "WAITING FOR AUDIO..."), 15, 48);
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(white, panel);
   char value[64];
@@ -111,10 +115,10 @@ void drawJs8MonitorPage() {
              static_cast<unsigned long>(m.discontinuities),
              static_cast<unsigned long>(m.clippedSamples));
   } else {
-    snprintf(value, sizeof(value), "MEASURING CALLBACK CADENCE AND ADC LEVEL");
+    snprintf(value, sizeof(value), "WAITING FOR FIRST MEASUREMENT WINDOW");
   }
   spr.drawString(value, 12, 152);
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(white, navy);
-  spr.drawString("SHORT CLICK: RESERVED  LONG PRESS: EXIT", 160, 164, FONT_SMALL);
+  spr.drawString("CLICK: TEST PLAY/STOP   LONG PRESS: EXIT", 160, 164, FONT_SMALL);
 }

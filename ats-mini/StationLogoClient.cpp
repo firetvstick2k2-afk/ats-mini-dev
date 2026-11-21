@@ -15,7 +15,7 @@ static bool logoStorageReady = false;
 void* logoAllocate(size_t bytes) {
   void* p = heap_caps_malloc(bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   if (!p) p = heap_caps_malloc(bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-  return p ? p : malloc(bytes);
+  return p;
 }
 void logoFree(void* p) { if (p) heap_caps_free(p); }
 constexpr size_t kMaxLogoBytes = 220000;

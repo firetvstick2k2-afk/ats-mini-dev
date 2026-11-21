@@ -100,21 +100,25 @@ Layout-Indizes (bestehende Indizes erhalten):
 - FT8/FT4-Presets öffnen den Decoder, normale Presets kehren zur aktiven Layoutanzeige zurück.
 - Keine Presets stillschweigend entfernen oder die Quellanzahl auf 74 ändern.
 
-## 7. Verbindliche neue Entwicklungsreihenfolge — 2026-11-21
+## 7. Korrigierte verbindliche Entwicklungsreihenfolge — 2026-11-21
 
-Diese Reihenfolge wurde vom Nutzer neu festgelegt und ersetzt die vorherige Priorisierung in diesem Dokument:
+**Korrektur: JS8Call ist Priorität Nr. 1. Danach folgt FM DX.** Diese Reihenfolge ersetzt alle früheren Prioritätslisten.
 
-1. **FM DX** – eigener FM-DX-Menümodus mit den real unterstützten SI4735-Bandbreiten und AUTO; Fokus auf Selektivität/Trennschärfe. Keine nicht vorhandenen TEF6686-Bandbreiten nachbilden oder vortäuschen.
-   - Danach als separater Prototyp ein Audio-FFT-Spektrum testen: weiße, schmale Peaks auf dunklem Hintergrund, schnelle Reaktion und weicher Abfall. Eigenes Testlayout; bestehende Layouts bleiben unverändert. Auch normales demoduliertes FM-Audio (Sprache/Musik) prüfen. Erst den Audio-Datenpfad untersuchen und vorhandene Samples nutzen; keinen zweiten ADC-Sampler starten.
-2. **Wetter portieren** – aus Mini_OS, Branch `dev/first-build-preparation`.
-3. **Newsticker portieren** – aus Mini_OS, demselben Quellbranch.
-4. **Mondphase portieren** – aus Mini_OS, demselben Quellbranch.
-5. **NAVTEX** – separater SITOR-B/CCIR-476-Decoder mit FEC, Synchronisation, Nachrichtenrahmen, 518/490/4209.5-kHz-Presets, Live-Text und LittleFS-Archiv; vollständige/unvollständige Nachrichten unterscheiden und Duplikate erkennen.
-6. **Übrige Decoder** – danach WEFAX, DSC, SSTV, PSK31/63, Olivia/Contestia, JS8Call und weitere geeignete Empfangsmodi.
+1. **JS8Call – nativer Empfangsdecoder**
+   - Ausschließlich Empfang: keine Sendefunktion, kein Encoder, keine PTT, kein TX-Menü und keine TX-Hardware.
+   - Technischer Plan: `JS8CALL_RECEIVE_DECODER.md`. Planung liegt vor, Firmwarecode ist noch nicht implementiert.
+   - Zuerst JS8 NORMAL, danach SLOW/FAST; JS8 40/60 erst nach Performanceprüfung.
+   - Vorhandenen Audio-Datenpfad nach Prüfung abonnieren; keinen zweiten ADC-Sampler starten. LILYGO-GPIO11/SPI-Ausschluss erhalten. FT8/FT4, CW, RTTY und vorhandene Layouts schützen.
+   - ATS Mini ist MIT-lizenziert, JS8Call-Referenzcode GPLv3. Keine direkte GPL-Codeübernahme ohne vorherige Lizenzentscheidung; unabhängige Implementierung anhand der Protokolldokumentation bevorzugen.
+2. **FM DX** – eigener Menümodus mit den real unterstützten SI4735-Bandbreiten und AUTO, Fokus auf Selektivität. Keine nicht unterstützten TEF6686-Bandbreiten vortäuschen.
+   - Danach separater Audio-FFT-Prototyp als eigenes Testlayout: weiße schmale Peaks, schnelle Reaktion, weicher Abfall; auch demoduliertes FM-Audio untersuchen. Erst den echten Audio-Datenpfad prüfen und vorhandene Samples nutzen, keinen zweiten ADC-Capture starten.
+3. **Wetter portieren** – aus Mini_OS, Branch `dev/first-build-preparation`.
+4. **Newsticker portieren** – aus Mini_OS, demselben Quellbranch.
+5. **Mondphase portieren** – aus Mini_OS, demselben Quellbranch.
+6. **NAVTEX** – eigener SITOR-B/CCIR-476-Decoder mit FEC, Synchronisation, Nachrichtenrahmen, 518/490/4209.5-kHz-Presets, Live-Text und LittleFS-Archiv; vollständige/unvollständige Nachrichten unterscheiden und Duplikate erkennen.
+7. **Übrige Decoder** – danach WEFAX, DSC, SSTV, PSK31/63, Olivia/Contestia und weitere geeignete Empfangsmodi.
 
-**JS8Call ist Punkt 6 zugeordnet** und wird dort als erster Decoder-Unterpunkt umgesetzt. Es bleibt ausdrücklich ein reiner Empfangsdecoder ohne Senden, Encoder, PTT, TX-Menü oder TX-Hardware. Der technische Plan liegt in `JS8CALL_RECEIVE_DECODER.md`; Planung ist erfolgt, Firmwarecode noch nicht implementiert. Wegen MIT-Projektlizenz und GPLv3-Referenzcode keine direkte GPL-Codeübernahme ohne vorherige Lizenzentscheidung; unabhängige Implementierung anhand der Protokolldokumentation bevorzugen.
-
-Die Reihenfolge ist verbindlich: keine NAVTEX- oder sonstigen Decoderarbeiten vor Abschluss der Punkte 1–4. Alle Arbeiten ausschließlich im privaten Repo `firetvstick2k2-afk/ats-mini-dev`, Branch `development`; `main` bleibt unangetastet. Nutzer startet Builds/Actions manuell und testet selbst. Keine Build- oder Hardware-Erfolge behaupten, wenn sie nicht bestätigt sind.
+Ausschließlich im privaten Repo `firetvstick2k2-afk/ats-mini-dev`, Branch `development` arbeiten; `main` bleibt unangetastet. Keine NAVTEX- oder weiteren Decoderarbeiten vor Abschluss von JS8Call, FM DX, Wetter, Newsticker und Mondphase. Nutzer startet Builds/Actions manuell und testet selbst; keine unbestätigten Build- oder Hardware-Erfolge behaupten.
 
 ## 9. Ton und Zusammenarbeit
 

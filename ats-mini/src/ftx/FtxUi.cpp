@@ -566,7 +566,7 @@ bool ftxUiOpen(FtxMode mode)
     decoderService.exit();
     netInit(restoreNetworkMode);
     ftxOfflineSyncActive = false;
-    statusShow("Decoder start failed", ftxOfflineSyncActive ? "Check audio / PSRAM" : "Check UTC and audio input");
+    statusShow("Decoder start failed", (mode == FtxMode::FT8 && ftxOfflineSyncPreference) ? "Check audio / PSRAM" : "Check UTC and audio input");
     return false;
   }
 
@@ -890,8 +890,8 @@ void drawFtxDecoderPage()
       const uint8_t count=ftxActionCount();
       spr.drawString(pageMode==FtxMode::FT4 ? "FT4 ACTIONS" : "FT8 ACTIONS",menuX+12,menuY+7);
       for(uint8_t i=0;i<count;++i) {
-        const int y=menuY+27+i*17;
-        if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,18,0x0359);
+        const int y=menuY+27+i*14;
+        if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,15,0x0359);
         spr.setTextColor(i==ftxMenuSelection?0xFFFF:0xBDF7);
         spr.drawString(labels[i+(pageMode==FtxMode::FT4?3:0)],menuX+14,y);
       }

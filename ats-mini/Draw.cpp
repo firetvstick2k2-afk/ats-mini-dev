@@ -8,6 +8,7 @@
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
 #include "src/cw/CwUi.h"
+#include "src/js8/Js8Ui.h"
 #include "FreqKeypad.h" // <--- Eingebundenes Keypad-Modul
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
@@ -604,6 +605,13 @@ void drawScreen()
   if(currentCmd == CMD_RTTY_DECODER)
   {
     drawRttyDecoderPage();
+    spr.pushSprite(0, 0);
+    return;
+  }
+
+  if(currentCmd == CMD_JS8_MONITOR)
+  {
+    drawJs8MonitorPage();
     spr.pushSprite(0, 0);
     return;
   }

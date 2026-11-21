@@ -11,6 +11,10 @@ namespace {
   uint32_t lastRefresh = 0;
   bool stereoPilot = false;
   uint8_t stereoBlend = 0;
+  bool actionsOpen = false;
+  uint8_t actionSelection = 0;
+  uint8_t manualFilter = 3;
+  extern bool updateFrequency(int newFreq, bool wrap);
 
   constexpr uint16_t BLACK  = 0x0000;
   constexpr uint16_t WHITE  = 0xFFFF;
@@ -76,6 +80,7 @@ bool fmDxUiOpen() {
 
 void fmDxUiExit() {
   if(!pageActive) return;
+  actionsOpen = false;
   pageActive = false;
   fmDxStop();
   currentCmd = CMD_NONE;
@@ -95,12 +100,41 @@ bool fmDxUiTick(uint32_t now) {
   return true;
 }
 
-void fmDxUiRotate(int16_t delta) { (void)delta; }
+void fmDxUiRotate(int16_t delta) {
+  if(!pageActive || !delta) return;
+  if(actionsOpen) {
+    int next = static_cast<int>(actionSelection) + (delta > 0 ? 1 : -1);
+    if(next < 0) next = 2;
+    if(next > 2) next = 0;
+    actionSelection = static_cast<uint8_t>(next);
+    return;
+  }
+  const Step *step = getCurrentStep();
+  int stepKHz = step && step->step > 0 ? step->step : 10;
+  updateFrequency(static_cast<int>(currentFrequency) + delta * stepKHz, true);
+}
 
 void fmDxUiClick() {
   if(!pageActive) return;
-  if(fmDxActive()) fmDxStop();
-  else fmDxStart();
+  if(!actionsOpen) {
+    actionsOpen = true;
+    actionSelection = 0;
+    return;
+  }
+  switch(actionSelection) {
+    case 0:
+      if(fmDxActive()) fmDxStop();
+      else fmDxStart();
+      break;
+    case 1:
+      if(fmDxActive()) fmDxStop();
+      manualFilter = manualFilter == 4 ? 2 : manualFilter + 1;
+      rx.setFmBandwidth(manualFilter);
+      break;
+    case 2:
+      actionsOpen = false;
+      break;
+  }
 }
 
 void drawFmDxPage() {
@@ -124,10 +158,10 @@ void drawFmDxPage() {
   spr.setTextColor(WHITE, BLACK);
   spr.drawString(frequency, 7, 17, FONT_LARGE);
   spr.setTextColor(GREY, BLACK);
-  spr.drawString("MHz", 103, 25, FONT_SMALL);
+  spr.drawString("MHz", 103, 32, FONT_SMALL);
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(CYAN, BLACK);
-  spr.drawString(fmDxBandwidthLabel(), 313, 27, FONT_SMALL);
+  spr.drawString(fmDxBandwidthLabel(), 313, 20, FONT_SMALL);
 
   // Live stereo state from the SI4735 pilot detector and blend metric.
   char stereoText[20];
@@ -170,11 +204,11 @@ void drawFmDxPage() {
   char piText[8];
   if(pi) snprintf(piText, sizeof(piText), "%04X", static_cast<unsigned>(pi));
   else piText[0] = '\0';
-  drawValueOrDash(piText, 25, 95);
+  drawValueOrDash(piText, 25, 97);
 
   drawLabel("PTY", 76, 97);
   const char *pty = getProgramInfo();
-  drawValueOrDash(pty, 101, 95);
+  drawValueOrDash(pty, 101, 97);
 
   // RadioText gets a fixed two-line area; blank RDS data remains visibly unavailable.
   spr.drawFastHLine(7, 112, 306, LINE);
@@ -193,12 +227,12 @@ void drawFmDxPage() {
     line2[remaining] = '\0';
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(WHITE, BLACK);
-    spr.drawString(line1, 7, 128, FONT_DEFAULT);
-    if(line2[0]) spr.drawString(line2, 7, 137, FONT_DEFAULT);
+    spr.drawString(line1, 7, 131, FONT_SMALL);
+    if(line2[0]) spr.drawString(line2, 7, 141, FONT_SMALL);
   } else {
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(GREY, BLACK);
-    spr.drawString("--", 7, 128, FONT_DEFAULT);
+    spr.drawString("--", 7, 131, FONT_SMALL);
   }
 
   // Footer: selected filter and operation hint.
@@ -207,8 +241,25 @@ void drawFmDxPage() {
   spr.setTextColor(CYAN, BLACK);
   spr.drawString("FILTER", 7, 155, FONT_DEFAULT);
   spr.setTextColor(WHITE, BLACK);
-  spr.drawString(fmDxBandwidthLabel(), 43, 155, FONT_DEFAULT);
+  spr.drawString(fmDxBandwidthLabel(), 52, 155, FONT_DEFAULT);
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(GREY, BLACK);
-  spr.drawString("CLICK: AUTO / PAUSE   HOLD: EXIT", 313, 155, FONT_DEFAULT);
+  spr.drawString("CLICK: ACTIONS  HOLD: EXIT", 313, 155, FONT_DEFAULT);
+
+  if(actionsOpen) {
+    spr.fillRoundRect(65, 35, 190, 104, 5, 0x0841);
+    spr.drawRoundRect(65, 35, 190, 104, 5, CYAN);
+    spr.setTextDatum(TC_DATUM);
+    spr.setTextColor(CYAN, 0x0841);
+    spr.drawString("FM-DX ACTIONS", 160, 41, FONT_DEFAULT);
+    const char *items[] = { fmDxActive() ? "PAUSE AUTO" : "START AUTO", "FILTER WIDTH", "BACK" };
+    for(uint8_t n=0;n<3;++n) {
+      int y=65+n*22;
+      if(n==actionSelection) {
+        spr.fillRoundRect(75,y-2,170,19,3,0x2104);
+        spr.setTextColor(GREEN,0x2104);
+      } else spr.setTextColor(WHITE,0x0841);
+      spr.drawString(items[n],160,y,FONT_DEFAULT);
+    }
+  }
 }

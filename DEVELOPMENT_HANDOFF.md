@@ -1244,3 +1244,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Build #23 (run `44942466083`) was subsequently verified successful: OSPI-DE compile, single firmware binary preparation, and artifact upload all completed successfully; release job was skipped.
 - Hardware verification of the three popup corrections remains outstanding. Check all six Date/Time fields, German umlauts at the footer, popup title/value centering, and the English template on hardware.
 - `main` remains untouched.
+
+
+## UTF-8 umlaut mark visibility refinement — 2026-11-21
+- German template renderer refinement committed as `1f98aa65645800603ca9c534f41fd68c88ce0097`.
+- English template renderer refinement committed as `1e53847a40e7ceac5f73ce318f2bb2af0ef55818`.
+- Moved the two diacritic dots for Ä/Ö/Ü and lowercase variants above the base glyph instead of drawing them into the upper part of the letter. This makes the umlaut marks visibly distinct on the small menu fonts as well.
+- Both commits were pushed to `development` with `[skip ci]`; no build was started. Hardware verification remains pending.

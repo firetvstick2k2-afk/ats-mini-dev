@@ -3,7 +3,7 @@
 Stand: 21.11.2026  
 Repository: `firetvstick2k2-afk/ats-mini-dev` (privat)  
 Arbeitsbranch: `development`  
-Letzter bestätigter Commit: `2daa5a1a6df3b34e76d9466f03df21c51bfde989` (aktualisiertes Handover; der vorherige Code-/DAB-Stand ist in den darunter genannten Commits enthalten)
+Letzter Code-Stand: CW-Decoder-Port in Arbeit abgeschlossen; Handoff-Dokument wird aktualisiert.
 
 ## 1. Wichtige Arbeitsregeln
 
@@ -340,3 +340,13 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Startup initializes the logo client after LittleFS migration. The initial offline lookup can still load a local logo; if Wi-Fi becomes available afterward, the same station key is retried immediately rather than waiting for the 60-second online retry interval.
 - Changed: `ats-mini/StationLogoClient.cpp/.h`, `ats-mini/Layout-DABStyle.cpp`, `ats-mini/Storage.cpp`, `ats-mini/ats-mini.ino`.
 - Source-only port. No GitHub Actions build, flash, or hardware/network test was started. User should manually run the OSPI-DE build on `development`, then test local PNG/JPG/JPEG display, root PNG migration (including splash exclusion and duplicate handling), online FM-DX lookup, Radio Browser fallback, offline behavior, cache persistence and station changes.
+
+
+## CW-Decoder-Port (21.11.2026)
+- Neuer eigener CW-Decoder auf `CMD_CW_DECODER`, direktes Hauptmenü in Deutsch/Englisch und Start aus allen neun CW-Presets in Decoder Frequencies.
+- Mini_OS Goertzel-DSP-Kern übernommen; Service verwendet Subscriber am bestehenden GPIO11 AudioCaptureService mit 4.000 Samples/s. FT8/FT4 verwenden nun denselben Singleton-Capture-Service. Es wird kein zusätzlicher CW-ADC-Sampler erzeugt.
+- Eigene 320×170 CW-Seite mit RX/SIGNAL, WPM, Audiopegel, Tonfrequenz (Standard 700 Hz), einstellbaren Tönen sowie Aktionen CLEAR TEXT, RESET DECODER, BACK und EXIT CW.
+- Encoder: drehen navigiert/ändert Ton im Aktionenmenü; kurzer Klick öffnet/bestätigt; langer Druck beendet CW und stellt die zuvor konfigurierte WLAN-Betriebsart wieder her.
+- Wichtiger Quellcodebefund: `RttyService.cpp` besitzt aktuell weiterhin einen eigenen 8-kSamples/s ADC-Capture-Task. Er wurde absichtlich nicht verändert, um RTTY nicht zu gefährden. Die frühere Annahme, RTTY nutze bereits den gemeinsamen 4-kSamples/s Subscriber, stimmt mit dem tatsächlich abgerufenen `development`-Code nicht überein.
+- Keine Actions, kein Build, kein Flash und kein Hardwaretest durch ChatGPT. Nachfolgend Nutzer-Build und Gerätetest erforderlich.
+- Relevante Code-Commits: `25775d1dfba9519ce04be67e05903340a5b4a54d`, `401eb98d99d5f2219e57496d8d64f9f4b9e44ab3`, `3dbdad4d9925ddd737aa6a18c2f1b55ebb5a965d`, `2d917e58a06943fcf39c68941a6ee169658da470`, `a764c87925b5e0387e234de4ebc5e962ad5f83fb`, `9ac9dc1633ff2c21c73b1d92802a64a2dc239a25`, `965adc959e29ddacf222934c4a6883fd01d3b4d8`, `bbed86448b7b99f61ca02df08d0cef07f32d312c`, `2559340c50e8444459ebc7346da96131a089222d`, `e970b9cf5a71e8e85e5a01ca687bfce9967e3ac2`, `cbda87aa0f2b404b69e34be4bae752644916f09f`, `cdbff5f06915a8934237464aa67b1f1da6dc5a92`, `9b98c518ce01848e2922f3ae69af4b4dad5b1538`, `04d595c9c5205d0dadf5e99a8dc438ff72ef911a`, `9de4ceda973e6e25c1060eaf74670a3bedfddd97`, `faff7cd6ff8695ae5511935d6a9240388d7f4a09f`, `256098b22d8572f5a1d4f309971f816f113f2610`.

@@ -192,13 +192,13 @@ bool StationLogoClient::hasLocalLogo(const StationLogoState& state) {
 }
 
 void StationLogoClient::update(const StationLogoState& state, bool wifiConnected) {
-  (void)wifiConnected;
   if (!state.piCode || busy_) return;
   char key[40];
   snprintf(key,sizeof(key),"%04X_%lu",static_cast<unsigned>(state.piCode),static_cast<unsigned long>(state.frequencyKHz));
-  if (haveRequested_ && strcmp(lastRequestKey_,key)==0 && millis()-lastAttemptMs_<60000) return;
+  if (haveRequested_ && strcmp(lastRequestKey_,key)==0 && millis()-lastAttemptMs_<60000 &&
+      (!wifiConnected || lastAttemptHadWifi_)) return;
   strncpy(lastRequestKey_,key,sizeof(lastRequestKey_)-1); lastRequestKey_[sizeof(lastRequestKey_)-1]=0;
-  haveRequested_=true; lastAttemptMs_=millis();
+  haveRequested_=true; lastAttemptMs_=millis(); lastAttemptHadWifi_=wifiConnected;
   Serial.printf("[LOGO] lookup requested: PI=%04X frequency=%lu kHz LittleFS=%s\\n",
     static_cast<unsigned>(state.piCode), static_cast<unsigned long>(state.frequencyKHz),
     logoStorageReady ? "ready" : "not-ready");

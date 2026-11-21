@@ -8,7 +8,7 @@ Scope: receive and decode JS8 messages only. No transmit path, no encoder, no TX
 
 ## 1. Goal
 
-Add a native JS8Call receive-only decoder to the ATS Mini. It should detect JS8 signals in the receiver's demodulated USB audio, decode complete JS8 frames, parse their message payloads and show received text on the display. The first milestone is reliable reception of JS8 NORMAL; further JS8 submodes can follow after CPU/RAM and sensitivity testing.
+Add a native JS8Call receive-only decoder to the ATS Mini. It should detect JS8 signals in the receiver's demodulated USB audio, decode complete JS8 frames, parse their message payloads and show received text on the display. The first milestone is reliable reception of JS8 NORMAL; further JS8 submodes can follow after CPU/RAM and sensitivity testing. The finished receiver should offer an explicit MODE selection with AUTO plus individual speed choices. AUTO is intended to recognize and decode whichever supported JS8 speed is active, using validated mode-specific synchronization rather than guessing from signal strength.
 
 The existing FT8/FT4 and CW/RTTY implementations must remain functional and unchanged unless a shared, isolated infrastructure improvement is necessary.
 
@@ -26,7 +26,7 @@ The current JS8Call-improved guide documents these modes:
 | JS8 40 | 6 s | 3.95 s | 20 baud / 20 Hz | 160 Hz |
 | JS8 60 | 4 s | 3.0 s | experimental | approx. 250 Hz |
 
-The four established modes use 8 tones and 79 symbols per waveform. JS8 60 is experimental and its specifications/performance may change; it is not part of the initial implementation. NORMAL is first. SLOW and FAST follow only after NORMAL is validated; JS8 40 is later and JS8 60 last. The guide states that JS8 40/60 do not participate in the Heartbeat network.
+The four established modes use 8 tones and 79 symbols per waveform. JS8 60 is experimental and its specifications/performance may change; it is not part of the initial implementation. JS8Call supports MULTI reception, which decodes multiple speed modes at once; the ATS Mini should provide an equivalent AUTO receive option if the ESP32-S3 has sufficient CPU and memory headroom. NORMAL is first. SLOW and FAST follow only after NORMAL is validated; JS8 40 is later and JS8 60 last. The guide states that JS8 40/60 do not participate in the Heartbeat network.
 
 Synchronization is mode-specific. NORMAL retains the three 7-symbol Costas blocks used for backwards compatibility; SLOW, FAST and JS8 40 use three unique 7×7 Costas arrays. Do not reuse FT8's Costas sequence or assume that an FT8 decoder will synchronize JS8. The JS8 frame contains 79 symbols and its protocol layer classifies decoded frames as heartbeat, compound callsign partial, compound callsign directed command, directed command, data Huffman, or data dictionary. A 2-bit transmission flag distinguishes default, first, last and reserved frame roles. Data frames carry a 75-bit variable-encoded payload; callsigns, prefixes/suffixes, signal reports and Maidenhead grids have dedicated encodings. Multi-frame text must be assembled with the first/last semantics respected.
 
@@ -90,7 +90,9 @@ Create a separate JS8 subsystem, initially under `ats-mini/src/js8/`:
 The UI must be text-first on the 320×170 display. Incoming messages are appended line-by-line; in live-follow mode, new lines appear at the bottom and older lines move upward automatically. Provide a pause/resume control and manual history scrolling so the user can stop the automatic movement and read older messages. Keep the capture/logging pipeline independent from the visible scroll position: pausing or leaving the live-follow view must never pause reception or lose messages. Logging is a separate opt-in action and must persist decoded messages independently of the UI refresh cycle.
 
 - Add the new files to `ats-mini/Makefile` SRC/HEADERS lists as required by repository development instructions.
-- Keep the Actions menu explicit and compact: JS8 PRESETS, TIME SYNC ONLINE/OFFLINE, speaker/audio option if appropriate, message history/log controls, BACK and EXIT.
+- Keep the Actions menu explicit and compact: JS8 PRESETS, MODE AUTO/NORMAL/SLOW/FAST/JS8 40/JS8 60, TIME SYNC ONLINE/OFFLINE, speaker/audio option if appropriate, message history/log controls, BACK and EXIT.
+- AUTO should identify the active JS8 speed by trying the mode-specific symbol timing, tone spacing and Costas/synchronization patterns. A speed is accepted only after the JS8 frame decoder validates it; signal strength or bandwidth alone is not enough.
+- Prefer simultaneous multi-speed decoding only if measured CPU, RAM, queue latency and sensitivity remain acceptable. If all-mode parallel decoding is too expensive, implement an AUTO candidate scheduler that tests likely speeds efficiently and reports the detected speed only after frame validation. JS8 60 remains experimental and may be excluded if its specification or resource cost prevents reliable operation.
 
 The UI must not contain a transmit text box, Send button, TX enable, PTT action, encoder/modulator or any call into transmit code. Do not add TX capability as a hidden future option.
 
@@ -125,10 +127,11 @@ Network behavior should match the selected timing mode and existing digital deco
    - Add the dedicated JS8 PRESETS submenu with the HF presets above and the two explicitly experimental CB presets.
    - Add a separate logging toggle and bounded LittleFS message archive only after valid live decoding is stable.
 
-5. **Additional submodes**
+5. **Additional submodes and automatic mode detection**
    - Add SLOW and FAST after NORMAL is stable.
    - Evaluate JS8 40 and experimental JS8 60 last; only include if ESP32-S3 timing and memory allow reliable decode.
-   - Multi-mode simultaneous decoding is out of scope for the first milestone.
+   - Add AUTO/MULTI receive mode after the individual mode decoders are validated. It should detect the active speed and decode supported speeds without requiring the user to select one manually.
+   - Benchmark true parallel decoding against a lower-cost candidate scheduler. Keep AUTO disabled or limit its supported modes if it overloads the ESP32-S3 or degrades decode sensitivity.
 
 6. **Validation**
    - Host-side/reference-vector tests for synchronization, payload/CRC, callsign/grid parsing and multi-frame assembly.
@@ -146,6 +149,7 @@ The ATS Mini repository is MIT-licensed. The JS8Call reference implementation is
 - Directed and free-text messages are displayed as received, with sensible multi-frame assembly.
 - ONLINE and OFFLINE are explicit persistent choices; OFFLINE does not require Wi-Fi or fabricate UTC and only reports lock after JS8-specific timing acquisition.
 - JS8 PRESETS contains the supported HF dial frequencies plus only CB channels 24 and 25 as experimental USB receive presets.
+- MODE offers AUTO and individual speeds. AUTO identifies a speed only after valid JS8 frame synchronization/validation and does not rely on signal strength alone.
 - No transmit UI, transmit routine, PTT path or encoder exists in the JS8 feature.
 - FT8/FT4, CW, RTTY, radio layouts and existing shared presets continue to work.
 - The LILYGO GPIO11/SPI guard remains intact.

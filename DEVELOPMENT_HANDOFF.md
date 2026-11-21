@@ -895,8 +895,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Source-only correction on `development`, commit `3d00b9b7a6019ab0556763d97b95467d14e4b819`. No build, flash, or hardware verification performed. User should test: Speaker OFF must silence the speaker while FT8 decode counters/messages continue; Speaker ON restores audio; exit restores the prior mute/amplifier state.
 
 
-## DAB layout selection fix (2026-11-21)
-- The UI Layout menu now labels index 8 simply **DAB** in German and English; the misleading FM-only suffix was removed.
-- Selecting DAB now always calls `drawLayoutDABStyle()`, regardless of the currently selected receiver mode/band. It no longer silently substitutes TinyRadio outside FM.
-- Only `ats-mini/Draw.cpp`, `ats-mini/Menu_german.cpp.src`, and `ats-mini/Menu_english.cpp.src` were changed for this fix. No other layouts or receiver behavior were intentionally modified.
-- Source change only; no build or hardware test was run. User should verify the DAB layout while on FM and on a non-FM band.
+## DAB layout menu label (2026-11-21)
+- The UI Layout menu entry at index 8 is now labeled simply **DAB** in German and English; the explanatory FM-only suffix was removed.
+- The existing behavior is intentionally preserved: on FM the DAB Style renderer is used; on non-FM bands the existing TinyRadio fallback remains active.
+- No renderer or fallback logic is changed by the label-only adjustment.

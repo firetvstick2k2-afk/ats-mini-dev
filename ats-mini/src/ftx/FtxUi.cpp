@@ -433,23 +433,30 @@ uint8_t ftxActionCount()
 
 bool ftxLogStart()
 {
-  if(ftxOfflineSyncActive || !clockAvailable()) return false;
+  // Logging must also work with offline signal synchronization or without UTC.
+  // Use a dated filename when a valid date is available, otherwise a unique
+  // untimed filename. Message timestamps remain explicitly "unknown" offline.
   uint16_t year = 0;
   uint8_t month = 0, day = 0;
-  if(!clockGetDate(&year, &month, &day, nullptr)) return false;
+  const bool haveDate = clockAvailable() &&
+    clockGetDate(&year, &month, &day, nullptr);
   char base[32] = {};
-  snprintf(base, sizeof(base), "%s_%02u.%02u.%02u",
-           pageMode == FtxMode::FT4 ? "FT4" : "FT8",
-           static_cast<unsigned>(day), static_cast<unsigned>(month),
-           static_cast<unsigned>(year % 100));
+  const char* modeName = pageMode == FtxMode::FT4 ? "FT4" : "FT8";
+  if(haveDate) {
+    snprintf(base, sizeof(base), "%s_%02u.%02u.%02u", modeName,
+             static_cast<unsigned>(day), static_cast<unsigned>(month),
+             static_cast<unsigned>(year % 100));
+  } else {
+    snprintf(base, sizeof(base), "%s_UNTIMED", modeName);
+  }
   for(uint16_t suffix = 0; suffix < 1000; ++suffix) {
     if(suffix == 0) snprintf(ftxLogPath, sizeof(ftxLogPath), "/%s.txt", base);
     else snprintf(ftxLogPath, sizeof(ftxLogPath), "/%s_%u.txt", base, suffix);
     if(!LittleFS.exists(ftxLogPath)) {
       File file = LittleFS.open(ftxLogPath, "w");
       if(!file) { ftxLogPath[0] = 0; return false; }
-      file.printf("# %s reception log\n# Date/time: UTC\n# QTH: JO31TV\n# Columns: UTC | Frequency kHz | Mode | Country | Locator | Distance km | SNR dB | Message\n",
-                  pageMode == FtxMode::FT4 ? "FT4" : "FT8");
+      file.printf("# %s reception log\n# Date/time: UTC when valid; unknown for offline reception\n# QTH: JO31TV\n# Columns: UTC | Frequency kHz | Mode | Country | Locator | Distance km | SNR dB | Message\n",
+                  modeName);
       file.flush();
       file.close();
       ftxLogEnabled = true;
@@ -467,11 +474,12 @@ void ftxLogStop()
 
 void ftxLogMessage(const FtxDecodedMessage& message)
 {
-  if(!ftxLogEnabled || !ftxLogPath[0] || !message.text[0] || !message.utcValid) return;
+  if(!ftxLogEnabled || !ftxLogPath[0] || !message.text[0]) return;
   File file = LittleFS.open(ftxLogPath, "a");
   if(!file) { ftxLogStop(); return; }
   struct tm stamp = {};
-  const bool haveTime = gmtime_r(&message.slotUtc, &stamp) != nullptr;
+  const bool haveTime = message.utcValid &&
+    gmtime_r(&message.slotUtc, &stamp) != nullptr;
   char timeText[24] = "unknown";
   if(haveTime) strftime(timeText, sizeof(timeText), "%Y-%m-%d %H:%M:%S", &stamp);
   char country[4] = {}, locator[8] = {};
@@ -696,10 +704,8 @@ void ftxUiClick()
           decoderService.enter(pageMode, true, clockAvailable(), previousActive, sharedAudioCapture());
           statusShow("Sync mode switch failed", "Previous mode restored");
         } else {
-          if(requestedOffline) {
-            ftxLogStop();
-            ftxLogPath[0] = 0;
-          }
+          // Keep an active log running across online/offline sync changes.
+          // Offline messages are stored with an "unknown" timestamp.
           lastProcessedSlot = 0;
           haveProcessedSlot = false;
           statusShow(requestedOffline ? "Offline signal sync" : "Online UTC sync",
@@ -721,7 +727,7 @@ void ftxUiClick()
         break;
       case 6: // Toggle per-session log
         if(ftxLogEnabled) ftxLogStop();
-        else if(!ftxLogStart()) statusShow("Logging unavailable", "UTC date required");
+        else if(!ftxLogStart()) statusShow("Logging unavailable", "Could not create log file");
         break;
       case 7: // Back
         ftxActionsOpen = false;
@@ -742,7 +748,8 @@ void ftxUiClick()
         decodedMessageCount = 0;
         break;
       case 3:
-        if(ftxLogEnabled) ftxLogStop(); else ftxLogStart();
+        if(ftxLogEnabled) ftxLogStop();
+        else if(!ftxLogStart()) statusShow("Logging unavailable", "Could not create log file");
         break;
       case 4: ftxActionsOpen = false; break;
       case 5: ftxUiExit(); break;

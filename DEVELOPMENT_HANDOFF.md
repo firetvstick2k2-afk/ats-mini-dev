@@ -1302,7 +1302,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Static source audit confirmed the menu entries/actions exist in German, English and Italian; `CMD_FM_DX` dispatches to `drawFmDxPage()`; `fmDxUiTick()` requests 500 ms redraws; RSSI/SNR are sampled through the existing `processRssiSnr()`; the Makefile wildcard includes `src/radio/*.cpp/.h`.
 - Confirmed FM bandwidth table indices: array positions map to device indices Auto=0, 110k=1, 84k=2, 60k=3, 40k=4. The controller's 40/60/84 device indices therefore match the existing table.
 - Hardened lifecycle for external/remote band changes: the FM-DX page exits when the mode is no longer FM, and the controller no longer attempts to restore an FM filter while the receiver is in AM/SSB. Also made new UI variadic format arguments explicitly unsigned.
-- Remaining validation limits: no compilation, GitHub Actions, flash or hardware test was run. Stereo indication is not implemented because no verified live stereo/pilot getter was found in the checked `SI4735-fixed.h` wrapper. RSSI/SNR thresholds and filter decisions still require real receiver testing/calibration; they are not validated performance thresholds.
+- Remaining validation limits: no compilation, GitHub Actions, flash or hardware test was run. Live stereo indication is now implemented using the inherited SI4735 FM_RSQ_STATUS pilot and blend getters (see the later FM-DX live stereo indication entry). RSSI/SNR thresholds and filter decisions still require real receiver testing/calibration; they are not validated performance thresholds.
 - Work remains on `development` only; `main` was not targeted. User starts the build manually.
 
 

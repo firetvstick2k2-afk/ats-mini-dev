@@ -248,3 +248,17 @@ The JS8 RX Monitor now supports a built-in repeatable synthetic signal source, a
 Important: this first waveform is deliberately a generic deterministic 8-FSK stimulus, not a protocol-valid JS8 NORMAL frame. It does not yet include verified JS8 Costas sync, LDPC(174,87), JS8 CRC-12 or a known message payload. It can exercise the monitor's block processing, timing and level metrics, but cannot prove successful JS8 synchronization or decoding. The next validation artifact must be an independently generated and verified protocol-valid NORMAL golden frame with expected decoded payload and metadata. No GPL JS8Call source is embedded.
 
 The playback path currently terminates at the monitor worker; a dedicated JS8 decoder sample-consumer interface remains a next implementation step. No build or hardware test has been performed.
+
+
+## 8.1 First build and ATS Mini monitor test procedure
+This is the first device validation gate for the current monitor-only milestone. It is not yet a JS8 decoder build. After the user starts the manual OSPI build on development and flashes the resulting firmware:
+
+1. Open MENU → JS8 RX MONITOR. The page should appear without changing the tuned frequency, receiver mode, network mode or other decoder state.
+2. Leave the page on LIVE AUDIO MONITOR for 5–10 seconds. The monitor should begin publishing metrics after roughly one second. For a live signal, the best case is a callback-derived rate near 4,000 Hz, a mean 24-sample block interval near 6,000 µs, and zero queue drops, gaps and clipping. ADC min/max, DC mean and AC RMS depend on the actual GPIO11 input signal; a quiet input can be nearly flat.
+3. Short-click the encoder once. The display should change to TEST PLAYBACK: 8-FSK and identify the source as SYNTH / NOMINAL 4 kHz. Watch the metrics during the approximately 12.64-second sequence.
+4. For the generated sine, expect approximately: rate 4,000 Hz; block interval 6,000 µs; ADC min/max 848/3248; DC mean 2048; AC RMS 849; DROP=0, GAP=0, CLIP=0. Treat these as indicative, not exact limits; scheduler jitter can change interval min/max and measured RMS slightly.
+5. When the sequence ends, the page should return to LIVE AUDIO MONITOR automatically. A second short click should start another run; a long press exits the monitor.
+
+The synthetic sequence is not audible, is not a valid JS8 NORMAL waveform and cannot produce a decoded message. This test only checks the monitor's deterministic 8-FSK block generation, queue/worker path and level metrics. Live GPIO11 measurements are also callback-derived and do not measure individual ADC sample intervals or intra-block jitter. For a real input check, manually tune the receiver to a JS8 HF dial frequency in USB (e.g. 7.078 MHz); the monitor itself does not tune the receiver. No JS8 sync, LDPC, CRC, message decode or sensitivity claim is possible at this stage.
+
+If JS8 audio monitor failed appears, metrics remain invalid, or synthetic metrics are far from the indicative values, stop and report the exact screen/counters before proceeding. Do not interpret a successful monitor test as proof of JS8 decoding. The protocol-valid NORMAL golden vector and decoder sample-consumer interface remain separate prerequisites for the next milestone.

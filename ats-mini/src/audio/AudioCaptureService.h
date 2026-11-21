@@ -26,3 +26,6 @@ private:
   Subscriber subscribers_[kMaxSubscribers]{};
   bool initialized_ = false;
 };
+
+// One capture task shared by all subscriber-based digital decoders.
+AudioCaptureService& sharedAudioCapture();

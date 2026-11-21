@@ -829,3 +829,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Auto-scroll only controls the visible three-message history. The periodic result poll always runs, and successful decoded messages are appended to the active log even while AUTO SCROLL is OFF.
 - The decoder intentionally shuts Wi-Fi down while active to protect timing/CPU headroom. Therefore log files are stored during reception and can be listed/downloaded after leaving FT8/FT4 and restoring the configured Wi-Fi mode, at `/radio/ft8-logs` (or `http://atsmini.local/radio/ft8-logs` when mDNS is available).
 - No LittleFS format/erase/mount behavior was changed. No build or hardware test performed.
+
+
+## FT8 preset submenu — 2026-11-21
+- User explicitly requested FT8 presets inside the FT8 actions overlay only. The main Decoder Frequencies menu and its category/preset contents are not changed. CW and RTTY are out of scope and untouched.
+- Added an `FT8 PRESETS` submenu to the FT8 actions overlay. It dynamically lists every entry tagged `DecoderKind::FT8` in the existing `src/radio/DecoderFrequencyList.h` category (10 entries): 160m 1.840, 80m 3.573, 60m 5.357, 40m 7.074, 30m 10.136, 20m 14.074, 17m 18.100, 15m 21.074, 12m 24.915 and 10m 28.074 MHz; all USB.
+- Selecting a preset chooses the narrowest existing receiver band covering that frequency, applies its preset frequency, USB mode and bandwidth index, and returns to the FT8 decoder screen. The FT8 decoder/audio worker remains active; no decoder/DSP/slot logic was edited. The broad ALL-SW band is deliberately avoided when a dedicated narrower band matches.
+- No extra 6m/2m frequencies were invented because the receiver's current bands stop at 30 MHz. Generic HF data-hunt, beacon, broadcast, RTTY, FAX and FT4 entries are not FT8 presets and were not imported. No changes to the main Decoder Frequencies menu.
+- Only `ats-mini/src/ftx/FtxUi.cpp` changed for this feature. No build, Actions run, flash or hardware test performed. Verify preset scrolling, band selection/tuning, USB mode, return to active FT8 decoder and subsequent decoding.

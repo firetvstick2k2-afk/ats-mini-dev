@@ -1251,3 +1251,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - English template renderer refinement committed as `1e53847a40e7ceac5f73ce318f2bb2af0ef55818`.
 - Moved the two diacritic dots for Ä/Ö/Ü and lowercase variants above the base glyph instead of drawing them into the upper part of the letter. This makes the umlaut marks visibly distinct on the small menu fonts as well.
 - Both commits were pushed to `development` with `[skip ci]`; no build was started. Hardware verification remains pending.
+
+
+## FT8/FT4 callsign country identification expansion — 2026-11-21
+- Expanded the callsign-prefix-to-country-code mapping in `ats-mini/src/ftx/FtxUi.cpp`. Explicit fixes include `LZ...` → `BG` (Bulgaria) and Russian `R...` calls such as `R4CJA` → `RU`; the existing `SP...` → `PL` mapping remains.
+- Added a broad set of commonly encountered DXCC prefixes across Europe, Asia, Africa, the Americas, and Oceania. Unrecognized or ambiguous callsigns still remain unlabelled rather than being assigned a guessed country.
+- Existing flag drawings are retained for countries with implemented graphics. For every other recognized country, the existing fallback draws the two-letter ISO country code (for example `BG`, `RU`, `PL`) in cyan in the flag position. No blank flag slot is shown when a country code is known.
+- The message parser, decoded text, FT8/FT4 DSP, audio capture, synchronization, slot timing, logging format, and message history are unchanged.
+- Source changes are in commits `d8e211950c5642cfeafa3b0db8a0385d80491726` and `e395890a49d7f7455eeb8e73c4d664bcf33391bc`; both target `development` only. The source commits used `[skip ci]` so the automatic workflow would start exactly once after this handoff update.
+- This handoff update is intentionally pushed without `[skip ci]` to start the OSPI-DE Development workflow. Build and hardware behavior must be confirmed from the resulting run; no compile result is claimed yet.
+- `main` remains untouched.

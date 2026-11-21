@@ -1155,3 +1155,9 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Next: host C++ tests with timing/frequency offsets, gain/noise and negative cases; then design a 50,560-sample (12.64 s / about 101 kB int16) bounded receive window. The existing 4,096-sample diagnostic ring is too short for a complete NORMAL frame.
 - LDPC/CRC/message decode remains blocked until an exact interoperable LDPC construction is lawfully available from an independent source. Preserve MIT; no GPL-derived tables.
 - No build, Actions, flash or hardware test. Code is not yet compiler-verified on ESP32. Commit sequence: `ce29d934a06c25cf7b7a55b89901dc4d3eaa3575` (header), `3fa1917feb7e169d259f202763e26844253ff9f2` (implementation), `963e83b7bc715a6d212547a36686a7c0b69ca205` (decoder-plan update).
+
+
+## JS8 NORMAL host test — 2026-11-21
+- Added `tests/js8_normal_sync_test.cpp` for the independent Costas metric. Host compile/run with g++17, -Wall -Wextra -Werror passed: correct 21-pilot NORMAL sequence with +1.25 Hz carrier hypothesis and 17-sample start offset; rejects deliberately altered Costas pilots; rejects incomplete frame window.
+- Test command and scope are documented in `JS8CALL_RECEIVE_DECODER.md` section 12. The fixture is not an LDPC/CRC-valid JS8 message. No ESP32 build yet.
+- Next: trigger the existing OSPI-DE workflow on a development push after the workflow trigger update. Artifact remains a single raw `Mini_OS_#<run>.bin`, with no partition files and no release on branch pushes. Then user manually flashes and follows the first monitor/firmware validation steps. Decoder remains sync-metric-only; no message decode claim.

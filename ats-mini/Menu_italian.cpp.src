@@ -123,6 +123,7 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_SPECTRUM    18
 #define MENU_ALL_SPECTRUM 19
 #define MENU_DECODER_FREQUENCIES 20
+#define MENU_FM_DX 21
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -151,7 +152,7 @@ static const char *menu[] =
 {
   "Modalita", "Bande", "Volume", "Tastiera", "DUAL RX", "VFO A/B",
   "Freq.", "BFO", "Passo", "Ricerca", "Scans.", "Memorie", "Squelch",
-  "Banda", "AGC/ATT", "AVC", "SoftMute", "Impostaz.", "Spet. VHF", "Spet. ALL", "Decoder Freq.",
+  "Banda", "AGC/ATT", "AVC", "SoftMute", "Impostaz.", "Spet. VHF", "Spet. ALL", "Decoder Freq.", "FM DX",
 };
 
 // Full labels are used only by the XXL full-screen menu.
@@ -161,7 +162,7 @@ static const char *menuXXL[] =
   "MODALITA", "BANDE", "VOLUME", "TASTIERA", "DUAL RX", "VFO A/B",
   "FREQUENZA", "BFO", "PASSO", "RICERCA", "SCANSIONE", "MEMORIE", "SQUELCH",
   "LARGHEZZA DI BANDA", "AGC/ATTENUAZIONE", "AVC", "RIDUZIONE RUMORE",
-  "IMPOSTAZIONI", "SPETTRO VHF", "SPETTRO COMPLETO", "FREQUENZE DECODER"
+  "IMPOSTAZIONI", "SPETTRO VHF", "SPETTRO COMPLETO", "FREQUENZE DECODER", "FM DX"
 };
 
 #define MENU_BRIGHTNESS   0
@@ -959,6 +960,7 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
     case MENU_DECODER_FREQUENCIES: decoderFrequencyOpen(); break;
+    case MENU_FM_DX: fmDxUiOpen(); break;
   }
 }
 
@@ -1079,6 +1081,7 @@ bool clickHandler(uint16_t cmd, bool shortPress)
 
 void selectBand(uint8_t idx, bool drawLoadingPatch)
 {
+  fmDxStop();
   // Expose the last reached stage to the web tune diagnostic endpoint.
   extern volatile uint8_t webTunePhase;
   webTunePhase = 8;

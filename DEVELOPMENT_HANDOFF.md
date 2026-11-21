@@ -1214,3 +1214,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Routed Settings subcommands through the shared renderer in Draw.cpp, keeping the dedicated Volume and Brightness popups.
 - Applied the UTF-8 umlaut-aware text renderer to popup headings and labels in both German and English menu sources; German Volume/Brightness labels are localized consistently.
 - This commit is intended for the next OSPI-DE hardware-test build. Build result and remaining menu/umlaut audit findings must be appended after CI.
+
+
+## Recovery: complete development tree restored — 2026-11-21
+- Root cause: commit `b5d1dfd36bb6d8e494b548dc3adc625c95aa800f` was created from an incomplete tree and unintentionally removed 31,894 lines across the project. This was an assistant-side Git tree construction error.
+- Recovery commit `0d3a7c5b0cfc1676e146d94d5b5fdb3d04f272cd` rebuilt the tree from the complete 238-entry tree of the preceding valid development state (`6b1558539ee1c442e919f8df943e2eb90946cd07`) and reapplied the five intended menu/handoff file changes from the faulty commit.
+- Verified after recovery: recursive tree contains 238 entries, not truncated; `ats-mini.ino`, `Station.cpp`, `SI4735-fixed.h`, CW, FT8, JS8, RTTY source files and `.github/workflows/build.yml` are present.
+- The recovery was committed on `development` only. `main` was not modified.
+- Recovery commit triggered OSPI-DE Build #21, run `44941837830`; status was in progress at the time of this entry. Build result/artifact must be appended after completion.
+- Outstanding work: inspect the restored settings-menu implementation against all command handlers, finish the UTF-8 menu audit, and implement RDS-CT automatic RTC/UTC-offset synchronization with minute precision before claiming those tasks complete.

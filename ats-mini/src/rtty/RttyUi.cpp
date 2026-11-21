@@ -51,11 +51,6 @@ constexpr int kManualBfoStep=5;
 constexpr float kTargetToneCenterHz=2210.0f;
 constexpr float kAutoDeadbandHz=18.0f;
 constexpr uint8_t kMenuCount=8;
-// Extra RTTY-only preset: keep this out of the shared top-level Decoder Frequencies list.
-static constexpr DecoderFrequencyPreset kRtty147UsbPreset={
-  "PINNEBERG DDH 47 USB",147,USB,4,DecoderKind::RTTY,50.0f
-};
-
 void applyBfo(int value) {
   int low=bfoAtEntry-kBfoLimit, high=bfoAtEntry+kBfoLimit;
   if(value<low) value=low;

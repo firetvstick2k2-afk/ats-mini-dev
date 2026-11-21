@@ -885,3 +885,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Shifted the main-menu indices for FT8/FT4 and Settings by one position to make room. Existing symbolic menu indices and settings handlers were kept aligned in both language files.
 - Changed only `ats-mini/Menu_german.cpp.src` and `ats-mini/Menu_english.cpp.src`. No FT8/FT4 decoder implementation, RTTY service/UI logic, TEF6686, LittleFS, or frequency preset definitions changed in this addition.
 - Source-only on `development`; no compile, Actions run, flash, or hardware test was performed. Verify that the main-menu order is Decoder Frequencies → RTTY Decoder → FT8 / FT4 Decoder and that the direct entry starts RTTY at the current frequency.
+
+
+## FT8/FT4 speaker mute correction — 2026-11-21
+- User tested the previous Speaker OFF implementation and found that FT8/FT4 stopped decoding when the external amplifier was disabled. The earlier assumption that `PIN_AMP_EN` was independent of the GPIO11 audio tap was therefore incorrect for the user's hardware.
+- Corrected `ats-mini/src/ftx/FtxUi.cpp`: during FT8/FT4, keep `PIN_AMP_EN` enabled so the GPIO11 capture path remains powered. Speaker ON/OFF now toggles only the active-high `AUDIO_MUTE` line (GPIO3 on ATS Mini), documented as the L/R audio mute. It does not call `rx.setAudioMute()` and does not change receiver volume or decoder capture.
+- On decoder entry, preserve the original amplifier and hardware-mute states; restore both on exit. Preset preview temporarily unmutes only the L/R speaker output and restores the prior speaker state afterward.
+- Changed only `ats-mini/src/ftx/FtxUi.cpp` plus these handoff notes. No FT8/FT4 DSP, slot timing, ADC capture service, RTTY, TEF6686, or LittleFS code changed.
+- Source-only correction on `development`, commit `3d00b9b7a6019ab0556763d97b95467d14e4b819`. No build, flash, or hardware verification performed. User should test: Speaker OFF must silence the speaker while FT8 decode counters/messages continue; Speaker ON restores audio; exit restores the prior mute/amplifier state.

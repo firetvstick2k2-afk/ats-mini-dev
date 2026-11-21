@@ -495,3 +495,5 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Not a valid JS8 frame and not decodable yet. No verified Costas sync, LDPC, CRC or message payload is included. This tests monitor block processing/levels/timing only. A protocol-valid NORMAL golden frame and decoder sample-consumer hook are still required.
 - Commits on development: 25d2723c6a97e92b48671481b1395b279d73d16f, b889bd8d3dbc36917097823ce79365110b969762, 0ed599949f1ed0b5f428b36ec501bdad7e9db337, fa04aa000084fd63524753addd412689600e8436, fd822658bd84d152f8b299ed13788fb266b4343e.
 - No compile, Actions, flash or hardware test.
+
+- UI follow-up: while the synthetic source is active, the monitor now labels it SYNTH / NOMINAL 4 kHz instead of implying GPIO11 is being sampled (commit 6f659ff205a64b6922ee772c5a882e0fe26fb927).

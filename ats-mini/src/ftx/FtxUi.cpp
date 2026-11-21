@@ -274,6 +274,8 @@ const DecoderFrequencyPreset* ftxPresetAt(uint8_t wanted)
   return nullptr;
 }
 
+bool applyFtxPreset(const DecoderFrequencyPreset& preset);
+
 void restoreFtxPresetPreviewSpeaker()
 {
   if(!ftxPresetPreviewSpeakerForced) return;

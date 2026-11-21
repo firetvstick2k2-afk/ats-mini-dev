@@ -329,13 +329,15 @@ void startFtxPresetPreview()
     return;
   }
 
+  // Treat the tune as provisional before calling the receiver: even a
+  // failed/partial tune must be rolled back to the saved VFO state.
+  ftxPresetPreviewActive = true;
   if(!applyFtxPreset(*preset)) {
-    ftxPresetPreviewPending = false;
+    restoreFtxPresetOriginal();
     return;
   }
 
   ftxPresetPreviewPending = false;
-  ftxPresetPreviewActive = true;
   if(PIN_AMP_EN >= 0 && !ftxSpeakerEnabled) {
     ftxPresetPreviewSpeakerWasEnabled = ftxSpeakerEnabled;
     ftxPresetPreviewSpeakerForced = true;
@@ -597,7 +599,12 @@ void ftxUiClick()
   }
   if(ftxPresetMenuOpen) {
     const DecoderFrequencyPreset* preset = ftxPresetAt(ftxPresetSelection);
-    const bool applied = ftxPresetPreviewActive || (preset && applyFtxPreset(*preset));
+    bool applied = ftxPresetPreviewActive;
+    if(!applied && preset) {
+      // Mark the tune provisional so a receiver tune mismatch is also rolled back.
+      ftxPresetPreviewActive = true;
+      applied = applyFtxPreset(*preset);
+    }
     if(applied)
       commitFtxPresetPreview();
     else

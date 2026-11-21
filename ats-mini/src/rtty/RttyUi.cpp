@@ -233,11 +233,17 @@ void drawRttyDecoderPage() {
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(0xFFFF,panel);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-    spr.drawString("RTTY ACTIONS",160,38);
+    spr.drawString("RTTY ACTIONS",160,35);
+    char toneStatus[48];
+    if(service.markHz()>0 && service.spaceHz()>0)
+      snprintf(toneStatus,sizeof(toneStatus),"MARK %.0f  SPACE %.0f Hz",service.markHz(),service.spaceHz());
+    else snprintf(toneStatus,sizeof(toneStatus),"TONE PAIR: SEARCHING...");
+    spr.setFont(FONT_SMALL);
+    spr.drawString(toneStatus,160,47);
     const char* labels[kMenuCount]={"BFO MODE","BAUD RATE","POLARITY","CLEAR TEXT","RESET DECODER","BACK","EXIT RTTY"};
     char value[32];
     for(uint8_t i=0;i<kMenuCount;++i) {
-      const int y=52+i*14;
+      const int y=59+i*12;
       const uint16_t bg=(i==menuIndex)?highlight:panel;
       spr.fillRect(36,y-6,248,13,bg);
       spr.setTextDatum(ML_DATUM);
@@ -255,6 +261,6 @@ void drawRttyDecoderPage() {
     spr.setTextColor(0xFFFF,panel);
     spr.setFont(FONT_SMALL);
     const char* hint=menuEditing?"ROTATE: CHANGE  CLICK: DONE":"ROTATE: SELECT  CLICK: OPEN";
-    spr.drawString(hint,160,149);
+    spr.drawString(hint,160,148);
   }
 }

@@ -37,7 +37,7 @@ void applyBfo(int value) {
 }
 }
 
-bool rttyUiOpen() {
+bool rttyUiOpen(float initialBaud) {
   restoreNetworkMode=wifiModeIdx;
   netStop();
   if(getWiFiStatus()!=0 || !service.enter()) {
@@ -55,6 +55,12 @@ bool rttyUiOpen() {
   pageActive=true;
   lastRefresh=0;
   baudIndex=0;
+  float bestDifference=fabsf(baudChoices[0]-initialBaud);
+  for(uint8_t i=1;i<3;++i) {
+    const float difference=fabsf(baudChoices[i]-initialBaud);
+    if(difference<bestDifference) { bestDifference=difference; baudIndex=i; }
+  }
+  service.setBaud(baudChoices[baudIndex]);
   return true;
 }
 

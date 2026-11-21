@@ -1295,3 +1295,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Static source checks: balanced braces in the modified main sketch and three menu sources and new radio files; no accidental literal newline escapes remain; FM DX is present in all three main menu arrays. No compiler/build/Actions/flash/hardware test was run. This code is not yet compiler-verified; the user will start the build manually.
 - Known tuning note: the adaptive thresholds are an initial software heuristic based on the existing receiver RSSI/SNR values, not calibrated RF measurements. Validate actual thresholds and audio behavior on hardware before treating them as final.
 - All changes are on `development`; `main` remains untouched.
+
+
+## FM-DX UI verification follow-up (2026-11-21)
+- Reworked `ats-mini/src/radio/FmDxUi.cpp` into the compact 320x170 monochrome DX instrument screen: left-aligned frequency, station/RDS clock, 20-segment red/yellow/green RSSI meter, SNR, PI, PTY, two-line RadioText, filter and AUTO/PAUSE status.
+- Static source audit confirmed the menu entries/actions exist in German, English and Italian; `CMD_FM_DX` dispatches to `drawFmDxPage()`; `fmDxUiTick()` requests 500 ms redraws; RSSI/SNR are sampled through the existing `processRssiSnr()`; the Makefile wildcard includes `src/radio/*.cpp/.h`.
+- Confirmed FM bandwidth table indices: array positions map to device indices Auto=0, 110k=1, 84k=2, 60k=3, 40k=4. The controller's 40/60/84 device indices therefore match the existing table.
+- Hardened lifecycle for external/remote band changes: the FM-DX page exits when the mode is no longer FM, and the controller no longer attempts to restore an FM filter while the receiver is in AM/SSB. Also made new UI variadic format arguments explicitly unsigned.
+- Remaining validation limits: no compilation, GitHub Actions, flash or hardware test was run. Stereo indication is not implemented because no verified live stereo/pilot getter was found in the checked `SI4735-fixed.h` wrapper. RSSI/SNR thresholds and filter decisions still require real receiver testing/calibration; they are not validated performance thresholds.
+- Work remains on `development` only; `main` was not targeted. User starts the build manually.

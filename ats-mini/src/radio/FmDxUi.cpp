@@ -9,6 +9,8 @@
 namespace {
   bool pageActive = false;
   uint32_t lastRefresh = 0;
+  bool stereoPilot = false;
+  uint8_t stereoBlend = 0;
 
   constexpr uint16_t BLACK  = 0x0000;
   constexpr uint16_t WHITE  = 0xFFFF;
@@ -48,6 +50,14 @@ namespace {
     spr.setTextColor(value && value[0] ? WHITE : GREY, BLACK);
     spr.drawString(value && value[0] ? value : "--", x, y, font);
   }
+
+  void updateStereoStatus() {
+    // FM_RSQ_STATUS supplies both the live 19 kHz pilot flag and stereo blend.
+    // Read it once per UI refresh; the getters below only inspect the cached response.
+    rx.getCurrentReceivedSignalQuality();
+    stereoPilot = rx.getCurrentPilot();
+    stereoBlend = rx.getCurrentStereoBlend();
+  }
 }
 
 bool fmDxUiOpen() {
@@ -58,6 +68,8 @@ bool fmDxUiOpen() {
   if(!fmDxStart()) return false;
   pageActive = true;
   lastRefresh = 0;
+  stereoPilot = false;
+  stereoBlend = 0;
   currentCmd = CMD_FM_DX;
   return true;
 }
@@ -79,6 +91,7 @@ bool fmDxUiTick(uint32_t now) {
   }
   if(static_cast<uint32_t>(now - lastRefresh) < 500) return false;
   lastRefresh = now;
+  updateStereoStatus();
   return true;
 }
 
@@ -105,7 +118,8 @@ void drawFmDxPage() {
   // Frequency stays left aligned; the unit is separate to preserve room on the right.
   char frequency[16];
   snprintf(frequency, sizeof(frequency), "%u.%02u",
-           static_cast<unsigned>(currentFrequency / 100),\n           static_cast<unsigned>(currentFrequency % 100));
+           static_cast<unsigned>(currentFrequency / 100),
+           static_cast<unsigned>(currentFrequency % 100));
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(WHITE, BLACK);
   spr.drawString(frequency, 7, 17, FONT_LARGE);
@@ -114,6 +128,20 @@ void drawFmDxPage() {
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(CYAN, BLACK);
   spr.drawString(fmDxBandwidthLabel(), 313, 27, FONT_SMALL);
+
+  // Live stereo state from the SI4735 pilot detector and blend metric.
+  char stereoText[20];
+  if(fmStereoIdx == FM_STEREO_MONO) {
+    snprintf(stereoText, sizeof(stereoText), "MONO LOCK");
+  } else if(stereoPilot) {
+    snprintf(stereoText, sizeof(stereoText), "STEREO %u%%",
+             static_cast<unsigned>(stereoBlend));
+  } else {
+    snprintf(stereoText, sizeof(stereoText), "MONO");
+  }
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(stereoPilot && fmStereoIdx != FM_STEREO_MONO ? GREEN : GREY, BLACK);
+  spr.drawString(stereoText, 313, 39, FONT_SMALL);
 
   // Station identity and valid RDS clock.
   spr.drawFastHLine(7, 49, 306, LINE);

@@ -492,4 +492,3 @@ void drawRttyDecoderPage() {
     }
   }
 }
-}

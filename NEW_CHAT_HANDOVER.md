@@ -510,3 +510,14 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 
 ## JS8 license decision / clean-room boundary — 2026-11-21
 The owner explicitly chose a fully independent implementation and preservation of the MIT license. Do not import GPL JS8Call code or copied/source-extracted LDPC tables. Public docs give the NORMAL waveform parameters but not the complete LDPC construction. A third-party article containing complete tables says those tables were machine-generated from JS8Call reference source, so it is not an independent table source and must not be copied. An arbitrary newly generated LDPC(174,87) matrix would be a different code and is not interoperable. Next: independently implement and test the NORMAL 4 kHz front end, Costas synchronization and soft 8-tone decisions with a clearly non-protocol-valid fixture; keep message decode blocked until the exact interoperable LDPC construction is lawfully available. Details: JS8CALL_RECEIVE_DECODER.md section 10. Latest documentation commits: 746dac66148af67abd18e196d08afc66924c70de (decoder plan), 06ff4d74da7c34391b44d04a78b3a1c9e5cae4d7 (development handoff). No build/Actions/flash was run.
+
+
+## FM-DX adaptive filter and screen — 21.11.2026
+
+- Automatic firmware workflow disabled for push events on `development`; only `workflow_dispatch` remains. Manual build is available when the user chooses. Workflow commit: `e14df4ad19c661cca25eaceb3a1d210cf3ea7751`. No build was launched.
+- FM-DX implementation added under `ats-mini/src/radio/`: `FmDxController.h/.cpp` and `FmDxUi.h/.cpp`.
+- Controller is FM-only, saves/restores the actual current SI4735 FM bandwidth, starts at 60 kHz, then uses RSSI/SNR hysteresis and a 6-second minimum dwell to select 40/60/84 kHz. It does not modify the band's persisted bandwidth index, AGC, or existing SI4735 stereo blend.
+- Dedicated screen is 320×170, dark navy/cyan/neon green, with frequency, RSSI, SNR and filter status. Short click pauses/resumes automatic filtering; long press exits/restores. Menu item appended in German, English and Italian. Existing layout renderers were not changed.
+- Integration: `CMD_FM_DX` in `Menu.h`, draw dispatch in `Draw.cpp`, menu actions in all three menu sources, loop/button/encoder and RSSI hooks in `ats-mini.ino`, stop-before-band-switch, and `src/radio/*.cpp` Makefile wildcard.
+- Static checks only (balanced braces and menu entries). No compilation, Actions, flash, or hardware validation. User starts the respective build manually. Initial RSSI/SNR thresholds need real receiver testing and may need calibration.
+- Work only on `development`; do not touch `main`.

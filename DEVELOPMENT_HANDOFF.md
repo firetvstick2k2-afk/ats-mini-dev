@@ -899,3 +899,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The UI Layout menu entry at index 8 is now labeled simply **DAB** in German and English; the explanatory FM-only suffix was removed.
 - The existing behavior is intentionally preserved: on FM the DAB Style renderer is used; on non-FM bands the existing TinyRadio fallback remains active.
 - No renderer or fallback logic is changed by the label-only adjustment.
+
+
+## DAB layout visual and logo corrections (2026-11-21)
+- DAB layout accents now use RGB565 `0x001F`, matching the vivid blue main-menu frame instead of cyan.
+- FM and PTY labels use centered text datum and the vertical center of their boxes. RDS RadioText is centered in its ticker frame.
+- RDS clock moved down to the vertical center of the top status row. Wi-Fi indicator moved further left of the battery voltage/icon.
+- Logo lookup now normalizes directory-entry paths to the `/Logos/<filename>` form before opening a PI-matched PNG. The existing LittleFS logo directory/migration logic is unchanged.
+- Only `ats-mini/Layout-DABStyle.cpp` and these handoff notes were changed. Source-only; no build or device test performed. If logos still do not appear, check that the flashed LittleFS image contains PI-named PNG files in `/Logos/` and confirm the station's received PI code.

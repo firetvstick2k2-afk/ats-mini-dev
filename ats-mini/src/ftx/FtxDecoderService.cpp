@@ -194,6 +194,17 @@ void FtxDecoderService::processChunk(const AudioChunk& chunk) {
   const int64_t slotLengthUs = mode_ == FtxMode::FT4 ? 7500000LL : 15000000LL;
 
   if (offlineSignalSync_) {
+    // A dropped audio-queue block breaks the rolling waveform. Discard the
+    // partial window and reacquire rather than deriving phase from a gap.
+    if (lastBlockStartUs_ && chunkStart - lastBlockStartUs_ > kBlockDurationUs * 2) {
+      ++timestampGaps_;
+      offlineLocked_ = false;
+      collecting_ = false;
+      activeSlotStartUs_ = 0;
+      offlineSampleCount_ = offlineWriteIndex_ = 0;
+      offlineWindowStartUs_ = offlineLastScanUs_ = offlineGridOriginUs_ = 0;
+      BootDiagnostics::write("[FTX][OFFLINE_SYNC] audio gap; restarting rolling acquisition");
+    }
     for (size_t i = 0; i < chunk.count; ++i) {
       if (offlineSampleCount_ < kOfflineWindowSamples) {
         if (offlineSampleCount_ == 0)

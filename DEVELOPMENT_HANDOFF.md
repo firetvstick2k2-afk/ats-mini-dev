@@ -1109,3 +1109,5 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Commits: monitor API 25d2723c6a97e92b48671481b1395b279d73d16f; playback worker b889bd8d3dbc36917097823ce79365110b969762; monitor UI controls 0ed599949f1ed0b5f428b36ec501bdad7e9db337; ADC-range correction fa04aa000084fd63524753addd412689600e8436; UI header fd822658bd84d152f8b299ed13788fb266b4343e.
 - Scope remains development only. No build, GitHub Actions run, flash or hardware test was started. The new code is not compiler-verified.
 - Next: source-review the playback lifecycle and timing, add a shared JS8-only sample consumer for the future decoder, then create an independently verified protocol-valid JS8 NORMAL golden frame (sync + payload + LDPC + CRC) and use it for actual decode tests. Do not confuse this synthetic tone sequence with that golden frame.
+
+- UI follow-up: while the synthetic source is active, the monitor now labels it SYNTH / NOMINAL 4 kHz instead of implying GPIO11 is being sampled (commit 6f659ff205a64b6922ee772c5a882e0fe26fb927).

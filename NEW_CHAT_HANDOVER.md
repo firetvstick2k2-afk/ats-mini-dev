@@ -426,3 +426,14 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Preserve existing FT8/FT4, CW, RTTY and all radio layouts/presets. Preserve the LILYGO GPIO11/SPI exclusion.
 - Licensing: ATS Mini is MIT; JS8Call reference source is GPLv3. Do not directly copy upstream GPL source into this repo without an explicit licensing decision.
 - No build or hardware test has been performed for JS8; user will perform firmware build and on-device reception tests.
+
+
+## JS8Call – aktueller Arbeitsstand (21.11.2026)
+- Weiterhin höchste Feature-Priorität: nativer JS8Call-Empfangsdecoder, ausschließlich RX. Kein TX, kein Encoder, keine PTT und keine Sendefunktion.
+- `JS8CALL_RECEIVE_DECODER.md` wurde anhand des aktuellen JS8Call-improved User Guide präzisiert: 8-FSK, 79 Symbole; NORMAL 15 s / 12,64 s Signal / 6,25 baud / 50 Hz; SLOW 30 s; FAST 10 s; JS8 40 6 s; JS8 60 ist experimentell und wird zurückgestellt.
+- NORMAL besitzt ein eigenes legacy-kompatibles Triple-Costas-Synchronisationsmuster. SLOW/FAST/JS8 40 verwenden drei unterschiedliche 7×7-Costas-Blöcke. JS8-Frame-/Payload-Parsing ist separat von FT8 zu implementieren.
+- USB und Slot-Synchronisation sind wesentlich. Mehr als ungefähr zwei Sekunden Zeitfehler können Decodierung verhindern. Keine erfundene UTC-Zeit und kein vorgetäuschter Slot-Lock.
+- Anzeige: empfangene Nachrichten zeilenweise als Lauftext; neue Zeilen unten, ältere automatisch nach oben. Pause/Weiter und manuelles Zurückblättern. Empfang und Logging laufen unabhängig von der Anzeige-Scrollposition weiter.
+- Die AudioCaptureService-Quelle (4 kHz, 24 Samples/Block) ist vorhanden und muss abonniert werden; keinen zweiten ADC-Sampler erzeugen. FT8-Engine nicht verändern oder als direkt JS8-kompatibel behandeln.
+- Aktuell wurden nur Protokoll-/UI-Plan und Handoff-Dokumentation aktualisiert. JS8-Firmwarecode ist noch nicht implementiert. Nächster Schritt: eigenständige NORMAL-Physical-Layer-Implementierung und JS8-Protokollparser, dann Referenzvektoren, danach UI/Logging.
+- Kein Build, keine Actions, kein Flash und kein Hardwaretest durch den Assistant.

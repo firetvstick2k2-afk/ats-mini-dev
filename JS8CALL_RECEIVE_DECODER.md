@@ -266,3 +266,15 @@ If JS8 audio monitor failed appears, metrics remain invalid, or synthetic metric
 - Lifecycle hardening (commits a9ed0983ed0cbe25f4d5d3a8e2676cbc44bad4bd and 917491b5a01dd728d47cc3c0084a6b008dbefd66): each queued audio block carries a source-generation tag. Source switches invalidate in-flight/stale callbacks so a GPIO11 block cannot be mistaken for synthetic playback or leak into the resumed live stream. This is source-reviewed only; no concurrency stress test or build has been run.
 
 - Follow-up to the source-generation guard: generation reads/increments are now serialized with the monitor's portMUX critical section so the UI stop action and worker auto-completion cannot lose a concurrent increment. Commits b707dc93a9b195a934576154d486655e361cf747 and df014139b7e3311072749fdced86d2e8c6ebbfd9. Still source-reviewed only; compile/runtime validation remains pending.
+
+
+## 9. JS8 display cleanup and next validation milestone (2026-11-21)
+
+- Replaced the blue diagnostic page with a pure-black, high-contrast text-first layout: white primary text, muted secondary text and restrained green status/counter accents.
+- Reduced diagnostics to three compact lines (callback-derived rate/block interval; RMS/ADC range; DROP/GAP/CLIP). The lower portion is reserved for decoded messages and currently shows an explicit waiting state.
+- The message area must remain empty until a candidate passes JS8-specific synchronization, LDPC decoding and CRC validation. Never show a fabricated sample message as if it were received.
+- The existing short-click signal remains only a generic audio-pipeline test. It must be relabeled/kept distinct from a protocol-valid JS8 test; it does not yet feed a JS8 decoder.
+- Next milestone is a protocol-valid, independently generated JS8 NORMAL golden frame with a fixed known payload and exact metadata (79 symbols, sync positions, tone sequence, 4 kHz PCM, symbol/frame timing, expected 75-bit payload and CRC result). Validate the fixture independently on a host before adding it to firmware.
+- After the golden vector is validated, implement the JS8-only sample consumer and NORMAL sync/soft-decision/LDPC/CRC path. Add a clearly labeled on-device self-test that routes the known vector through the same decoder path and displays the expected text only when the decoder actually recovers it.
+- Do not call the generic 8-FSK monitor stimulus a JS8 decode test. Do not copy GPLv3 JS8Call source/tables into this MIT repository. Do not run builds/Actions; user handles manual builds.
+- UI-only change commit: 959e58308b4982fa96e3a754c7bc4f0249b55597. Source-only; not compiled or hardware-tested.

@@ -486,7 +486,7 @@ void drawFtxDecoderPage()
   // Three large, alternating blue message rows with flag and QTH distance.
   for(int i=0;i<3;++i) {
     const int y=52+i*37;
-    spr.fillRect(7,y,306,34,(i&1)?blueLight:blueDark);
+    spr.fillRect(7,y,306,34,blueDark);
     spr.drawRect(7,y,306,34,0x0359);
     if(!recentMessages[i].text[0]) {
       if(i==0) {

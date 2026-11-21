@@ -521,3 +521,12 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Integration: `CMD_FM_DX` in `Menu.h`, draw dispatch in `Draw.cpp`, menu actions in all three menu sources, loop/button/encoder and RSSI hooks in `ats-mini.ino`, stop-before-band-switch, and `src/radio/*.cpp` Makefile wildcard.
 - Static checks only (balanced braces and menu entries). No compilation, Actions, flash, or hardware validation. User starts the respective build manually. Initial RSSI/SNR thresholds need real receiver testing and may need calibration.
 - Work only on `development`; do not touch `main`.
+
+
+## FM-DX UI verification follow-up (2026-11-21)
+- Reworked `ats-mini/src/radio/FmDxUi.cpp` into the compact 320x170 monochrome DX instrument screen: left-aligned frequency, station/RDS clock, 20-segment red/yellow/green RSSI meter, SNR, PI, PTY, two-line RadioText, filter and AUTO/PAUSE status.
+- Static source audit confirmed the menu entries/actions exist in German, English and Italian; `CMD_FM_DX` dispatches to `drawFmDxPage()`; `fmDxUiTick()` requests 500 ms redraws; RSSI/SNR are sampled through the existing `processRssiSnr()`; the Makefile wildcard includes `src/radio/*.cpp/.h`.
+- Confirmed FM bandwidth table indices: array positions map to device indices Auto=0, 110k=1, 84k=2, 60k=3, 40k=4. The controller's 40/60/84 device indices therefore match the existing table.
+- Hardened lifecycle for external/remote band changes: the FM-DX page exits when the mode is no longer FM, and the controller no longer attempts to restore an FM filter while the receiver is in AM/SSB. Also made new UI variadic format arguments explicitly unsigned.
+- Remaining validation limits: no compilation, GitHub Actions, flash or hardware test was run. Stereo indication is not implemented because no verified live stereo/pilot getter was found in the checked `SI4735-fixed.h` wrapper. RSSI/SNR thresholds and filter decisions still require real receiver testing/calibration; they are not validated performance thresholds.
+- Work remains on `development` only; `main` was not targeted. User starts the build manually.

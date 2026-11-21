@@ -58,7 +58,7 @@ bool FtxDecoderService::enter(FtxMode mode, bool wifiOff, bool utcSynchronized, 
   if (!capture.begin() || !begin(capture)) return false;
 
   xSemaphoreTake(engineMutex_, portMAX_DELAY);
-  const bool ready = decoder_.begin(mode);
+  bool ready = decoder_.begin(mode);
   if (ready) {
     mode_ = mode;
     offlineSignalSync_ = offlineSignalSync;
@@ -195,9 +195,13 @@ void FtxDecoderService::processChunk(const AudioChunk& chunk) {
 
   if (offlineSignalSync_) {
     for (size_t i = 0; i < chunk.count; ++i) {
-      if (offlineSampleCount_ == 0) offlineWindowStartUs_ = chunkStart + static_cast<int64_t>(i) * 1000000LL / AudioCaptureService::kSampleRate;
-      else if (offlineSampleCount_ == kOfflineWindowSamples) offlineWindowStartUs_ += 1000000LL / AudioCaptureService::kSampleRate;
-      else ++offlineSampleCount_;
+      if (offlineSampleCount_ < kOfflineWindowSamples) {
+        if (offlineSampleCount_ == 0)
+          offlineWindowStartUs_ = chunkStart + static_cast<int64_t>(i) * 1000000LL / AudioCaptureService::kSampleRate;
+        ++offlineSampleCount_;
+      } else {
+        offlineWindowStartUs_ += 1000000LL / AudioCaptureService::kSampleRate;
+      }
       offlineSamples_[offlineWriteIndex_] = chunk.samples[i];
       offlineWriteIndex_ = (offlineWriteIndex_ + 1) % kOfflineWindowSamples;
     }

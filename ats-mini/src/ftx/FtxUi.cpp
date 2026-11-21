@@ -822,9 +822,11 @@ bool ftxUiOpen(FtxMode mode)
   // uses the separate active-high L/R mute line (GPIO3), not AMP_EN.
   ftxSpeakerAmpBefore = PIN_AMP_EN < 0 || digitalRead(PIN_AMP_EN) == HIGH;
   ftxAudioMuteBefore = digitalRead(AUDIO_MUTE) == HIGH;
-  ftxSpeakerEnabled = ftxSpeakerAmpBefore && !ftxAudioMuteBefore;
+  // FT8/FT4 always opens silently. The user can explicitly enable the speaker
+  // from the decoder Actions menu; the previous speaker state is restored on exit.
+  ftxSpeakerEnabled = false;
   if(PIN_AMP_EN >= 0) digitalWrite(PIN_AMP_EN, HIGH);
-  digitalWrite(AUDIO_MUTE, ftxSpeakerEnabled ? LOW : HIGH);
+  digitalWrite(AUDIO_MUTE, HIGH);
 
   memset(recentMessages,0,sizeof(recentMessages));
   decodedMessageCount=0;

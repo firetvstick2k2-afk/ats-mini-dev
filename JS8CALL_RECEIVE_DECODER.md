@@ -226,3 +226,17 @@ Do not begin by adding the JS8 LDPC decoder or a UI. First add a non-invasive, J
 The callback must only copy/enqueue a bounded block and timestamp it. All window statistics and spectral analysis belong in the JS8 worker. A measured callback cadence is only an estimate of the capture scheduler output timing; it cannot expose every intra-block ADC interval. If the diagnostic shows unacceptable jitter or drift, evaluate a narrowly scoped timing improvement to the shared capture service separately and regression-test existing digital decoders before adopting it.
 
 Do not change the shared sampler just to suit JS8 before this measurement. In particular, do not create a second ADC sampler, do not alter FT8/CW/RTTY behavior as a side effect, and do not claim that the 4 kHz stream is suitable until the real capture path passes these checks.
+
+
+## 2d. First diagnostic subscriber implementation (2026-11-21)
+
+A JS8-owned diagnostic subscriber has now been added under ats-mini/src/js8/:
+
+- Js8AudioMonitor.h/.cpp subscribes to the existing AudioCaptureService; it never calls analogRead() and does not create or change an ADC sampler.
+- The callback captures a monotonic esp_timer_get_time() observation, copies the bounded 24-sample block into a 96-block queue, increments minimal callback/queue-drop counters, and returns. It does not perform sample statistics, filtering or spectral analysis.
+- A separate low-priority worker estimates delivered block cadence (interval min/max/mean and effective output rate), counts long gaps/missing-block estimates, measures ADC min/max/DC/AC-RMS/near-rail samples, and retains the newest 4,096 raw samples for later spectral analysis.
+- The wall-clock callback timestamp is intentionally ignored for cadence measurement. The reported rate is an estimate from callback delivery timestamps and known block sample counts; it is not a measurement of individual analogRead() intervals or intra-block jitter.
+- The service exposes begin(), stop(), copyMetrics() and copyRecentSamples(). It is not yet connected to a JS8 menu, UI or decoder lifecycle, and it does not decode JS8.
+- The LILYGO GPIO11/SPI guard remains intact. Makefile wildcard lists include the new src/js8 files.
+- Next gate: review this module, add an isolated JS8 diagnostic lifecycle/view, then collect controlled-tone and lawful JS8 NORMAL measurements. Do not implement NORMAL DSP until the actual capture evidence is acceptable.
+- No build, repository check, GitHub Actions run, flash or hardware test has been performed.

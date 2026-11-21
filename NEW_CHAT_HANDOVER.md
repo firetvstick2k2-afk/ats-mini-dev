@@ -545,3 +545,11 @@ The owner explicitly chose a fully independent implementation and preservation o
 - FT8/FT4 still raises the SI473x output volume to 50/63 while the decoder is active, then restores the pre-decoder volume on exit. Decoder capture/DSP samples are unchanged.
 - FT8/FT4 now always enters with the external speaker muted (speaker toggle OFF), while the amplifier remains powered for the existing GPIO11 decoder audio tap. The user can turn the speaker ON explicitly in the decoder Actions menu. On exit, the speaker mute/amplifier state from before entering the decoder is restored.
 - Scope: `development` only. No build, GitHub Actions, flash or hardware test was run; user performs the OSPI-DE build and device verification. `main` remains untouched.
+
+
+## FM-DX control and layout corrections — 2026-11-22
+- Encoder rotation on the FM-DX page now tunes the current FM frequency using the selected band step and existing updateFrequency() range/wrap logic. The updateFrequency() declaration is kept at global namespace scope to match its definition in ats-mini.ino.
+- Short encoder click opens a compact FM-DX Actions overlay. Rotate to select AUTO start/pause, cycle the manual filter width (84/60/40 kHz), or Back; click applies the selected action. Long press still exits.
+- Controller lifecycle now distinguishes pausing adaptive AUTO from ending the FM-DX session. The originally active FM bandwidth is captured once and restored on page exit; manual filter selection and AUTO pause/resume do not lose the saved bandwidth. External mode changes still avoid applying an FM filter while in AM/SSB.
+- Display refinements: bandwidth indicator moved upward; MHz baseline adjusted lower alongside the frequency; PI/PTY values aligned to their labels; RadioText remains left-aligned and is positioned within the text panel using the larger default font; footer spacing added between FILTER and the bandwidth value.
+- Scope is development only. No build, GitHub Actions, flash or hardware test was run. Static source review only; user will run the OSPI-DE build manually. Main untouched.

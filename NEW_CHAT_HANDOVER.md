@@ -328,7 +328,7 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 ## DAB layout fine-tuning (21.11.2026)
 - Main-menu neon-blue frame color matched with RGB565 `0x001F` throughout the DAB layout.
 - FM, PTY and RDS RadioText centered in their respective frames; RDS clock lowered; Wi-Fi icon moved left to avoid battery-voltage overlap.
-- PI logo file path normalized to `/Logos/<filename>` before opening the PNG. LittleFS mount/migration untouched.
+- The initial local-only PNG lookup was superseded by the Mini_OS StationLogoClient port documented below; the final directory is lowercase `/logos/` with boot migration and online fallback.
 - Changed only `ats-mini/Layout-DABStyle.cpp` plus handoff notes. Build/hardware validation pending.
 
 ## DAB Style station logos — Mini_OS port (2026-11-21)

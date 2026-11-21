@@ -25,6 +25,7 @@
 #include "AllBandSpectrum.h"
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
+#include "src/cw/CwUi.h"
 #include "StationLogoClient.h"
 
 
@@ -680,6 +681,16 @@ void loop()
   ButtonTracker::State pb1st = pb1.update(digitalRead(ENCODER_PUSH_BUTTON) == LOW);
   if(!pb1st.isPressed) decoderMenuLongPressHandled = false;
 
+  // Handle CW exit immediately after sampling the physical button.
+  if(currentCmd == CMD_CW_DECODER && pb1st.isLongPressed && !decoderMenuLongPressHandled)
+  {
+    decoderMenuLongPressHandled = true;
+    pb1st.wasClicked = pb1st.wasShortPressed = false;
+    cwUiExit();
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime = millis();
+  }
+
   // Handle RTTY exit immediately after sampling the physical button. Keep this
   // ahead of encoder/remote input processing so a long hold cannot be consumed
   // by another input path before the decoder gets a chance to close cleanly.
@@ -778,6 +789,14 @@ void loop()
   if(currentCmd == CMD_FTX_DECODER && encCount)
   {
     ftxUiRotate(encCount);
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime;
+    encCount = encCountAccel = 0;
+  }
+
+  if(currentCmd == CMD_CW_DECODER && encCount)
+  {
+    cwUiRotate(encCount);
     needRedraw = true;
     elapsedSleep = elapsedCommand = currentTime;
     encCount = encCountAccel = 0;
@@ -933,6 +952,13 @@ void loop()
       elapsedSleep = elapsedCommand = currentTime = millis();
       pb1st.wasClicked = pb1st.wasShortPressed = false;
     }
+    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_CW_DECODER)
+    {
+      cwUiClick();
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+      pb1st.wasClicked = pb1st.wasShortPressed = false;
+    }
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_RTTY_DECODER)
     {
       rttyUiClick();
@@ -1053,13 +1079,15 @@ void loop()
     needRedraw = true;
   if(currentCmd == CMD_RTTY_DECODER && rttyUiTick(currentTime))
     needRedraw = true;
+  if(currentCmd == CMD_CW_DECODER && cwUiTick(currentTime))
+    needRedraw = true;
 
   if(currentCmd == CMD_DECODER_FREQUENCIES && decoderFrequencyTick(currentTime))
     needRedraw = true;
 
   if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
   {
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_RTTY_DECODER)
+    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER)
     {
       currentCmd = CMD_NONE;
       needRedraw = true;

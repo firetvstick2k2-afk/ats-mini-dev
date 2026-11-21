@@ -58,6 +58,8 @@ private:
   void publishWindow(int64_t endTimeUs);
   void resetMeasurementState();
   void makeTestBlock(AudioBlock& block);
+  uint32_t currentSourceGeneration() const;
+  uint32_t advanceSourceGeneration();
 
   static constexpr size_t kQueueDepth = 96;
   static constexpr uint32_t kWindowUs = 1000000;
@@ -75,7 +77,7 @@ private:
   volatile bool active_ = false;
   volatile bool resetRequested_ = false;
   volatile bool testPlayback_ = false;
-  volatile uint32_t sourceGeneration_ = 0;
+  uint32_t sourceGeneration_ = 0;
   bool initialized_ = false;
 
   uint32_t testSampleIndex_ = 0;

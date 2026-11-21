@@ -1,6 +1,9 @@
 name: Build Firmware
 
 on:
+  push:
+    branches:
+      - development
   workflow_dispatch:
     inputs:
       revision:

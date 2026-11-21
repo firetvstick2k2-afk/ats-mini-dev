@@ -3,7 +3,7 @@
 Stand: 21.11.2026  
 Repository: `firetvstick2k2-afk/ats-mini-dev` (privat)  
 Arbeitsbranch: `development`  
-Letzter Code-Stand: CW-Decoder-Port in Arbeit abgeschlossen; Handoff-Dokument wird aktualisiert.
+Letzter bestätigter Commit: 1e4a90b5dba54407dcf239501f2dd681adeb4e17 (CW-Decoder-Port und Handoff-Dokumentation).
 
 ## 1. Wichtige Arbeitsregeln
 

@@ -25,6 +25,7 @@
 #include "AllBandSpectrum.h"
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
+#include "StationLogoClient.h"
 
 
 // SI473/5 and UI
@@ -213,7 +214,8 @@ void setup()
   }
 
   diskInit();
-  logosInit();  // Prepare /Logos and migrate legacy root-level PNG logos.
+  logosInit();  // Prepare /logos and migrate legacy root-level PNG logos.
+  dabLogoBegin();
 
   if(!ESP.getPsramSize() || !memoriesInit()) {
     ledcWrite(PIN_LCD_BL, 255);

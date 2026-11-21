@@ -315,27 +315,104 @@ bool locatorCenter(const char* locator, double& lat, double& lon)
   return true;
 }
 
-bool distanceFromQthKm(const char* locator, int& km)
+bool distanceBetweenKm(double lat1, double lon1, double lat2, double lon2, int& km)
 {
-  double lat2, lon2;
-  if(!locatorCenter("JO31TV", lat2, lon2)) return false;
-  double lat1, lon1;
-  if(!locatorCenter(locator, lat1, lon1)) return false;
   const double rad = 0.017453292519943295;
   const double dLat = (lat1-lat2)*rad;
   const double dLon = (lon1-lon2)*rad;
   const double a = sin(dLat/2)*sin(dLat/2) +
     cos(lat2*rad)*cos(lat1*rad)*sin(dLon/2)*sin(dLon/2);
-  const double c = 2.0*atan2(sqrt(a), sqrt(1.0-a));
-  km = static_cast<int>(6371.0*c + 0.5);
+  const double arc = 2.0*atan2(sqrt(a), sqrt(1.0-a));
+  km = static_cast<int>(6371.0*arc + 0.5);
   return true;
 }
 
+bool distanceFromQthKm(const char* locator, int& km)
+{
+  double qthLat, qthLon, stationLat, stationLon;
+  if(!locatorCenter("JO31TV", qthLat, qthLon) ||
+     !locatorCenter(locator, stationLat, stationLon)) return false;
+  return distanceBetweenKm(stationLat, stationLon, qthLat, qthLon, km);
+}
+
+// Approximate geographic centers (not station locations). Used only when a
+// decoded callsign identifies a country but the message contains no locator.
+bool countryCenter(const char* country, double& lat, double& lon)
+{
+  struct CountryCenter { const char* code; double lat; double lon; };
+  static const CountryCenter centers[] = {
+    {"DE",51.2,10.4},{"PL",52.0,19.0},{"RU",55.75,37.6},{"UA",49.0,32.0},
+    {"BG",42.7,25.5},{"FR",46.2,2.2},{"GB",54.0,-2.0},{"IT",42.8,12.8},
+    {"ES",40.2,-3.7},{"PT",39.5,-8.0},{"NL",52.2,5.3},{"BE",50.8,4.5},
+    {"CH",46.8,8.2},{"AT",47.6,14.1},{"CZ",49.8,15.5},{"SK",48.7,19.5},
+    {"SE",62.0,15.0},{"NO", res, 10.0},{"DK",56.0,10.0},{"FI",64.0,26.0},
+    {"IE",53.2,-8.0},{"IS",65.0,-18.0},{"GR",39.0,22.0},{"RO",45.8,24.9},
+    {"HU",47.2,19.5},{"RS",44.0,21.0},{"HR",45.2,15.5},{"SI",46.1,14.9},
+    {"ME",42.7,19.3},{"MD",47.0,28.5},{"EE",58.7,25.5},{"LV",56.9,24.6},
+    {"LT",55.2,23.9},{"BY",53.7,27.9},{"IL",31.5,34.8},{"TR",39.0,35.0},
+    {"CY",35.1,33.4},{"MT",35.9,14.4},{"US",39.8,-98.6},{"CA",56.0,-106.0},
+    {"MX",23.6,-102.5},{"BR",-10.0,-55.0},{"AR",-38.4,-63.6},{"CL",-30.0,-71.0},
+    {"CO",4.5,-74.0},{"VE",8.0,-66.0},{"PE",-9.2,-75.0},{"AU",-25.0,134.0},
+    {"NZ",-41.0,174.0},{"JP",36.2,138.3},{"CN",35.0,103.0},{"KR",36.5,127.8},
+    {"IN",22.0,79.0},{"ID",-2.0,118.0},{"TH",15.0,101.0},{"MY",4.2,102.0},
+    {"PH",12.9,122.0},{"TW",23.7,121.0},{"SG",1.35,103.8},{"LK",7.9,80.7},
+    {"PK",30.4,69.3},{"IR",32.0,53.0},{"IL",31.5,34.8},{"SA",24.0,45.0},
+    {"AE",24.0,54.0},{"OM",21.0,57.0},{"QA",25.3,51.2},{"BH",26.0,50.5},
+    {"JO",31.2,36.0},{"EG",26.8,30.8},{"ZA",-29.0,24.0},{"MA",31.8,-7.1},
+    {"KE",0.2,37.9},{"GH",7.9,-1.0},{"NG",9.1,8.7},{"TN",34.0,9.0},
+    {"DZ",28.0,1.7},{"LY",26.3,17.2},{"ET",9.1,40.5},{"TZ",-6.3,35.0},
+    {"UG",1.4,32.3},{"ZM",-13.1,27.8},{"NA",-22.0,17.0},{"BW",-22.0,24.0},
+    {"MG",-19.0,46.7},{"NZ",-41.0,174.0},{"EC",-1.5,-78.4},{"UY",-32.8,-56.0},
+    {"BO",-17.0,-65.0},{"CR",10.0,-84.0},{"PA",8.5,-80.0},{"GT",15.5,-90.2},
+    {"SV",13.8,-88.9},{"HN",15.0,-86.5},{"NI",13.0,-85.0},{"PY",-23.4,-58.4},
+    {"CU",21.5,-78.0},{"DO",19.0,-70.7},{"JM",18.1,-77.3},{"TT",10.7,-61.2},
+    {"IS",65.0,-18.0},{"NZ",-41.0,174.0},{"FJ",-17.8,178.1},{"PG",-6.3,145.0},
+    {"VU",-16.0,167.0},{"WS",-13.8,-172.0},{"TO",-21.2,-175.1},{"CV",15.1,-23.6},
+    {"MW",-13.3,34.3},{"RW",-1.9,29.9},{"BI",-3.4,29.9},{"SL",8.5,-11.8},
+    {"LR",6.4,-9.4},{"GA",-0.6,11.6},{"CI",7.5,-5.5},{"BJ",9.5,2.3},
+    {"ML",17.0,-4.0},{"BF",12.3,-1.5},{"GN",10.4,-10.8},{"NE",17.6,8.1},
+    {"TG",8.6,0.8},{"TD",15.0,19.0},{"SD",15.0,30.0},{"AO",-12.5,18.5},
+    {"MZ",-18.7,35.5},{"KM",-11.7,43.3},{"CD",-3.0,23.0},{"CG",-1.0,15.0},
+    {"CF",6.6,20.9},{"ST",0.2,6.6},{"GW",12.0,-15.0},{"DJ",11.8,42.6},
+    {"AG",17.1,-61.8},{"BB",13.2,-59.5},{"BS",24.3,-76.0},{"BZ",17.2,-88.7},
+    {"BM",32.3,-64.7},{"KY",19.3,-81.2},{"AW",12.5,-69.9},{"CW",12.2,-69.0},
+    {"BQ",12.2,-68.3},{"SX",18.0,-63.0},{"TC",21.8,-71.8},{"GP",16.2,-61.6},
+    {"MQ",14.6,-61.0},{"GF",4.0,-53.0},{"GI",36.1,-5.4},{"SH",-15.9,-5.7},
+    {"NC",-21.3,165.5},{"PF",-17.7,-149.4},{"FM",7.4,151.8},{"PW",7.5,134.5},
+    {"CK",-21.2,-159.8},{"BN",4.5,114.7},{"BT",27.5,90.4},{"BD",24.0,90.0},
+    {"NP",28.3,84.0},{"KH",12.6,105.0},{"LA",19.0,103.0},{"IQ",33.0,44.0},
+    {"KH",12.6,105.0},{"LS",-29.6,28.2},{"PY",-23.4,-58.4},{"SR",4.0,-56.0},
+    {"EC",-1.5,-78.4},{"PE",-9.2,-75.0},{"JO",31.2,36.0},{"SY",35.0,38.0},
+    {"KW",29.3,47.5},{"MR",20.3,-10.5},{"NE",17.6,8.1},{"BF",12.3,-1.5},
+    {"GN",10.4,-10.8},{"BI",-3.4,29.9},{"RW",-1.9,29.9},{"UG",1.4,32.3},
+    {"TT",10.7,-61.2},{"AG",17.1,-61.8},{"GD",12.1,-61.7},{"LC",13.9,-60.9},
+    {"DM",15.4,-61.4},{"VC",13.3,-61.2},{"MU",-20.2,57.5},{"GI",36.1,-5.4}
+  };
+  for(const CountryCenter& center : centers) {
+    if(!strcmp(country, center.code)) {
+      lat = center.lat;
+      lon = center.lon;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool distanceFromCountryKm(const char* country, int& km)
+{
+  double qthLat, qthLon, stationLat, stationLon;
+  if(!locatorCenter("JO31TV", qthLat, qthLon) ||
+     !countryCenter(country, stationLat, stationLon)) return false;
+  return distanceBetweenKm(stationLat, stationLon, qthLat, qthLon, km);
+}
+
 void extractMetadata(const char* message, char* country, size_t countrySize,
-                     char* locator, size_t locatorSize, int& distanceKm)
+                     char* locator, size_t locatorSize, int& distanceKm,
+                     bool& distanceEstimated)
 {
   country[0] = locator[0] = 0;
   distanceKm = -1;
+  distanceEstimated = false;
   char copy[FTX_MAX_MESSAGE_LENGTH + 1] = {};
   strncpy(copy, message, sizeof(copy)-1);
   char* save = nullptr;
@@ -353,7 +430,10 @@ void extractMetadata(const char* message, char* country, size_t countrySize,
       }
     }
   }
-
+  // A real locator always wins. Only estimate from the country when none exists.
+  if(distanceKm < 0 && country[0]) {
+    distanceEstimated = distanceFromCountryKm(country, distanceKm);
+  }
 }
 
 void drawFlag(const char* country, int x, int y)
@@ -635,7 +715,8 @@ void ftxLogMessage(const FtxDecodedMessage& message)
   if(haveTime) strftime(timeText, sizeof(timeText), "%Y-%m-%d %H:%M:%S", &stamp);
   char country[4] = {}, locator[8] = {};
   int distanceKm = -1;
-  extractMetadata(message.text, country, sizeof(country), locator, sizeof(locator), distanceKm);
+  bool distanceEstimated = false;
+  extractMetadata(message.text, country, sizeof(country), locator, sizeof(locator), distanceKm, distanceEstimated);
   file.printf("%s | %u.%03u | %s | %s | %s | ",
               timeText,
               static_cast<unsigned>(currentFrequency / 1000),
@@ -643,7 +724,7 @@ void ftxLogMessage(const FtxDecodedMessage& message)
               pageMode == FtxMode::FT4 ? "FT4" : "FT8",
               country[0] ? country : "Unknown",
               locator[0] ? locator : "N/A");
-  if(distanceKm >= 0) file.printf("%d", distanceKm);
+  if(distanceKm >= 0) file.printf("%s%d", distanceEstimated ? "~" : "", distanceKm);
   else file.print("N/A");
   file.printf(" | %.1f | %s\n", message.snrDb, message.text);
   file.flush();
@@ -959,8 +1040,8 @@ void drawFtxDecoderPage()
       if(i==0) { spr.setFont(&lgfx::fonts::FreeSansBold9pt7b); spr.setTextDatum(ML_DATUM); spr.setTextColor(cyan); spr.drawString("Waiting for FT8/FT4 decodes...",14,y+8); }
       continue;
     }
-    char country[4]={}, locator[8]={}; int distanceKm=-1;
-    extractMetadata(recentMessages[i].text,country,sizeof(country),locator,sizeof(locator),distanceKm);
+    char country[4]={}, locator[8]={}; int distanceKm=-1; bool distanceEstimated=false;
+    extractMetadata(recentMessages[i].text,country,sizeof(country),locator,sizeof(locator),distanceKm,distanceEstimated);
     if(country[0]) drawFlag(country,12,y+5);
     const int messageX=country[0]?40:14, distanceWidth=64;
     const int messageWidth=306-(messageX-7)-distanceWidth-8;
@@ -968,7 +1049,7 @@ void drawFtxDecoderPage()
     char distanceText[16];
     if(distanceKm>=0) {
       if(distanceKm>=10000) snprintf(distanceText,sizeof(distanceText),">9999 km");
-      else snprintf(distanceText,sizeof(distanceText),"%d km",distanceKm);
+      else snprintf(distanceText,sizeof(distanceText),"%s%d km",distanceEstimated?"~":"",distanceKm);
     } else snprintf(distanceText,sizeof(distanceText),"---");
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b); spr.setTextDatum(TR_DATUM);
     spr.setTextColor(distanceKm>=0?cyan:0x7BEF); spr.drawString(distanceText,306,y+7);

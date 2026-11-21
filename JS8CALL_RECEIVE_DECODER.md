@@ -37,6 +37,19 @@ USB is required. The official guide warns that clock error greater than about tw
 - Store the selection in ESP32 Preferences/NVS so it survives decoder exit and power cycles. Default to ONLINE when no saved preference exists.
 - The JS8 timing implementation must be independent of FT8 decoder internals; only the UX concept and safe shared infrastructure may be reused. OFFLINE must be validated against JS8 signals, not inferred from FT8 lock.
 
+## 2a. Verified physical-layer frame dimensions and sample-rate implications
+
+The current JS8Call source confirms the common channel dimensions:
+
+- 79 transmitted symbols per frame: 21 synchronization symbols (three 7-symbol Costas blocks) and 58 data symbols.
+- The channel code is LDPC(174,87): 87 information bits (75 payload bits plus a 12-bit CRC) and 87 parity bits.
+- CRC-12 uses polynomial 0xC06 with the JS8-specific XOR value 42. CRC validation is mandatory before a decoded payload is passed to the message parser.
+- NORMAL uses the original Costas sequence; the other established speeds use modified mode-specific synchronization arrays. Do not accept a mode based on tone energy or a sync-like pattern alone.
+
+The upstream implementation processes 12 kHz audio, while the ATS Mini shared capture currently provides 4 kHz. Do not copy upstream FFT/sample-count constants into the ATS Mini. At 4 kHz, the nominal samples per symbol are exactly 640 (NORMAL), 1,280 (SLOW), 400 (FAST), and 200 (JS8 40). These are arithmetic planning values, not proof that the receiver audio chain preserves the required tone spacing, phase, frequency stability or symbol edges. Validate the actual 4 kHz capture path with recorded reference signals before choosing filters, FFT lengths, downsampling or synchronization windows. JS8 60 remains excluded because its published parameters are experimental/unspecified.
+
+Source provenance: these frame dimensions, code parameters and CRC parameters were checked against the public JS8Call source and user guide. The ATS Mini implementation must be independently written; do not copy GPL-licensed source code or source-derived tables into this MIT repository without an explicit licensing decision.
+
 ## 3. JS8 frequency presets
 
 Add a dedicated **JS8 PRESETS** submenu inside the JS8 decoder Actions menu. It is separate from the general `Decoder Frequencies` browser and should use the same preview/accept interaction as the existing FT8 preset submenu.

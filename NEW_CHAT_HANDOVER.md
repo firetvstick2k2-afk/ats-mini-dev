@@ -267,3 +267,13 @@ Der Nutzer arbeitet aktiv mit GitHub, lässt Builds manuell laufen und testet au
 - Both submenus use the existing preset application path: select the narrowest receiver band containing the frequency, apply USB and bandwidth index 4, and return to the active decoder screen. The decoder worker remains active; no FT8/FT4 DSP, audio capture, or slot-timing code changed.
 - Changed only `ats-mini/src/ftx/FtxUi.cpp` for the implementation. Handoff documents updated. No build, Actions run, or flash was started; user performs the OSPI-DE build and hardware tests.
 - Hardware checks: confirm the two new 11m entries tune to 27.235/27.245 MHz; test all 10 FT8 amateur-band presets and all 8 FT4 presets; verify USB/bandwidth and that reception continues after selecting any preset.
+
+
+## FT8/FT4 preset delayed preview listening — 2026-11-21
+- Added a 2-second idle delay to the FT8 and FT4 preset submenus. Opening a preset submenu starts the delay for the initially highlighted row; every encoder movement restarts the delay for the newly selected row.
+- After 2 seconds without encoder movement, the receiver automatically tunes to the highlighted preset using the existing narrowest-band selection, USB mode and bandwidth index. The preset list displays `WAIT` while waiting and `LISTEN` once preview tuning has succeeded.
+- A short encoder click commits the currently previewed frequency and closes the overlay. Clicking before the 2-second preview delay still applies the highlighted preset immediately, preserving the previous quick-select behavior.
+- If the user rotates to another preset after a preview has started, the radio is first restored to the exact pre-submenu VFO state (band, frequency, mode, step, bandwidth and BFO); the new 2-second delay then begins. A long press/decoder exit during preview also restores that original radio state before leaving.
+- If the external speaker amplifier was OFF before preview, it is temporarily enabled so the user can hear the signal, then restored to its prior state when the preview is committed, changed, or cancelled. The receiver volume boost and GPIO11 capture path remain unchanged.
+- Implementation is isolated to `ats-mini/src/ftx/FtxUi.cpp`; no FT8/FT4 DSP, audio-capture, slot timing, RTTY, main Decoder Frequencies menu, TEF6686, or LittleFS code was changed.
+- Source-only review. No build, GitHub Actions run, flash or hardware test was started. User should manually build OSPI-DE on `development` and verify initial auto-preview, timer restart while scrolling, audible speaker override/restore, click-to-commit, and long-press restoration.

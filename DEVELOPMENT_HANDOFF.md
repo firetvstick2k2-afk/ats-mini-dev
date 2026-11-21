@@ -1100,3 +1100,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Makefile wildcard lists now include src/js8/*.h/.cpp.
 - Source-only review; no build, repository checks, GitHub Actions run, flash or hardware measurement was performed. The service is not yet compiler-verified or device-tested.
 - Next: review the menu/UI integration and the monitor lifecycle without compiling yet; then measure with controlled audio input on hardware. Add worker-side spectral/tone analysis and compare against lawful JS8 NORMAL recordings. Do not implement JS8 NORMAL decoding until capture evidence is acceptable.
+
+
+## JS8 test playback harness — 2026-11-21
+- The JS8 RX Monitor now has a short-click test-playback control. A click starts a deterministic synthetic 8-FSK waveform; another click stops it. Long press still exits.
+- Playback is generated at the nominal 4 kHz input rate, with 79 symbols of 640 samples each (160 ms / 6.25 baud), eight tones spaced 6.25 Hz apart around a 1 kHz audio center, and ADC-style unsigned-offset samples centered near 2048. The monitor temporarily unsubscribes only its own live GPIO11 subscriber, processes generated blocks in its existing worker, then resumes live capture automatically.
+- This is intentionally a DSP plumbing / timing / level test waveform, not a protocol-valid JS8 frame: it does not contain verified JS8 NORMAL Costas synchronization, LDPC(174,87), CRC-12 or a decodable message payload. It must not be described as a successful JS8 decode or used to validate decoder sensitivity. It gives us a repeatable 8-FSK signal source while the independent NORMAL encoder/decoder test vectors are developed.
+- Commits: monitor API 25d2723c6a97e92b48671481b1395b279d73d16f; playback worker b889bd8d3dbc36917097823ce79365110b969762; monitor UI controls 0ed599949f1ed0b5f428b36ec501bdad7e9db337; ADC-range correction fa04aa000084fd63524753addd412689600e8436; UI header fd822658bd84d152f8b299ed13788fb266b4343e.
+- Scope remains development only. No build, GitHub Actions run, flash or hardware test was started. The new code is not compiler-verified.
+- Next: source-review the playback lifecycle and timing, add a shared JS8-only sample consumer for the future decoder, then create an independently verified protocol-valid JS8 NORMAL golden frame (sync + payload + LDPC + CRC) and use it for actual decode tests. Do not confuse this synthetic tone sequence with that golden frame.

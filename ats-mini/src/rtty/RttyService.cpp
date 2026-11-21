@@ -55,8 +55,9 @@ bool RttyService::enter() {
   frameCount_=0; dc_=2048.0f;
   markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
   signal_=false; shownText_[0]=0; textLength_=0; baud_=45.45f;
+  polarity_=RTTY_POL_AUTO;
   xSemaphoreTake(engineMutex_,portMAX_DELAY);
-  rtty_init(); rtty_set_baud(baud_); rtty_set_polarity(RTTY_POL_AUTO);
+  rtty_init(); rtty_set_baud(baud_); rtty_set_polarity(static_cast<RttyPolarity>(polarity_));
   xSemaphoreGive(engineMutex_);
   active_=true;
   return true;
@@ -81,6 +82,40 @@ void RttyService::setBaud(float value) {
   if(value!=45.45f && value!=50.0f && value!=75.0f) return;
   baud_=value;
   if(engineMutex_) { xSemaphoreTake(engineMutex_,portMAX_DELAY); rtty_set_baud(value); xSemaphoreGive(engineMutex_); }
+}
+
+void RttyService::setPolarity(uint8_t value) {
+  if(value>RTTY_POL_REVERSE) return;
+  polarity_=value;
+  if(engineMutex_) {
+    xSemaphoreTake(engineMutex_,portMAX_DELAY);
+    rtty_set_polarity(static_cast<RttyPolarity>(polarity_));
+    markHz_=rtty_mark_hz(); spaceHz_=rtty_space_hz();
+    xSemaphoreGive(engineMutex_);
+  }
+}
+
+void RttyService::clearText() {
+  shownText_[0]=0;
+  textLength_=0;
+  if(engineMutex_) {
+    char discard[65];
+    xSemaphoreTake(engineMutex_,portMAX_DELAY);
+    while(rtty_take_text(discard,sizeof(discard))>0) {}
+    xSemaphoreGive(engineMutex_);
+  }
+}
+
+void RttyService::resetDecoder() {
+  if(!engineMutex_) return;
+  xSemaphoreTake(engineMutex_,portMAX_DELAY);
+  rtty_init();
+  rtty_set_baud(baud_);
+  rtty_set_polarity(static_cast<RttyPolarity>(polarity_));
+  if(toneLowHz_>0 && toneHighHz_>0) rtty_set_tones(toneLowHz_,toneHighHz_);
+  markHz_=spaceHz_=0;
+  xSemaphoreGive(engineMutex_);
+  clearText();
 }
 
 void RttyService::captureTaskEntry(void* arg) { static_cast<RttyService*>(arg)->captureTask(); }

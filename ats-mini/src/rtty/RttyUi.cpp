@@ -13,21 +13,25 @@ extern bool updateBFO(int newBFO, bool wrap);
 namespace {
 RttyService service;
 bool pageActive=false;
+bool menuOpen=false;
+bool menuEditing=false;
+uint8_t menuIndex=0;
 uint8_t restoreNetworkMode=NET_OFF;
 uint32_t lastRefresh=0;
 uint32_t lastAutoBfoAdjust=0;
 uint8_t baudIndex=0;
 const float baudChoices[3]={45.45f,50.0f,75.0f};
+const char* const polarityNames[3]={"AUTO","NORMAL","REVERSE"};
+uint8_t polarityIndex=0;
+bool bfoAuto=true;
 uint8_t volumeBefore=0;
-bool volumeBoost=false;
+bool volumeBoost=false;\nint16_t bfoAtEntry=0;
 constexpr uint8_t kPlaybackVolume=50;
 constexpr int kBfoLimit=250;
 constexpr int kManualBfoStep=5;
 constexpr float kTargetToneCenterHz=2210.0f;
 constexpr float kAutoDeadbandHz=18.0f;
-enum RttyControlMode : uint8_t { RTTY_CONTROL_BAUD=0, RTTY_CONTROL_BFO_AUTO=1, RTTY_CONTROL_BFO_MANUAL=2 };
-RttyControlMode controlMode=RTTY_CONTROL_BAUD;
-int16_t bfoAtEntry=0;
+constexpr uint8_t kMenuCount=7;
 
 void applyBfo(int value) {
   int low=bfoAtEntry-kBfoLimit, high=bfoAtEntry+kBfoLimit;
@@ -50,7 +54,12 @@ bool rttyUiOpen(float initialBaud) {
   if(volume<kPlaybackVolume) { volume=kPlaybackVolume; rx.setVolume(volume); }
   volumeBoost=true;
   bfoAtEntry=currentBFO;
-  controlMode=RTTY_CONTROL_BAUD;
+  bfoAuto=true;
+  polarityIndex=0;
+  service.setPolarity(polarityIndex);
+  menuOpen=false;
+  menuEditing=false;
+  menuIndex=0;
   lastAutoBfoAdjust=0;
   pageActive=true;
   lastRefresh=0;
@@ -67,6 +76,8 @@ bool rttyUiOpen(float initialBaud) {
 void rttyUiExit() {
   if(!pageActive) return;
   pageActive=false;
+  menuOpen=false;
+  menuEditing=false;
   service.exit();
   if(currentBFO!=bfoAtEntry) updateBFO(bfoAtEntry,true);
   if(volumeBoost) { volume=volumeBefore; rx.setVolume(volume); volumeBoost=false; }
@@ -76,28 +87,73 @@ void rttyUiExit() {
 
 void rttyUiRotate(int16_t delta) {
   if(!pageActive || !delta) return;
-  if(controlMode==RTTY_CONTROL_BAUD) {
-    int next=static_cast<int>(baudIndex)+delta;
-    while(next<0) next+=3;
-    baudIndex=static_cast<uint8_t>(next%3);
-    service.setBaud(baudChoices[baudIndex]);
+  if(menuOpen) {
+    if(menuEditing) {
+      if(menuIndex==1) {
+        int next=static_cast<int>(baudIndex)+delta;
+        while(next<0) next+=3;
+        baudIndex=static_cast<uint8_t>(next%3);
+        service.setBaud(baudChoices[baudIndex]);
+      } else if(menuIndex==2) {
+        int next=static_cast<int>(polarityIndex)+delta;
+        while(next<0) next+=3;
+        polarityIndex=static_cast<uint8_t>(next%3);
+        service.setPolarity(polarityIndex);
+      }
+      return;
+    }
+    int next=static_cast<int>(menuIndex)+delta;
+    while(next<0) next+=kMenuCount;
+    menuIndex=static_cast<uint8_t>(next%kMenuCount);
     return;
   }
-  if(controlMode==RTTY_CONTROL_BFO_AUTO) controlMode=RTTY_CONTROL_BFO_MANUAL;
-  applyBfo(static_cast<int>(currentBFO)+static_cast<int>(delta)*kManualBfoStep);
+  if(!bfoAuto) {
+    applyBfo(static_cast<int>(currentBFO)+static_cast<int>(delta)*kManualBfoStep);
+  }
 }
 
 void rttyUiClick() {
   if(!pageActive) return;
-  controlMode=static_cast<RttyControlMode>((static_cast<uint8_t>(controlMode)+1)%3);
-  lastAutoBfoAdjust=0;
+  if(!menuOpen) {
+    menuOpen=true;
+    menuEditing=false;
+    menuIndex=0;
+    return;
+  }
+  if(menuEditing) {
+    menuEditing=false;
+    return;
+  }
+  switch(menuIndex) {
+    case 0:
+      bfoAuto=!bfoAuto;
+      lastAutoBfoAdjust=0;
+      break;
+    case 1:
+    case 2:
+      menuEditing=true;
+      break;
+    case 3:
+      service.clearText();
+      break;
+    case 4:
+      service.resetDecoder();
+      lastAutoBfoAdjust=0;
+      break;
+    case 5:
+      menuOpen=false;
+      break;
+    case 6:
+      rttyUiExit();
+      break;
+  }
 }
 
 bool rttyUiTick(uint32_t now) {
   if(!pageActive || static_cast<uint32_t>(now-lastRefresh)<100) return false;
   lastRefresh=now;
   service.update();
-  if(controlMode==RTTY_CONTROL_BFO_AUTO && service.signal() &&
+  if(bfoAuto && service.signal() &&
      static_cast<uint32_t>(now-lastAutoBfoAdjust)>=500) {
     const float error=kTargetToneCenterHz-service.toneCenterHz();
     if(fabsf(error)>kAutoDeadbandHz) {
@@ -162,10 +218,43 @@ void drawRttyDecoderPage() {
   const uint16_t led=active?green:red;
   if((millis()/350)&1) spr.fillCircle(300,10,3,led); else spr.drawCircle(300,10,3,led);
   char footer[80];
-  const char* mode=controlMode==RTTY_CONTROL_BAUD?"BAUD":controlMode==RTTY_CONTROL_BFO_AUTO?"BFO AUTO":"BFO MANUAL";
-  snprintf(footer,sizeof(footer),"ROTATE: %s  BFO %+d Hz  CLICK: MODE  LONG: EXIT",mode,static_cast<int>(currentBFO));
+  snprintf(footer,sizeof(footer),"ROTATE: %s  BFO %+d Hz  CLICK: ACTIONS  LONG: EXIT",
+           bfoAuto?"BFO AUTO":"BFO MANUAL",static_cast<int>(currentBFO));
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(0xFFFF,navy);
   spr.setFont(FONT_SMALL);
   spr.drawString(footer,160,163);
+
+  if(menuOpen) {
+    constexpr uint16_t panel=0x0008,highlight=0x0359,border=0x07E0;
+    spr.fillRect(28,27,264,130,panel);
+    spr.drawRect(28,27,264,130,border);
+    spr.setTextDatum(MC_DATUM);
+    spr.setTextColor(0xFFFF,panel);
+    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    spr.drawString("RTTY ACTIONS",160,38);
+    const char* labels[kMenuCount]={"BFO MODE","BAUD RATE","POLARITY","CLEAR TEXT","RESET DECODER","BACK","EXIT RTTY"};
+    char value[32];
+    for(uint8_t i=0;i<kMenuCount;++i) {
+      const int y=52+i*14;
+      const uint16_t bg=(i==menuIndex)?highlight:panel;
+      spr.fillRect(36,y-6,248,13,bg);
+      spr.setTextDatum(ML_DATUM);
+      spr.setTextColor(0xFFFF,bg);
+      spr.setFont(FONT_SMALL);
+      spr.drawString(labels[i],43,y);
+      const char* state="";
+      if(i==0) state=bfoAuto?"AUTO":"MANUAL";
+      else if(i==1) { snprintf(value,sizeof(value),"%.2f Bd",baudChoices[baudIndex]); state=value; }
+      else if(i==2) state=polarityNames[polarityIndex];
+      else if(i==1 || i==2) state="";
+      spr.setTextDatum(MR_DATUM);
+      spr.drawString(state,277,y);
+    }
+    spr.setTextDatum(MC_DATUM);
+    spr.setTextColor(0xFFFF,panel);
+    spr.setFont(FONT_SMALL);
+    const char* hint=menuEditing?"ROTATE: CHANGE  CLICK: DONE":"ROTATE: SELECT  CLICK: OPEN";
+    spr.drawString(hint,160,149);
+  }
 }

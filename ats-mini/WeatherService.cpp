@@ -1,0 +1,451 @@
+#include "WeatherService.h"
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
+#include <Preferences.h>
+#include <ArduinoJson.h>
+#include <math.h>
+#include <time.h>
+#include <string.h>
+#include <stdarg.h>
+
+namespace {
+void weatherLog(const char* format, ...) {
+  char line[256];
+  va_list args;
+  va_start(args, format);
+  vsnprintf(line, sizeof(line), format, args);
+  va_end(args);
+  Serial.println(line);
+}
+
+constexpr char kWeatherNamespace[] = "weather";
+constexpr uint32_t kRefreshIntervalMs = 15UL * 60UL * 1000UL;
+constexpr uint32_t kRetryIntervalMs = 60UL * 1000UL;
+constexpr size_t kMaxJsonBytes = 65536;
+
+int32_t civilDayNumber(int year, unsigned month, unsigned day) {
+  year -= month <= 2;
+  const int era = (year >= 0 ? year : year - 399) / 400;
+  const unsigned yearOfEra = static_cast<unsigned>(year - era * 400);
+  const unsigned adjustedMonth = month > 2 ? month - 3 : month + 9;
+  const unsigned dayOfYear = (153 * adjustedMonth + 2) / 5 + day - 1;
+  const unsigned dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
+  return era * 146097 + static_cast<int>(dayOfEra) - 719468;
+}
+int16_t roundedTemperature(JsonVariantConst value) {
+  return value.isNull() ? 0 : static_cast<int16_t>(lroundf(value.as<float>()));
+}
+uint8_t boundedPercent(JsonVariantConst value) {
+  if (value.isNull()) return 0;
+  return static_cast<uint8_t>(constrain(value.as<int>(), 0, 100));
+}
+String urlEncode(const String& input) {
+  static const char hex[] = "0123456789ABCDEF";
+  String encoded;
+  encoded.reserve(input.length() * 3);
+  for (size_t i = 0; i < input.length(); ++i) {
+    const uint8_t c = static_cast<uint8_t>(input[i]);
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == '~') {
+      encoded += static_cast<char>(c);
+    } else {
+      encoded += '%';
+      encoded += hex[c >> 4];
+      encoded += hex[c & 0x0F];
+    }
+  }
+  return encoded;
+}
+const char* weatherDescription(uint8_t code) {
+  if (code == 0) return "Klar";
+  if (code <= 3) return "Teilweise bewoelkt";
+  if (code == 45 || code == 48) return "Nebel";
+  if (code >= 51 && code <= 57) return "Nieselregen";
+  if (code >= 61 && code <= 67) return "Regen";
+  if (code >= 71 && code <= 77) return "Schnee";
+  if (code >= 80 && code <= 82) return "Regenschauer";
+  if (code >= 85 && code <= 86) return "Schneeschauer";
+  if (code >= 95) return "Gewitter";
+  return "Wetter";
+}
+
+}
+
+bool WeatherService::begin() {
+  weatherLog("%s", "[WEATHER] begin entered");
+  if (taskHandle_) {
+    weatherLog("%s", "[WEATHER] worker already running");
+    return true;
+  }
+  if (!settingsLoaded_) {
+    loadSettings();
+    settingsLoaded_ = true;
+  }
+  if (!hasConfiguredLocation()) {
+    weatherLog("%s", "[WEATHER] worker not started: no postal code configured");
+    return false;
+  }
+  Snapshot initial;
+  publish(initial);
+  const BaseType_t created = xTaskCreatePinnedToCore(taskEntry, "WeatherWorker", 12288, this, 1, &taskHandle_, 0);
+  weatherLog("[WEATHER] worker task %s; postal_code='%s'\n",
+    created == pdPASS ? "created" : "creation failed", postalCode_);
+  return created == pdPASS;
+}
+void WeatherService::loadSettings() {
+  Preferences preferences;
+  const bool opened = preferences.begin(kWeatherNamespace, true, "settings");
+  weatherLog("[WEATHER] load settings namespace='%s' opened=%s\n",
+    kWeatherNamespace, opened ? "yes" : "no");
+  if (!opened) return;
+  String saved = preferences.getString("postal", "");
+  saved.trim();
+  if (saved.length() == 5) saved.toCharArray(postalCode_, sizeof(postalCode_));
+  weatherLog("[WEATHER] stored postal='%s' length=%u valid=%s\n",
+    saved.c_str(), static_cast<unsigned>(saved.length()),
+    strlen(postalCode_) == 5 ? "yes" : "no");
+  preferences.end();
+}
+bool WeatherService::setPostalCode(const char* value) {
+  weatherLog("[WEATHER] setPostalCode called value='%s'\n", value ? value : "(null)");
+  if (!value) return false;
+  String code(value); code.trim();
+  if (code.length() != 5) {
+    weatherLog("[WEATHER] rejected postal: length=%u (expected 5)\n", static_cast<unsigned>(code.length()));
+    return false;
+  }
+  for (size_t i=0; i<code.length(); ++i) {
+    if (code[i] < '0' || code[i] > '9') {
+      weatherLog("[WEATHER] rejected postal: non-digit at index=%u\n", static_cast<unsigned>(i));
+      return false;
+    }
+  }
+  Preferences preferences;
+  if (!preferences.begin(kWeatherNamespace, false, "settings")) {
+    weatherLog("%s", "[WEATHER] ERROR: Preferences.begin for write failed");
+    return false;
+  }
+  const size_t written = preferences.putString("postal", code);
+  const String readBack = preferences.getString("postal", "");
+  preferences.end();
+  weatherLog("[WEATHER] save postal='%s' bytes_written=%u read_back='%s'\n",
+    code.c_str(), static_cast<unsigned>(written), readBack.c_str());
+  if (written == 0 || readBack != code) {
+    weatherLog("%s", "[WEATHER] ERROR: postal persistence verification failed");
+    return false;
+  }
+  code.toCharArray(postalCode_, sizeof(postalCode_));
+  requestRefresh();
+  weatherLog("[WEATHER] postal accepted; refresh requested; wifi_connected=%s\n",
+    wifiConnected_ ? "yes" : "no");
+  return true;
+}
+String WeatherService::postalCode() const { return String(postalCode_); }
+WeatherService::Snapshot WeatherService::snapshot() const {
+  Snapshot copy;
+  portENTER_CRITICAL(&snapshotMux_); copy = snapshot_; portEXIT_CRITICAL(&snapshotMux_);
+  return copy;
+}
+void WeatherService::publish(const Snapshot& value) {
+  portENTER_CRITICAL(&snapshotMux_); snapshot_ = value; portEXIT_CRITICAL(&snapshotMux_);
+}
+void WeatherService::requestRefresh() { refreshRequested_ = true; }
+void WeatherService::update(bool wifiConnected) {
+  static bool lastReported = false;
+  static bool reportedOnce = false;
+  wifiConnected_ = wifiConnected;
+  if (!reportedOnce || wifiConnected != lastReported) {
+    reportedOnce = true;
+    lastReported = wifiConnected;
+    weatherLog("[WEATHER] data-service WiFi=%s postal_configured=%s",
+      wifiConnected ? "connected" : "disconnected",
+      strlen(postalCode_) == 5 ? "yes" : "no");
+  }
+
+  // Start only after a real station connection and a valid persisted postal
+  // code. AP-only mode must never launch Internet requests.
+  if (!settingsLoaded_) {
+    loadSettings();
+    settingsLoaded_ = true;
+  }
+  const uint32_t now = millis();
+  if (wifiConnected_ && !taskHandle_ && hasConfiguredLocation() &&
+      (!lastStartAttemptMs_ || now - lastStartAttemptMs_ >= 5000)) {
+    lastStartAttemptMs_ = now ? now : 1;
+    begin();
+  }
+}
+void WeatherService::taskEntry(void* context) { static_cast<WeatherService*>(context)->taskLoop(); }
+void WeatherService::taskLoop() {
+  weatherLog("%s", "[WEATHER] worker task entered");
+  weatherLog("[WEATHER][MEM] stage=worker_start free_heap=%u max_block=%u min_free=%u task_stack_high_water=%u",
+    static_cast<unsigned>(ESP.getFreeHeap()),
+    static_cast<unsigned>(ESP.getMaxAllocHeap()),
+    static_cast<unsigned>(ESP.getMinFreeHeap()),
+    static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
+  bool waitingLogged = false;
+  for (;;) {
+    const uint32_t now = millis();
+    const bool due = refreshRequested_ || !lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs;
+    if (strlen(postalCode_) != 5 && !waitingLogged) {
+      weatherLog("%s", "[WEATHER] waiting: no valid postal code configured");
+      waitingLogged = true;
+    }
+    if (strlen(postalCode_) == 5) waitingLogged = false;
+    if (!wifiConnected_ && strlen(postalCode_) == 5 && due) {
+      static bool wifiWaitLogged = false;
+      if (!wifiWaitLogged) {
+        weatherLog("%s", "[WEATHER] waiting: data-service WiFi is not connected");
+        wifiWaitLogged = true;
+      }
+    }
+    if (wifiConnected_ && due && strlen(postalCode_) == 5) {
+      weatherLog("[WEATHER] refresh starting postal='%s' requested=%s\n",
+        postalCode_, refreshRequested_ ? "yes" : "no");
+      refreshRequested_ = false; lastAttemptMs_ = now;
+      Snapshot current = snapshot(); current.fetching = true; publish(current);
+      Snapshot fresh;
+      if (fetchWeather(postalCode_, fresh)) {
+        fresh.valid = true; fresh.stale = false; fresh.fetching = false; fresh.updatedAtMs = millis();
+        publish(fresh);
+        weatherLog("[WEATHER] updated location=%s temperature=%d C\n", fresh.location, fresh.temperatureC);
+      } else {
+        current = snapshot(); current.fetching = false; current.stale = true; publish(current);
+        weatherLog("%s", "[WEATHER] update failed; keeping last successful snapshot");
+        lastAttemptMs_ = millis() - kRefreshIntervalMs + kRetryIntervalMs;
+      }
+    }
+    vTaskDelay(pdMS_TO_TICKS(1000));
+  }
+}
+bool WeatherService::fetchJson(const String& url, String& body) {
+  const char* requestType = url.indexOf("openplzapi.org") >= 0 ? "postcode" :
+    url.indexOf("geocoding-api.open-meteo.com") >= 0 ? "geocoding" :
+    url.indexOf("current_weather") >= 0 ? "current" : "forecast";
+  weatherLog("[WEATHER] HTTP request start type=%s\n", requestType);
+  WiFiClientSecure client; client.setTimeout(8000); client.useBuiltinCACertBundle();
+  HTTPClient http; http.setTimeout(8000); http.setReuse(false);
+  if (!http.begin(client, url)) {
+    weatherLog("[WEATHER] HTTP begin failed type=%s\n", requestType);
+    return false;
+  }
+  const int status = http.GET();
+  weatherLog("[WEATHER] HTTP response type=%s status=%d\n", requestType, status);
+  if (status != HTTP_CODE_OK) {
+    weatherLog("[WEATHER] HTTP status=%d error=%s\n", status, http.errorToString(status).c_str());
+    http.end(); return false;
+  }
+  const int length = http.getSize();
+  if (length > static_cast<int>(kMaxJsonBytes)) {
+    weatherLog("[WEATHER] JSON too large: %d bytes\n", length); http.end(); return false;
+  }
+  body = http.getString(); http.end();
+  weatherLog("[WEATHER] HTTP body type=%s bytes=%u\n",
+    requestType, static_cast<unsigned>(body.length()));
+  if (body.length() <= 16 || body.length() > kMaxJsonBytes) {
+    weatherLog("[WEATHER] invalid body size type=%s bytes=%u\n",
+      requestType, static_cast<unsigned>(body.length()));
+    return false;
+  }
+  return true;
+}
+bool WeatherService::fetchWeather(const char* postalCode, Snapshot& result) {
+  // Resolve German postcodes through the postal-code directory first. This
+  // avoids relying on weather-provider geocoders accepting numeric postcodes.
+  String localityBody;
+  const String localityUrl = String("https://openplzapi.org/de/Localities?postalCode=") + postalCode + "&page=1&pageSize=5";
+  if (!fetchJson(localityUrl, localityBody)) {
+    weatherLog("%s", "[WEATHER] OpenPLZ postcode lookup failed");
+    return false;
+  }
+
+  JsonDocument localityDoc;
+  if (deserializeJson(localityDoc, localityBody)) {
+    weatherLog("%s", "[WEATHER] OpenPLZ JSON parse failed");
+    return false;
+  }
+  JsonArrayConst localities = localityDoc.as<JsonArrayConst>();
+  if (localities.isNull() || localities.size() == 0) {
+    weatherLog("[WEATHER] no locality found for postal code %s", postalCode);
+    return false;
+  }
+
+  JsonObjectConst locality = localities[0];
+  const char* localityName = locality["name"] | "";
+  const char* municipalityName = locality["municipality"]["name"] | "";
+  String searchName = municipalityName[0] ? String(municipalityName) : String(localityName);
+  searchName.trim();
+  // OpenPLZ may return administrative labels such as "Münster, Stadt".
+  // Open-Meteo expects the actual place name, so remove this suffix before
+  // geocoding. Keep the normalized name for the display snapshot as well.
+  if (searchName.endsWith(", Stadt")) {
+    searchName.remove(searchName.length() - 7);
+    searchName.trim();
+  }
+  if (!searchName.length()) {
+    weatherLog("%s", "[WEATHER] OpenPLZ result has no locality name");
+    return false;
+  }
+  weatherLog("[WEATHER] postcode resolved geocoding_name='%s' municipality='%s'",
+    searchName.c_str(), municipalityName);
+
+  // Open-Meteo is used only as a place-name geocoder here; all weather data
+  // comes from Bright Sky / DWD.
+  String geoBody;
+  const String geoUrl = String("https://geocoding-api.open-meteo.com/v1/search?name=") +
+    urlEncode(searchName) + "&count=5&language=de&countryCode=DE&format=json";
+  if (!fetchJson(geoUrl, geoBody)) return false;
+  JsonDocument geo;
+  if (deserializeJson(geo, geoBody)) {
+    weatherLog("%s", "[WEATHER] locality geocoding JSON parse failed");
+    return false;
+  }
+  JsonArrayConst matches = geo["results"].as<JsonArrayConst>();
+  if (matches.isNull() || matches.size() == 0) {
+    weatherLog("[WEATHER] locality geocoding returned no coordinates for '%s'", searchName.c_str());
+    return false;
+  }
+
+  JsonObjectConst place = matches[0];
+  const double latitude = place["latitude"] | 0.0;
+  const double longitude = place["longitude"] | 0.0;
+  if (latitude == 0.0 && longitude == 0.0) {
+    weatherLog("%s", "[WEATHER] locality geocoding returned invalid coordinates");
+    return false;
+  }
+  strlcpy(result.location, searchName.c_str(), sizeof(result.location));
+  strlcpy(result.country, "Deutschland", sizeof(result.country));
+  weatherLog("[WEATHER] location coordinates lat=%.4f lon=%.4f", latitude, longitude);
+
+  // Current conditions are compiled by Bright Sky from recent DWD SYNOP data.
+  const String locationArgs = String("?lat=") + String(latitude, 4) +
+    "&lon=" + String(longitude, 4) + "&tz=Europe%2FBerlin";
+  String currentBody;
+  if (!fetchJson(String("https://api.brightsky.dev/current_weather") + locationArgs, currentBody)) return false;
+  JsonDocument currentDoc;
+  if (deserializeJson(currentDoc, currentBody)) {
+    weatherLog("%s", "[WEATHER] Bright Sky current-weather JSON parse failed");
+    return false;
+  }
+  JsonObjectConst current = currentDoc["weather"];
+  if (current.isNull()) {
+    weatherLog("%s", "[WEATHER] Bright Sky current-weather record missing");
+    return false;
+  }
+  result.temperatureC = roundedTemperature(current["temperature"]);
+  result.feelsLikeC = result.temperatureC;
+  result.humidity = boundedPercent(current["relative_humidity"]);
+  result.pressureHpa = static_cast<uint16_t>(constrain(current["pressure_msl"] | 0.0f, 0.0f, 1500.0f));
+  result.windKmh = static_cast<uint16_t>(constrain(lroundf(current["wind_speed_10"] | 0.0f), 0L, 500L));
+  const char* condition = current["condition"] | "dry";
+  if (!strcmp(condition, "fog")) result.weatherCode = 45;
+  else if (!strcmp(condition, "rain")) result.weatherCode = 61;
+  else if (!strcmp(condition, "sleet")) result.weatherCode = 66;
+  else if (!strcmp(condition, "snow")) result.weatherCode = 71;
+  else if (!strcmp(condition, "hail")) result.weatherCode = 96;
+  else if (!strcmp(condition, "thunderstorm")) result.weatherCode = 95;
+  else result.weatherCode = 0;
+  strlcpy(result.description, weatherDescription(result.weatherCode), sizeof(result.description));
+
+  // Bright Sky's /weather endpoint returns hourly observations and forecasts.
+  // Request six calendar days so the display can reliably fill five day slots.
+  time_t now = time(nullptr);
+  if (now < 1704067200) {
+    weatherLog("%s", "[WEATHER] system clock not synchronized; cannot request dated DWD forecast");
+    return false;
+  }
+  struct tm dateParts;
+  gmtime_r(&now, &dateParts);
+  char firstDate[12] = {};
+  strftime(firstDate, sizeof(firstDate), "%Y-%m-%d", &dateParts);
+  time_t endTime = now + 5 * 24 * 60 * 60;
+  struct tm endParts;
+  gmtime_r(&endTime, &endParts);
+  char lastDate[12] = {};
+  strftime(lastDate, sizeof(lastDate), "%Y-%m-%d", &endParts);
+
+  const String forecastUrl = String("https://api.brightsky.dev/weather") + locationArgs +
+    "&date=" + firstDate + "&last_date=" + lastDate;
+  String forecastBody;
+  if (!fetchJson(forecastUrl, forecastBody)) return false;
+  // Bright Sky returns additional station/metadata fields that are not
+  // needed for the five-day display. Filter the hourly records to keep the
+  // ArduinoJson document small even when the HTTP response is larger.
+  JsonDocument forecastFilter;
+  forecastFilter["weather"][0]["timestamp"] = true;
+  forecastFilter["weather"][0]["temperature"] = true;
+  forecastFilter["weather"][0]["precipitation_probability"] = true;
+  forecastFilter["weather"][0]["icon"] = true;
+  JsonDocument forecast;
+  if (deserializeJson(forecast, forecastBody, DeserializationOption::Filter(forecastFilter))) {
+    weatherLog("%s", "[WEATHER] Bright Sky forecast JSON parse failed");
+    return false;
+  }
+  JsonArrayConst records = forecast["weather"].as<JsonArrayConst>();
+  if (records.isNull() || records.size() == 0) {
+    weatherLog("%s", "[WEATHER] Bright Sky returned no hourly forecast records");
+    return false;
+  }
+
+  static const char* const names[] = {"So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"};
+  int16_t highs[FORECAST_DAYS];
+  int16_t lows[FORECAST_DAYS];
+  uint8_t rain[FORECAST_DAYS] = {};
+  uint8_t codes[FORECAST_DAYS] = {};
+  bool found[FORECAST_DAYS] = {};
+  for (uint8_t i = 0; i < FORECAST_DAYS; ++i) {
+    highs[i] = INT16_MIN;
+    lows[i] = INT16_MAX;
+  }
+
+  int firstYear = 0, firstMonth = 0, firstDay = 0;
+  if (sscanf(firstDate, "%4d-%2d-%2d", &firstYear, &firstMonth, &firstDay) != 3) return false;
+  const int32_t startDay = civilDayNumber(firstYear, firstMonth, firstDay);
+
+  for (JsonObjectConst record : records) {
+    const char* timestamp = record["timestamp"] | "";
+    if (strlen(timestamp) < 10) continue;
+    int year = 0, month = 0, day = 0;
+    if (sscanf(timestamp, "%4d-%2d-%2d", &year, &month, &day) != 3) continue;
+    const int32_t recordDay = civilDayNumber(year, month, day);
+    const int dayIndex = recordDay - startDay;
+    if (dayIndex < 0 || dayIndex >= FORECAST_DAYS) continue;
+
+    const int16_t temperature = roundedTemperature(record["temperature"]);
+    if (temperature > highs[dayIndex]) highs[dayIndex] = temperature;
+    if (temperature < lows[dayIndex]) lows[dayIndex] = temperature;
+    const uint8_t probability = boundedPercent(record["precipitation_probability"]);
+    if (probability > rain[dayIndex]) rain[dayIndex] = probability;
+    const char* icon = record["icon"] | "";
+    uint8_t code = 0;
+    if (strstr(icon, "thunderstorm")) code = 95;
+    else if (strstr(icon, "snow")) code = 71;
+    else if (strstr(icon, "sleet")) code = 66;
+    else if (strstr(icon, "hail")) code = 96;
+    else if (strstr(icon, "rain")) code = 61;
+    else if (strstr(icon, "fog")) code = 45;
+    else if (strstr(icon, "cloud")) code = 2;
+    if (!found[dayIndex] || code > codes[dayIndex]) codes[dayIndex] = code;
+    found[dayIndex] = true;
+  }
+
+  for (uint8_t i = 0; i < FORECAST_DAYS; ++i) {
+    if (!found[i] || highs[i] == INT16_MIN || lows[i] == INT16_MAX) {
+      weatherLog("[WEATHER] forecast day %u missing from Bright Sky response",
+        static_cast<unsigned>(i + 1));
+      return false;
+    }
+    result.days[i].maximumC = highs[i];
+    result.days[i].minimumC = lows[i];
+    result.days[i].precipitationChance = rain[i];
+    result.days[i].weatherCode = codes[i];
+    const int weekday = (startDay + i + 4) % 7;
+    if (i == 0) strlcpy(result.weekdays[i], "Heute", sizeof(result.weekdays[i]));
+    else strlcpy(result.weekdays[i], names[weekday], sizeof(result.weekdays[i]));
+  }
+  result.precipitation = rain[0];
+  weatherLog("[WEATHER] Bright Sky forecast parsed hourly_records=%u days=%u",
+    static_cast<unsigned>(records.size()), static_cast<unsigned>(FORECAST_DAYS));
+  return true;
+}

@@ -47,6 +47,14 @@ static const char pageConfig[] PROGMEM = R"HTML(<H1>{{title}}</H1>
     <TR><TH COLSPAN="2" CLASS="HEADING"><INPUT TYPE="SUBMIT" VALUE="Save weather location"></TH></TR>
   </TABLE>
 </FORM>
+<FORM ACTION="/news/save" METHOD="POST" CLASS="CONFIGFORM">
+  <TABLE COLUMNS="2">
+    <TR><TH COLSPAN="2" CLASS="HEADING">RSS News feeds (8 slots)</TH></TR>
+    {{{news_feeds}}}
+    <TR><TH COLSPAN="2" CLASS="HEADING"><INPUT TYPE="SUBMIT" VALUE="Save RSS feeds"></TH></TR>
+  </TABLE>
+  <P><SMALL>Enter your own RSS/Atom URLs. The reader uses the longer available content:encoded or description text.</SMALL></P>
+</FORM>
 <SCRIPT>
 function browserDateTime(submit) {
   const enabled = document.getElementById('browserdatetime').checked;
@@ -69,5 +77,10 @@ static const char pageSplash[] PROGMEM = R"HTML(<IMG SRC="/splash.png?{{version}
 static const char pageConfigThemeOption[] PROGMEM = R"HTML(<OPTION VALUE="{{value}}" {{selected}}>{{label}}</OPTION>)HTML";
 
 static const char pageConfigUtcOption[] PROGMEM = R"HTML(<OPTION VALUE="{{value}}" DATA-MINUTES="{{minutes}}" {{selected}}>{{label}}</OPTION>)HTML";
+
+static const char pageConfigNewsFeed[] PROGMEM = R"HTML(
+<TR><TD CLASS="LABEL">Feed {{index}} <INPUT TYPE="CHECKBOX" NAME="newsenabled{{slot}}" VALUE="on" {{enabled}}> Enabled</TD>
+<TD><INPUT TYPE="URL" NAME="newsurl{{slot}}" VALUE="{{url}}" PLACEHOLDER="https://example.com/rss.xml"></TD></TR>
+)HTML";
 
 #endif // PAGE_CONFIG_H

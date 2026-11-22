@@ -24,6 +24,7 @@
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
 #include "WeatherService.h"
+#include "NewsService.h"
 #include "MoonCalendar.h"
 #include <WiFi.h>
 #include "src/ftx/FtxUi.h"
@@ -110,8 +111,9 @@ uint32_t background_timer = millis();   // Background screen refresh timer.
 //
 uint16_t currentCmd  = CMD_NONE;
 uint8_t  currentMode = FM;
-WeatherService weatherService;
 uint8_t weatherPage = 0;
+uint8_t newsCurrentIndex = 0;
+uint8_t newsCurrentPage = 0;
 volatile uint8_t weatherUiState = WEATHER_UI_IDLE;
 volatile uint8_t moonUiState = MOON_UI_IDLE;
 int16_t  currentBFO  = 0;
@@ -171,6 +173,7 @@ void drawEcoWaterfallStatic(LGFX_Sprite &targetSprite) {
 //
 void setup()
 {
+  newsService.begin();
   setenv("TZ", "UTC0", 1);
   tzset();
 
@@ -693,6 +696,8 @@ void loop()
   // mode and defer shutdown until an in-flight HTTPS request has completed.
   static bool weatherSessionActive = false;
   static bool weatherWifiCleanupPending = false;
+  static bool newsSessionActive = false;
+  static bool newsWifiCleanupPending = false;
 
   if(currentCmd == CMD_WEATHER && !weatherSessionActive)
   {
@@ -707,6 +712,20 @@ void loop()
     weatherWifiCleanupPending = true;
     weatherUiState = WEATHER_UI_IDLE;
   }
+
+  if(currentCmd == CMD_NEWS && !newsSessionActive)
+  {
+    newsSessionActive = true;
+    if(newsService.hasEnabledFeeds()) netWeatherBegin();
+  }
+  if(currentCmd != CMD_NEWS && newsSessionActive)
+  {
+    newsSessionActive = false;
+    newsWifiCleanupPending = true;
+  }
+  bool newsConnected = WiFi.status() == WL_CONNECTED;
+  if(newsSessionActive && newsService.hasEnabledFeeds()) newsConnected = netWeatherPoll();
+  newsService.update(newsConnected, newsSessionActive && newsService.hasEnabledFeeds());
 
   bool weatherConnected = WiFi.status() == WL_CONNECTED;
   if(weatherSessionActive && weatherService.hasConfiguredLocation())
@@ -724,11 +743,7 @@ void loop()
     weatherUiState = (sessionWeather.fetching || !sessionWeather.valid) ? WEATHER_UI_LOADING : WEATHER_UI_READY;
   }
 
-  if(weatherWifiCleanupPending && !weatherService.snapshot().fetching)
-  {
-    netWeatherEnd();
-    weatherWifiCleanupPending = false;
-  }
+  // Shared WiFi cleanup is deferred until all weather/news workers are idle.
 
   // Moon phases are calculated locally. Wi-Fi is only needed when the
   // system clock has never been synchronized; reuse the weather session and
@@ -775,11 +790,7 @@ void loop()
     else
       moonUiState = MOON_UI_WAITING_WIFI;
   }
-  if(moonWifiCleanupPending)
-  {
-    netWeatherEnd();
-    moonWifiCleanupPending = false;
-  }
+  // Moon-calendar cleanup uses the same shared network session.
   if(currentCmd == CMD_MOON_CALENDAR)
   {
     const time_t now = time(nullptr);
@@ -788,6 +799,31 @@ void loop()
     {
       lastMoonDrawMinute = minute;
       lastMoonUiState = moonUiState;
+      needRedraw = true;
+    }
+  }
+
+  if(!weatherSessionActive && !moonWifiSessionActive && !newsSessionActive &&
+     (weatherWifiCleanupPending || moonWifiCleanupPending || newsWifiCleanupPending) &&
+     !weatherService.snapshot().fetching && !newsService.isFetching())
+  {
+    netWeatherEnd();
+    weatherWifiCleanupPending = false;
+    moonWifiCleanupPending = false;
+    newsWifiCleanupPending = false;
+  }
+
+  static bool lastNewsDrawFetching = false;
+  static uint8_t lastNewsDrawCount = 0;
+  if(currentCmd == CMD_NEWS)
+  {
+    const uint8_t count = newsService.itemCount();
+    const bool fetching = newsService.isFetching();
+    if(count != lastNewsDrawCount || fetching != lastNewsDrawFetching)
+    {
+      lastNewsDrawCount = count;
+      lastNewsDrawFetching = fetching;
+      if(count && newsCurrentIndex >= count) newsCurrentIndex = 0;
       needRedraw = true;
     }
   }
@@ -818,6 +854,23 @@ void loop()
 
   ButtonTracker::State pb1st = pb1.update(digitalRead(ENCODER_PUSH_BUTTON) == LOW);
   if(!pb1st.isPressed) decoderMenuLongPressHandled = false;
+
+  if(currentCmd == CMD_NEWS && encCount)
+  {
+    const uint8_t count = newsService.itemCount();
+    if(count)
+    {
+      NewsService::Item item;
+      newsService.getItem(newsCurrentIndex % count, item);
+      uint8_t pages = (uint8_t)((strlen(item.text) + 239) / 240);
+      if(!pages) pages = 1;
+      int next = (int)newsCurrentPage + encCount;
+      if(next < 0) { newsCurrentIndex = newsCurrentIndex ? newsCurrentIndex - 1 : state.count - 1; newsCurrentPage = 0; }
+      else if(next >= pages) { newsCurrentIndex = (newsCurrentIndex + 1) % state.count; newsCurrentPage = 0; }
+      else newsCurrentPage = (uint8_t)next;
+    }
+    needRedraw = true; elapsedSleep = elapsedCommand = currentTime; encCount = encCountAccel = 0;
+  }
 
   if(currentCmd == CMD_WEATHER && encCount)
   {
@@ -1095,6 +1148,13 @@ void loop()
         currentCmd = CMD_NONE;
       needRedraw = true;
     }
+    else if(pb1st.isLongPressed && currentCmd == CMD_NEWS && !decoderMenuLongPressHandled)
+    {
+      decoderMenuLongPressHandled = true;
+      currentCmd = CMD_NONE;
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+    }
     else if(pb1st.isLongPressed && currentCmd == CMD_WEATHER && !decoderMenuLongPressHandled)
     {
       decoderMenuLongPressHandled = true;
@@ -1141,6 +1201,15 @@ void loop()
     }
     // The native Spectrum keypad handles its own encoder clicks below.
     // Do not let the generic click handler clear CMD_SPECTRUM_INPUT first.
+    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_NEWS)
+    {
+      const uint8_t count = newsService.itemCount();
+      if(count) newsCurrentIndex = (newsCurrentIndex + 1) % count;
+      newsCurrentPage = 0;
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+      pb1st.wasClicked = pb1st.wasShortPressed = false;
+    }
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_WEATHER)
     {
       weatherPage ^= 1;
@@ -1315,7 +1384,7 @@ void loop()
 
   if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
   {
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_JS8_MONITOR && currentCmd != CMD_FM_DX && currentCmd != CMD_WEATHER && currentCmd != CMD_MOON_CALENDAR)
+    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_JS8_MONITOR && currentCmd != CMD_FM_DX && currentCmd != CMD_WEATHER && currentCmd != CMD_MOON_CALENDAR && currentCmd != CMD_NEWS)
     {
       currentCmd = CMD_NONE;
       needRedraw = true;

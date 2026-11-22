@@ -64,6 +64,7 @@
 #define CMD_FM_DX       0x4400 // FM adaptive DX reception screen
 #define CMD_WEATHER     0x4500 // Two-page weather report
 #define CMD_MOON_CALENDAR 0x4600 // Offline moon phase and next moon events
+#define CMD_NEWS 0x4700 // RSS news reader
 
 
 

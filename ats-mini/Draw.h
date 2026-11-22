@@ -59,6 +59,7 @@ void drawLayoutTEF6686();
 void drawLayoutTinyRadio();
 void drawLayoutHJB();
 
+void drawNewsScreen();
 void drawAbout();
 void drawAboutHelp(uint8_t arrow);
 

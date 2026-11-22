@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "Menu.h"
 #include "WeatherService.h"
+#include "NewsService.h"
 #include "MoonCalendar.h"
 #include "BleMode.h"
 #include "Draw.h"
@@ -734,6 +735,54 @@ static void drawMoonCalendarScreen()
   spr.drawString("Zeiten: Lokalzeit  |  Klick: Zurueck",12,155);
 }
 
+
+void drawNewsScreen()
+{
+  const uint8_t newsCount = newsService.itemCount();
+  const bool fetching = newsService.isFetching();
+  const bool failed = newsService.hasFailed();
+  const int w = spr.width();
+  constexpr uint16_t BLUE=0x001F, CYAN=0x07FF, GREEN=0x07E0, WHITE=0xFFFF, MUTED=0x8410, PANEL=0x0000;
+  spr.fillScreen(PANEL); spr.drawRoundRect(3,3,w-6,164,6,BLUE);
+  spr.setTextDatum(TL_DATUM); spr.setFont(FONT_SMALL); spr.setTextColor(CYAN,PANEL);
+  spr.drawString("NACHRICHTEN",10,6); spr.setFont(FONT_DEFAULT); spr.setTextColor(MUTED,PANEL);
+  if(!newsCount)
+  {
+    spr.drawFastHLine(9,23,w-18,BLUE); spr.setTextDatum(MC_DATUM); spr.setTextColor(WHITE,PANEL);
+    spr.drawCenterString(fetching ? "RSS-Feeds werden geladen..." : "Keine Nachrichten vorhanden",w/2,72);
+    spr.setTextColor(MUTED,PANEL);
+    spr.drawCenterString(failed ? "Abruf fehlgeschlagen / Feed pruefen" : "RSS-Adressen in der Weboberflaeche eintragen",w/2,94);
+    spr.drawString("Lang druecken: Zurueck",10,148); return;
+  }
+  const uint8_t index=newsCurrentIndex%newsCount;
+  NewsService::Item item;
+  if(!newsService.getItem(index,item)) return;
+  spr.setTextDatum(TR_DATUM); char meta[20]; snprintf(meta,sizeof(meta),"%u/%u",index+1,newsCount); spr.drawString(meta,w-10,8);
+  spr.setTextDatum(TL_DATUM); spr.setTextColor(WHITE,PANEL); spr.setFont(FONT_DEFAULT);
+  const char* title=item.title; char titleLine[44];
+  for(uint8_t row=0;row<2 && *title;row++)
+  {
+    size_t n=0,lastSpace=0;
+    while(title[n] && n<40){titleLine[n]=title[n];if(title[n]==' ')lastSpace=n;++n;}
+    if(title[n] && lastSpace>8)n=lastSpace;
+    titleLine[n]='\0'; spr.drawString(titleLine,10,21+row*11); title+=n; while(*title==' ')++title;
+  }
+  spr.setTextColor(GREEN,PANEL); spr.drawString(item.source,10,44);
+  spr.setTextColor(MUTED,PANEL); spr.setTextDatum(TR_DATUM); spr.drawString(item.date,w-10,44);
+  spr.drawFastHLine(9,56,w-18,BLUE); spr.setTextDatum(TL_DATUM); spr.setTextColor(WHITE,PANEL);
+  const char* body=item.text; size_t offset=(size_t)newsCurrentPage*240; size_t length=strlen(body); if(offset>=length)offset=0; body+=offset;
+  for(uint8_t row=0;row<6 && *body;row++)
+  {
+    char line[42]; size_t n=0,lastSpace=0;
+    while(body[n] && n<40){line[n]=body[n];if(body[n]==' ')lastSpace=n;++n;}
+    if(body[n] && lastSpace>8)n=lastSpace;
+    line[n]='\0'; spr.drawString(line,10,61+row*13); body+=n; while(*body==' ')++body;
+  }
+  spr.setTextColor(MUTED,PANEL); spr.setTextDatum(TL_DATUM);
+  spr.drawString("Dreh: Textseiten  Klick: Naechste Meldung",10,145);
+  spr.setTextDatum(TR_DATUM); char pageText[20]; snprintf(pageText,sizeof(pageText),"SEITE %u",newsCurrentPage+1); spr.drawString(pageText,w-10,155);
+}
+
 static void drawWeatherScreen()
 {
   const WeatherService::Snapshot weather = weatherService.snapshot();
@@ -863,6 +912,11 @@ void drawScreen()
     drawFullScreenMenu(currentCmd);
     spr.pushSprite(0, 0);
     return;
+  }
+
+  if(currentCmd == CMD_NEWS)
+  {
+    drawNewsScreen(); spr.pushSprite(0,0); return;
   }
 
   if(currentCmd == CMD_WEATHER)

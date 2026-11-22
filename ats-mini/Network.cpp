@@ -18,6 +18,7 @@
 #include "PagePatches.h"
 #include "AllBandWebScanner.h"
 #include "WeatherService.h"
+#include "NewsService.h"
 #include <new>
 
 #include <WiFi.h>
@@ -858,6 +859,26 @@ static void webInit()
     request->send(200, "text/html", webConfigPage());
   });
 
+  server.on("/news/save", HTTP_POST, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    NewsService::Configuration config = {};
+    for(uint8_t i=0;i<NewsService::MAX_FEEDS;i++)
+    {
+      String suffix(i), urlName="newsurl"+suffix, enabledName="newsenabled"+suffix;
+      if(request->hasParam(urlName,true))
+      {
+        String url=request->getParam(urlName,true)->value(); url.trim();
+        if(url.length()>=NewsService::MAX_URL_BYTES || !NewsService::validFeedUrl(url.c_str()))
+          return request->send(400,"text/plain; charset=utf-8","RSS URL must use HTTP/HTTPS and be shorter than 192 characters.");
+        url.toCharArray(config.feeds[i].url,NewsService::MAX_URL_BYTES);
+      }
+      config.feeds[i].enabled=request->hasParam(enabledName,true) && config.feeds[i].url[0];
+    }
+    if(!newsService.setConfiguration(config))
+      return request->send(500,"text/plain; charset=utf-8","RSS configuration could not be saved.");
+    request->redirect("/config");
+  });
+
   server.on("/weather/save", HTTP_POST, [] (AsyncWebServerRequest *request) {
     if(!webIsAuthenticated(request)) return request->requestAuthentication();
     if(!request->hasParam("postal", true))
@@ -1417,6 +1438,14 @@ const String webConfigPage()
     {"resolution", splashResolution}, {"postal", weatherService.postalCode()}
   }, {
     {"navigation", [](String &out) { webNavigation(out, "/config"); }},
+    {"news_feeds", [](String &out) {
+      const NewsService::Configuration config=newsService.configuration();
+      for(uint8_t i=0;i<NewsService::MAX_FEEDS;i++)
+        pageAppend(out,pageConfigNewsFeed,{
+          {"index",String(i+1)},{"slot",String(i)},{"url",String(config.feeds[i].url)},
+          {"enabled",config.feeds[i].enabled?"CHECKED":""}
+        });
+    }},
     {"utc_options", [](String &out) {
       for(int i=0 ; i<getTotalUTCOffsets(); i++)
         pageAppend(out, pageConfigUtcOption, {

@@ -13,6 +13,7 @@
 
 class NavtexReceiverService {
 public:
+  enum class SelfTestStatus : uint8_t { Idle, Running, Passed, Failed };
   bool enter(bool wifiOff, AudioCaptureService& capture);
   void exit();
   bool active() const { return active_; }
@@ -24,6 +25,8 @@ public:
   uint32_t messagesCompleted() const { return messagesCompleted_; }
   uint8_t copyMessages(NavtexMessageParser::Message* out, uint8_t capacity) const;
   bool requestSelfTest();
+  SelfTestStatus selfTestStatus() const { return selfTestStatus_; }
+  uint8_t selfTestPhasingErrors() const { return selfTestPhasingErrors_; }
 
 private:
   struct AudioChunk {
@@ -40,6 +43,11 @@ private:
   void processCodeword(uint8_t code);
   void runSelfTest();
   void processSample(int16_t sample);
+  volatile SelfTestStatus selfTestStatus_ = SelfTestStatus::Idle;
+  bool selfTestRunning_ = false;
+  uint8_t selfTestPhasingBits_[NavtexSitorBSync::kPatternBits]{};
+  uint8_t selfTestPhasingBitCount_ = 0;
+  volatile uint8_t selfTestPhasingErrors_ = 0;
 
   AudioCaptureService* capture_ = nullptr;
   QueueHandle_t queue_ = nullptr;

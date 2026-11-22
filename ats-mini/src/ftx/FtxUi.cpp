@@ -1064,34 +1064,41 @@ void drawFtxDecoderPage()
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);
     if(ftxPresetMenuOpen) {
-      spr.drawString(ftxPresetDecoder==DecoderKind::FT4 ? "FT4 PRESETS" : "FT8 PRESETS",menuX+12,menuY+7);
+      spr.drawString("DECODER-FREQUENZ",menuX+12,menuY+7);
       const uint8_t count=ftxPresetCount();
-      for(uint8_t row=0;row<6;++row) {
+      for(uint8_t row=0;row<5;++row) {
         const uint8_t index=ftxPresetScroll+row;
         if(index>=count) break;
         const DecoderFrequencyPreset* preset=ftxPresetAt(index);
         if(!preset) continue;
         char label[40];
-        snprintf(label,sizeof(label),"%-8s %2u.%03u MHz USB",
-                 preset->label+4,
+        const char* name=preset->label;
+        if(!strncmp(name,"FT8 ",4) || !strncmp(name,"FT4 ",4)) name+=4;
+        snprintf(label,sizeof(label),"%-8s %2u.%03u %s",name,
                  static_cast<unsigned>(preset->frequencyKHz/1000),
-                 static_cast<unsigned>(preset->frequencyKHz%1000));
-        const int y=menuY+29+row*20;
-        if(index==ftxPresetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,blue);
-        spr.setTextColor(index==ftxPresetSelection?0xFFFF:0xBDF7);
+                 static_cast<unsigned>(preset->frequencyKHz%1000),
+                 preset->modulation==USB?"USB":preset->modulation==LSB?"LSB":"AM");
+        const int y=menuY+29+row*19;
+        if(index==ftxPresetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x07FF);
+        spr.setTextColor(index==ftxPresetSelection?0x0000:0xBDF7);
+        spr.setTextDatum(TL_DATUM);
+        spr.setFont(FONT_SMALL);
         spr.drawString(label,menuX+13,y);
-        if(index==ftxPresetSelection && (ftxPresetPreviewPending || ftxPresetPreviewActive)) {
-          spr.setTextDatum(TR_DATUM);
-          spr.setTextColor(ftxPresetPreviewActive ? 0x07E0 : 0xFFE0);
-          spr.drawString(ftxPresetPreviewActive ? "LISTEN" : "WAIT",menuX+menuW-12,y);
-          spr.setTextDatum(TL_DATUM);
-        }
       }
       char page[12];
       snprintf(page,sizeof(page),"%02u/%02u",static_cast<unsigned>(ftxPresetSelection+1),static_cast<unsigned>(count));
       spr.setTextDatum(TR_DATUM);
       spr.setTextColor(0xFFFF);
+      spr.setFont(FONT_SMALL);
       spr.drawString(page,menuX+menuW-10,menuY+7);
+      spr.setTextDatum(MC_DATUM);
+      spr.setTextColor(ftxPresetPreviewActive?0x07E0:0xBDF7);
+      spr.drawString(ftxPresetPreviewActive?"ABGESTIMMT":(ftxPresetPreviewPending?"ABSTIMMEN...":"BEREIT"),160,menuY+124);
+      spr.setTextDatum(ML_DATUM);
+      spr.setTextColor(0xFFFF);
+      spr.drawString("DREHEN: WÄHLEN",menuX+12,menuY+143);
+      spr.setTextDatum(MR_DATUM);
+      spr.drawString("HALTEN: ZURÜCK",menuX+menuW-12,menuY+143);
     } else {
       const char* labels[kFtxMenuItems] = {
         "FT8 PRESETS",

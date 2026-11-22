@@ -89,7 +89,6 @@ void CwDecoderService::update() {
   wpm_ = decoder_.getWpm();
   const bool key = decoder_.isKeyDown();
   const uint8_t level = decoder_.getLevel();
-  const float detectedTone = decoder_.getTone();
   xSemaphoreGive(mutex_);
   audioPresent_ = audioLevel_ >= 12;
   if (key && level > 20) lastToneMs_ = millis();

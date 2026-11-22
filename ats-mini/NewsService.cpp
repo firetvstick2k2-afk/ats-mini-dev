@@ -62,6 +62,8 @@ void copy(char* dst,size_t cap,const String& s){if(!cap)return;size_t n=min((siz
 String hostOf(const char* url){String s(url);int a=s.indexOf("://");a=a<0?0:a+3;int b=s.indexOf('/',a);if(b<0)b=s.length();s=s.substring(a,b);int c=s.indexOf(':');if(c>=0)s.remove(c);return s;}
 void add(NewsService::Snapshot& s,String title,String source,String date,String body,uint8_t sourceIndex){
   title=clean(title);source=clean(source);body=clean(body);if(title.length()<3||s.count>=NewsService::MAX_ITEMS)return;
+  uint8_t sourceCount=0;for(uint8_t i=0;i<s.count;i++)if(s.items[i].sourceIndex==sourceIndex)++sourceCount;
+  if(sourceCount>=NewsService::MAX_ITEMS_PER_FEED)return;
   int64_t epoch=parseDate(date);time_t now=time(nullptr);if(epoch>0&&now>MIN_EPOCH&&epoch<(int64_t)now-172800LL)return;
   for(uint8_t i=0;i<s.count;i++)if(!strcasecmp(s.items[i].title,title.c_str()))return;
   auto& v=s.items[s.count++];copy(v.title,sizeof(v.title),title);copy(v.source,sizeof(v.source),source);copy(v.date,sizeof(v.date),date);copy(v.text,sizeof(v.text),body.length()?body:title);v.publishedAt=epoch;v.sourceIndex=sourceIndex;

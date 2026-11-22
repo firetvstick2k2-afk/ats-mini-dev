@@ -204,6 +204,16 @@ void NavtexReceiverService::runSelfTest() {
       }
     }
   }
+
+  // One trailing bit flushes the final integrate-and-dump decision because
+  // the streaming demodulator emits decisions on the next bit-clock edge.
+  const float flushStep = kPi2 * 1615.0f / 4000.0f;
+  for (uint8_t sample = 0; sample < 40; ++sample) {
+    const int16_t audio = static_cast<int16_t>(2048.0f + kAmplitude * sinf(phase));
+    processSample(audio);
+    phase += flushStep;
+    if (phase >= kPi2) phase -= kPi2;
+  }
 }
 
 void NavtexReceiverService::processCodeword(uint8_t code) {

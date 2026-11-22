@@ -11,6 +11,7 @@ profiles:
       - Async TCP (3.5.0)
       - ESP Async WebServer (3.12.1)
       - NTPClient (3.2.1)
+      - ArduinoJson (7.4.2)
 
   esp32s3-qspi:
     # If you change this line, change it in build.yml as well

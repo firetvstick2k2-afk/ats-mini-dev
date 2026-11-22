@@ -167,7 +167,14 @@ void NavtexReceiverService::processSample(int16_t sample) {
   if (!demod_.pushSample(sample, bit)) return;
   ++bitsDecoded_;
   if (selfTestRunning_ && selfTestPhasingBitCount_ < NavtexSitorBSync::kPatternBits) {
+    const uint8_t bitIndex = selfTestPhasingBitCount_;
     selfTestPhasingBits_[selfTestPhasingBitCount_++] = bit ? 1U : 0U;
+    if (bitIndex < 12U) {
+      const NavtexBfskDemodulator::Metrics& metrics = demod_.metrics();
+      Serial.printf("[NAVTEX-TEST] DSP bit=%u value=%u mark=%.0f space=%.0f confidence=%.3f\n",
+                    static_cast<unsigned>(bitIndex), bit ? 1U : 0U,
+                    metrics.markEnergy, metrics.spaceEnergy, metrics.confidence);
+    }
   }
   uint8_t codeword = 0;
   if (!sync_.pushBit(bit, codeword)) return;

@@ -668,12 +668,32 @@ static void drawWeatherScreen()
   spr.setTextDatum(TL_DATUM);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   spr.setTextColor(WHITE_TEXT,PANEL);
-  if(!weather.valid)
+  if(weatherUiState != WEATHER_UI_READY || !weather.valid)
   {
     spr.drawString("WETTERBERICHT",12,12);
-    spr.setTextColor(MUTED_TEXT,PANEL);
-    spr.drawString(weather.fetching ? "Wetterdaten werden geladen..." : "Keine Wetterdaten vorhanden",12,66);
-    spr.drawString("PLZ in der WLAN-Webseite einstellen",12,91);
+    spr.drawFastHLine(10,29,w-20,FRAME);
+    spr.fillRoundRect(25,48,w-50,72,6,0x0841);
+    spr.drawRoundRect(25,48,w-50,72,6,FRAME);
+    spr.setTextDatum(MC_DATUM);
+    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    spr.setTextColor(WHITE_TEXT,0x0841);
+    const char* message = "Waiting for WiFi...";
+    const char* detail = "Verbinde mit gespeichertem Netzwerk";
+    if(weatherUiState == WEATHER_UI_LOADING)
+    {
+      message = "Loading weather data...";
+      detail = "Bitte einen Moment warten";
+    }
+    else if(weatherUiState == WEATHER_UI_NO_LOCATION)
+    {
+      message = "Postleitzahl fehlt";
+      detail = "PLZ auf der WLAN-Webseite einstellen";
+    }
+    spr.drawCenterString(message,w/2,70);
+    spr.setFont(FONT_DEFAULT);
+    spr.setTextColor(MUTED_TEXT,0x0841);
+    spr.drawCenterString(detail,w/2,96);
+    spr.setTextDatum(TL_DATUM);
     spr.setFont(FONT_DEFAULT);
     spr.setTextColor(MUTED_TEXT,PANEL);
     spr.drawString("Lang druecken: Zurueck",12,145);

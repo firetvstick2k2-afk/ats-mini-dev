@@ -194,6 +194,6 @@ void drawNavtexPage() {
   } else {
     const char* labels[] = {"NAVTEX PRESETS", "BACK", "EXIT NAVTEX"};
     DecoderMenuUi::draw("NAVTEX ACTIONS", labels, nullptr, 3, actionSelection,
-                        "TURN: SELECT", "CLICK: OPEN");
+                        "TURN: SELECT", "CLICK: OPEN", nullptr, true);
   }
 }

@@ -97,12 +97,11 @@ bool navtexUiOpen() {
   previewPending = previewActive = originalValid = false;
   restoreNetworkMode = wifiModeIdx;
 
-  Serial.printf("[NAVTEX] WIFI STOP begin mode=%d\n", static_cast<int>(WiFi.getMode()));
+  Serial.println("[NAVTEX] WIFI STOP begin");
   netStop();
   const int8_t wifiStatus = getWiFiStatus();
-  Serial.printf("[NAVTEX] WIFI STOP done status=%d mode=%d heap=%u stack=%u\n",
-                static_cast<int>(wifiStatus), static_cast<int>(WiFi.getMode()),
-                static_cast<unsigned>(ESP.getFreeHeap()),
+  Serial.printf("[NAVTEX] WIFI STOP done status=%d heap=%u stack=%u\n",
+                static_cast<int>(wifiStatus), static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
   if (wifiStatus != 0) {
     Serial.println("[NAVTEX] ABORT: WiFi still active");

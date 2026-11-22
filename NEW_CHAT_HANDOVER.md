@@ -1,5 +1,15 @@
 # ATS Mini Dev — Übergabe für neuen Chat
 
+## RSS-Nachrichtenansicht – Textüberlauf und Trennlinie (2026-11-22)
+
+- Nutzer hat nach dem ersten Hardwaretest die deutlich bessere Lesbarkeit bestätigt, aber am rechten Ende der drei Textzeilen und am Ende des Lauftextes abgeschnittene/unerwünschte Zeichenfolgen gemeldet (Foto vom ATS Mini).
+- Ursache der sichtbaren Überläufe: RSS-Titel und Textzeilen wurden mit einer festen Zeichenanzahl statt anhand der tatsächlichen Pixelbreite aufgeteilt. Bei der kräftigen FreeSans-Bold-Schrift können 28 Zeichen breiter als der verfügbare Displaybereich sein.
+- ats-mini/Draw.cpp geändert: Headline-Ticker und Artikelzeilen werden jetzt anhand von spr.textWidth() innerhalb der verfügbaren Breite aufgebaut; die Seitenberechnung verwendet dieselbe pixelbreitenbasierte Umbruchfunktion. Drei Zeilen pro Seite bleiben erhalten.
+- Eine dünne horizontale Trennlinie wurde direkt unter dem Headline-Lauftext ergänzt. Footer-Hinweis gekürzt, damit er nicht mit der Seitenanzeige kollidiert.
+- Commit: 1b376c207bd3d8e486adf2ac1ff0fc063fe1f327.
+- Source-only Änderung auf development; noch kein Build oder Hardwaretest nach diesem Fix. Beim nächsten OSPI-DE-Build besonders prüfen: vollständiger Lauftext ohne abgeschnittene Enden, keine Zeichenüberläufe am rechten Rand der drei Artikelzeilen, Seitenwechsel und sichtbare Trennlinie.
+
+
 ## Wichtige Vorgabe: Lesbarkeit und visuelle Gestaltung für den Nutzer (2026-11-22)
 
 - Der Nutzer hat eine eingeschränkte Seh-/Lesefähigkeit und trägt eine Brille (+1,5 Dioptrien beidseitig). Er beschreibt keine grundsätzlichen Probleme mit der Farberkennung; entscheidend sind **gute Erkennbarkeit, klare Schrift und möglichst geringe Augenanstrengung**.

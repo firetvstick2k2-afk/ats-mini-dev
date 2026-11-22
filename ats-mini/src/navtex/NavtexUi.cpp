@@ -169,8 +169,14 @@ void navtexUiClick() {
 }
 
 bool navtexUiTick(uint32_t now) {
+  static uint32_t lastDisplayRefresh = 0;
+  bool refresh = false;
+  if (pageActive && static_cast<uint32_t>(now - lastDisplayRefresh) >= 500) {
+    lastDisplayRefresh = now;
+    refresh = true;
+  }
   if (!pageActive || !presetsOpen || !previewPending ||
-      static_cast<uint32_t>(now - previewStartedAt) < kPreviewDelayMs) return false;
+      static_cast<uint32_t>(now - previewStartedAt) < kPreviewDelayMs) return refresh;
   previewPending = false;
   previewActive = true; // Provisional before attempting the tune, so failures roll back.
   if (!tunePreset(kNavtexPresets[presetSelection])) {

@@ -1,55 +1,44 @@
 # ATS Mini Development Handoff
 
-## Latest task: decoder menu unification and CW audio/auto-tone improvements (2026-11-22)
+Last updated: 2026-11-22
 
-### Follow-up refinement (2026-11-22)
-- Applied the central three-row decoder frequency renderer to all language templates: English, German and Italian. The German OSPI-DE build therefore uses the unified category/preset UI too.
-- Shared renderer now shows the same selected/total counter and two-digit row numbering as the main menu; preview/tone status is placed above the footer divider.
-- AUTO Tone search resolution increased from 25 Hz to 10 Hz; tone-bin dominance threshold was relaxed slightly so real carriers between search bins are not rejected. This is still awaiting device verification.
-- Follow-up code commits: `52cad6ea0e5e5bdeb4727773528674fc0c071147` (AUTO Tone frequency resolution), `1866eb8d3312c52273c59f3c88cd500c32aac4a5` (German menu), `e7e3d88cbe369c1733d5be49b33fa6ea31456f37` (Italian menu), `1bc90849d15b2f4d67c9d082e2644d8f7f8b5e01` (menu counters/numbering).
-- User authorized direct commits to `development` until this task is complete. `main` remains untouched. The user starts the OSPI-DE build manually; do not dispatch a build.
-- Added shared renderer `ats-mini/src/DecoderMenuUi.h`: three visible rows, main-menu-inspired cyan/blue selection, numbering, scrollbar and encoder footer.
-- Applied it to CW Actions/CW frequencies, RTTY Actions/RTTY presets, FT8/FT4 Actions/presets, and the central Decoder Frequencies category/preset screen in `Menu_english.cpp.src`. Existing action handlers and preview/tune delays remain in place.
-- CW current frequency is refreshed from `rx.getFrequency()` when the CW page opens, preventing a stale display.
-- The CW decoder core already contained the RESONIK-style adaptive Goertzel/reference-filter algorithm. Avoid duplicating it. The actual differences were in the service's unstable fixed-threshold AUTO Tone sweep and the audio capture setup.
-- Reworked AUTO Tone to use RMS/coherence and strongest/second-strongest Goertzel bins, an adaptive noise floor, and three consecutive stable windows before retuning.
-- Configured GPIO11 ADC capture explicitly for 12-bit reads and 11 dB attenuation (ATS Mini V4B; Wi-Fi must remain stopped while ADC2 is sampled).
-- Added CW audio peak and clipping diagnostics to the service and page display.
-- CW page now follows RESONIK's receiver-level floor: raise volume to 50 only when the user's current volume is lower, then restore the exact previous volume on exit or startup failure. Higher user volume is left unchanged; the new peak/clipping indicator helps identify overload.
-- Code commits on `development` for this task:
-  - `1d62cc5a998d49998a43da7edd4374c76596c766` — shared three-row decoder menu renderer.
-  - `8c5ea2a999f4f3c72c218d81916a0eefbefd9965` — menu helper formatting include.
-  - `97848d95c74144764367669edf27f2534a434433` and `1f12b3cec2d317f9eb5c1bd25b8092acdc18819b` — CW menus.
-  - `ce0103294a86f174f52cde1f2746d25b037fbb6a` — RTTY menus.
-  - `5ebbe676d2493e4bd9d67506381c4dcb9bd2cb75` — FT8/FT4 menus.
-  - `4ca35e8941ef4ad165a2a32073e4e986158dbef5`, `92a4406dba9a44d3df529534198eb79e99729d58`, `06cb21a688adfe25200a3015f1aa8a68e4aa009a`, `61e567f179e8d18901a7ee7a397d0e7a97794494` — CW diagnostics/AUTO Tone.
-  - `a311af6a8d6b436079943d5da210a9b7073bc5b7` — CW live frequency and audio status.
-  - `3794ced1b0ccf06b2e210f1a19be7b4c07485a92` — GPIO11 ADC setup.
-  - `729f14d860f5d053ef6d3368ee716f82c721510d` — central decoder frequency menu.
-- Validation status: source changes committed; no build, flash, or hardware test has been run. User will run OSPI-DE build and report compiler output. Check all decoder menus, RTTY/FT8 preset preview/restore, CW tone stability, level/peak/clip display, and actual decoding with a stable CW signal after flashing.
-- Note: these commits are source-level only. Do not mark CW reception as fixed until the user confirms a device test.
+## Current project status
 
+- **Repository:** [firetvstick2k2-afk/ats-mini-dev](https://github.com/firetvstick2k2-afk/ats-mini-dev)
+- **Active branch:** `development`. All development work, commits and pushes belong here.
+- **Stable branch:** `main` remains untouched until a feature is complete, built, verified on hardware and explicitly approved for promotion.
+- **Branch policy:** use only `development`; do not create temporary feature/test branches.
+- **Build workflow:** `.github/workflows/build.yml` currently uses `workflow_dispatch` only. A push does not start a firmware build. Do not start a workflow/build unless the user asks for it.
+- **Commit/push permission:** the assistant is authorized to commit and push completed, reviewed changes directly to `development`. No additional approval is needed for ordinary development commits or handoff updates.
+- **Handoff rule:** keep this file current after meaningful changes, decisions, test results and newly agreed next steps. It is the primary source of truth when opening a new chat.
 
-Last updated: 2026-11-21 (RTTY preset preview submenu)
-Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
-Active work branch: `development` (the sole development branch; never modify `main` except for a completed, tested feature explicitly approved for promotion)
+## Current implementation checkpoint — 2026-11-22
 
-## Latest bugfix: FT8/FT4 logging in offline mode (2026-11-21)
-- User-reported issue: FT8 Actions > Logging stayed OFF and could not be enabled.
-- Root cause: `ftxLogStart()` rejected offline synchronization and required a valid UTC date; `ftxLogMessage()` also discarded messages without valid UTC. Switching to offline mode additionally stopped and cleared the active log.
-- Fixed in commit `4b3a3e8d46e6061235349d15bf4cad9e4bf8d84e`: logging can start without UTC, uses a unique `FT8_UNTIMED` / `FT4_UNTIMED` filename when no date is available, writes unknown timestamps for offline receptions, and remains active across online/offline sync changes.
-- Changelog fragment: `changelog/+ft8-offline-logging.fixed.md`.
-- Source review only. No compile, GitHub Actions run, or hardware test was performed; user must verify Logging ON, actual file creation, offline reception entries, and online/offline switching on device.
+### Decoder menus and receiver pages
+- CW, FT8/FT4 and RTTY action/preset menus have been brought into a consistent black, cyan and white visual style. Selected rows use a thin cyan outline; normal text is white. Decoder main-page layouts retain their own content.
+- Preset screens show five visible frequency rows with decoder-specific titles, page counters, tuning status and encoder hints. The shared decoder frequency category screen is a separate three-row view.
+- CW page opening refreshes the displayed frequency from the receiver's live frequency, so it should not reuse a stale value from an earlier session. Hardware confirmation of this specific case is still pending.
+- CW AUTO Tone uses adaptive signal/noise analysis and a 10 Hz search resolution. Treat tone stability and actual decoding as unverified until tested with a stable on-air CW signal.
+- RTTY retains AUTO tone-pair/polarity/BFO behavior and selectable baud rates. The latest simplified RTTY page/menu changes still need the user's device feedback.
+- FT8/FT4 and RTTY preset selection use a 2-second preview before committing. **CW preset scrolling is intentionally not yet converted to that same 2-second preview.** Do this after the user's current build/test cycle, matching the FT8/FT4 and RTTY behavior: preview while browsing, restore the original tuning when scrolling away/canceling, and commit only on click.
 
-## Working agreement
-- Keep this file current after every meaningful feature or code change. Use it as the handoff reference when starting a new chat.
-- **Bugfix priority:** when the user reports a bug during planned feature work, pause the roadmap and handle that bug first; after the fix, resume the previous highest-priority task (currently JS8Call).
-- New features must be isolated from existing features wherever practical. If implementing a feature would require changing shared feature-specific logic, duplicate that logic into a new module/state/handler for the new feature rather than refactoring the established feature.
-- Preserve Dual RX, existing Web Spectrum behavior, Clean Layout and especially Layout-TEF6686 unless a change is explicitly required.
-- Shared low-level radio/scanning primitives may be reused only after checking their side effects and compatibility.
-- Branch policy (user-confirmed 2026-11-21): use only `development` for all development. Do not create feature/test branches. The user intends to keep only `main` and `development`; old branches are not sources for recovery/merging—if something is needed later, recreate it in `development`.
-- Promotion policy (user-confirmed 2026-11-21): when a feature is complete, builds successfully and is verified working, promote it to `main`. `main` is the stable approved state; never update it prematurely.
-- Build workflow: pushes to `development` trigger the OSPI-DE BIN build; `workflow_dispatch` remains available. Do not claim a build/device test passed unless verified.
+### Immediate test focus
+1. Build and flash the current `development` revision using the existing manual workflow.
+2. Verify CW page entry after tuning elsewhere: the displayed frequency must match the receiver's current frequency.
+3. Check CW AUTO Tone, audio level/peak/clipping display and actual decoding with a stable CW signal.
+4. Check FT8/FT4 and RTTY preset preview/restore/commit behavior and their latest UI changes.
+5. Report actual build and hardware results here. Source review is not a substitute for compilation or device verification.
+
+### Working rules
+- Fix user-reported bugs before continuing the feature roadmap.
+- Keep new features isolated where practical; check side effects before reusing shared receiver/scanner primitives.
+- Preserve Dual RX, Web Spectrum, Clean Layout and especially Layout-TEF6686 unless a change explicitly requires otherwise.
+- Do not claim a build, flash or hardware test passed without evidence from the workflow or user/device feedback.
+- Keep the historical log below as a record of earlier work. Old “next steps”, build instructions and status notes inside dated historical entries describe the situation at that time; they are not current instructions.
+
+---
+
+## Historical implementation log
 
 ## Previous task: native VHF Spectrum Scanner
 ### Intended user experience
@@ -97,51 +86,6 @@ Active work branch: `development` (the sole development branch; never modify `ma
 - `FreqKeypad.cpp/.h` implements the existing radio/Dual RX keypad and must remain unchanged for this feature.
 - Native VHF scanning no longer calls `Scan.cpp`; the web scanner's existing global result buffer is untouched.
 - GitHub Actions workflow was changed earlier to `ubuntu-24.04` for both jobs after an Ubuntu runner/Python issue. Do not revert without a reason.
-
-## Immediate next steps
-1. User launches the manual GitHub Actions workflow on `development` and checks all four OSPI/QSPI × German/English builds.
-2. After the fix commit `db8c1f7fe7ab23911d7a65ea53b779ebb893f8c3`, rerun the manual workflow on `development`. If another build fails, use the exact compiler output to fix only the affected code and update this handoff.
-3. After a successful build, flash/test the ATS Mini V4: start/end entry, invalid range, cancel without retune, full sweep/status, graph navigation, short-click tune, long-press exit, and confirm Web Spectrum + Dual RX still work.
-4. Do not merge/copy to `main` unless the user explicitly asks.
-
-## Validation checklist (must be checked before asking user to build)
-- [x] VHF start and end are entered in separate scanner-owned stages (source reviewed).
-- [x] Dot/comma decimal parsing works up to two decimal places (source reviewed).
-- [x] Range and ordering validation reject invalid values before radio changes (source reviewed).
-- [x] Input cancel/validation errors do not retune; scan restores prior state before graph navigation (source reviewed).
-- [x] Encoder navigation and short-click selection are wired to scanner-specific handlers (source reviewed; hardware test pending).
-- [x] Long press cancels keypad or exits graph without tuning; Dual RX handling block remains unchanged (source reviewed).
-- [x] ALL Band submenu item cannot start VHF scanning (source reviewed).
-- [x] Existing Dual RX-specific keypad and state logic were not modified for the scanner (source review; hardware regression test pending).
-- [x] Native scanner no longer shares Web Spectrum sample buffer (source reviewed; hardware regression test pending).
-- [ ] Native sweep tune-complete polling and timeout behavior reviewed against existing scan loop.
-- [x] First build failure fixed at source level: `Utils.h` is now included for `muteOn` and `MUTE_TEMP`; rebuild pending.
-- [x] Native sweep configures a covering FM band and restores previous band/frequency/mode/BFO after scanning (source reviewed; hardware test pending).
-- [x] German and English menu templates have VHF/All Band labels and guarded click handling (source reviewed).
-- [x] VHF keypad uses matching geometry/colors/fonts and `CLOSE` label (visual confirmation requires device test).
-- [x] VHF keypad exposes only fixed FM and MHz; no mode or kHz switching (source reviewed).
-- [x] Future ALL Band requirement is documented; implementation is intentionally not present yet.
-- [x] Build workflow uses `workflow_dispatch`; no workflow was triggered by the assistant.
-- [x] Handoff updated with actual changes and remaining build/device validation.
-
-## Changes made in this session
-- Added `DEVELOPMENT_HANDOFF.md` on `development` (initial handoff commit `bee78177301f4d2be6759f40f5de46ed0c55522f`).
-- Added `CMD_SPECTRUM_INPUT` and scanner-specific keypad API/state.
-- Added independent VHF start/end frequency entry and basic range validation in `SpectrumScanner.cpp`.
-- Added keypad drawing dispatch in `Draw.cpp`; added encoder input dispatch in `ats-mini.ino` without changing the Dual RX block itself.
-- Updated English/German menu click handling so only VHF item starts scanner; German submenu localized.
-- Updated `Network.cpp` to ignore web-spectrum command processing during native scanner input.
-- Additional commits: `b1b657d3355526920328069a31735eeab1babfa3` (corrected label line breaks), `1c6861a7427736b7670afbe82a870d7892e174f1` (web-spectrum command isolation), `7d5d86e1a54f7db04ad28709a180c4ec0fac5c5d` (consume menu-opening click so it cannot enter a keypad digit). The handoff itself was updated in `90effb849c89d8b4c867808c5aaf6e13a572ebbd` before these final edits.
-- Still required before user build: finish the source-level review of the isolated native sweep and all encoder/UI state transitions. No compile or hardware test has been run.
-
-
-## Build readiness
-- First manual build attempt failed in `build ospi-de` on undeclared `muteOn`/`MUTE_TEMP`; the fix is committed as `db8c1f7fe7ab23911d7a65ea53b779ebb893f8c3` (added `Utils.h`, clarified a warning-prone condition). Rerun the manual workflow on `development` before flashing.
-- Ready for the user to click **Run workflow** on the `development` branch.
-- The workflow matrix builds OSPI/QSPI firmware in both German and English (four builds).
-- This is a source-level review only. Do not describe the build as passing until GitHub Actions completes successfully.
-- Current relevant source commit: `07bac5f4b21d4ca70bdb6e62a74071758360e425`; latest handoff updates continue after it.
-
 
 ## Future layout reference: GNBD miniradio (requested 2026-10-28)
 - User wants to recreate the screenshot's receiver layout as close to 1:1 as possible in the ATS Mini V4 firmware, using the reference source at https://github.com/GNBD/ats-mini-dualboot/tree/main/GNBD%20miniradio.
@@ -612,7 +556,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
 
 ## GitHub Actions build narrowed to OSPI-DE (2026-11-20)
 
-- User requested that once the currently running six-way build completed, future builds should generate only the German OSPI target. The manual run `44690333439` completed successfully before this change; all six matrix jobs succeeded, including `build ospi-de`.
+- At that time, the user requested that future builds generate only the German OSPI target. The manual run `44690333439` completed successfully before this change; all six matrix jobs succeeded, including `build ospi-de`.
 - Confirmed uploaded OSPI-DE artifacts from run `44690333439`: `ats-mini-dev-v1.30-165-g54a7d0d-ospi-de`, `ats-mini-v1.30-165-g54a7d0d-ospi-de-ota.bin`, and `sketches-report-ospi-de`. The run produced 18 artifacts total across all six targets. Artifact retention reported expiry on 2027-02-18.
 - Updated `.github/workflows/build.yml` on `development`: matrix language is now only `de`; board matrix retains only `esp32s3-ospi` with suffix `ospi`. QSPI, English and Italian matrix entries were removed. All build steps, artifact upload logic, manual trigger, and release logic were otherwise left unchanged.
 - Workflow change commit: `fefad16d8f2c6ae5a8932528f1acff2cf68abc19`.
@@ -718,7 +662,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Reviewed `.github/workflows/build.yml` on `development`. The prior workflow fetched the full Git history and all tags, then ran a costly disk-cleanup step before compiling. Neither is needed for a normal manually dispatched development build.
 - Updated the development workflow: shallow checkout (`fetch-depth: 1`, no tag fetch); use the short commit SHA as the fallback build slug (an explicitly supplied revision is still preserved); remove the disk-cleanup step; cache `~/.arduino15` so Arduino CLI packages, ESP32 platform files, and libraries can be reused across runs.
 - Workflow commit: `d421dcc0f5ac2e1398435d7ffa6039cb5fa8d6bd`.
-- This is an expected speed improvement, not yet measured. The first run after the change may still need to populate the cache; compare the next two successful OSPI-DE runs. Do not change `main`; user builds manually and does not want Actions triggered automatically.
+- This was an expected speed improvement, not yet measured. The first run after the change may still need to populate the cache; compare subsequent successful OSPI-DE runs. Do not change `main`.
 - Earlier FT8 stack-size correction: commit `5552f57f7ca66acf46ca92fb6b2ee8d6657f47f8` fixed a malformed line-comment that had hidden the `kWorkerStackBytes = 16384` definition, and retained the before/after stack high-water diagnostics. The prior note's commit `21d6db...` was not the final corrected source state.
 
 ## Verbindliche Portierungsquelle Mini_OS → ATS Mini Dev — 2026-11-20
@@ -1271,7 +1215,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Routed the remaining German and English menu/footer instructions through the UTF-8-aware renderer. Corrected the English Volume popup footer from the stray German text to `CLICK: CONFIRM`.
 - Restored a visible active-field highlight in the new Date/Time popup by reusing the existing `dateTimeField` state and its six-field index mapping (year, month, day, hour, minute, second). The established encoder/click handlers were not changed.
 - Kept the existing dark popup, cyan frame/accent, and white text design. No radio-layout, TEF6686, RDS PS/RT, or decoder behavior was intentionally changed.
-- Both commits were pushed to `development` only. Their commit messages include `[skip ci]` because the Development workflow runs automatically on branch pushes; no firmware build was started. Build #24 remains pending separate user authorization.
+- Both commits were pushed to `development` only. Their commit messages included `[skip ci]` under the workflow configuration then in effect; no firmware build was started. Build #24 remained pending at that time.
 - Build #23 (run `44942466083`) was subsequently verified successful: OSPI-DE compile, single firmware binary preparation, and artifact upload all completed successfully; release job was skipped.
 - Hardware verification of the three popup corrections remains outstanding. Check all six Date/Time fields, German umlauts at the footer, popup title/value centering, and the English template on hardware.
 - `main` remains untouched.
@@ -1302,7 +1246,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The common great-circle calculation is shared by locator and country-center paths. No decoder DSP, audio capture, synchronization, slot timing, message parsing, or receiver behavior was changed.
 - Source commits: `8235e369a294b0bc8bb22d25721cd8fc74ecbcbd` (distance fallback) and `32727561cc70a70ed9c632a8b081e26452f67072` (coordinate correction). Both were pushed to `development` with `[skip ci]` so the workflow starts once after this handoff update.
 - Static source checks confirmed the JO31TV reference remains in use, both display and log mark estimated values with `~`, all metadata call sites use the extended signature, braces are balanced, and no temporary coordinate placeholder remains. No local firmware compilation was run.
-- The user confirmed the preceding country-prefix/flag-code build worked successfully. This handoff update is pushed without `[skip ci]` to start the next OSPI-DE Development build for the distance fallback.
+- The user confirmed the preceding country-prefix/flag-code build worked successfully. At that time, this handoff update was pushed without `[skip ci]` to start the next OSPI-DE Development build for the distance fallback.
 - `main` remains untouched.
 
 

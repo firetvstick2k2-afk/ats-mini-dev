@@ -591,3 +591,9 @@ The owner explicitly chose a fully independent implementation and preservation o
 - RF frequency/BFO is not shifted automatically; first validate DSP tone tracking before attempting AFC/BFO changes.
 - Auto tone and level thresholds are provisional and require real-device testing. Existing Morse timing/mark-space decoder still requires calibration/improvement.
 - Source-only changes; no compile/build/hardware test. User starts OSPI-DE build manually.
+
+
+## CW frequencies / RTTY UI update (2026-11-22)
+- CW Actions includes FREQUENCIES submenu: CURRENT frequency plus nine existing CW band presets. Selecting a preset applies matching band, USB and bandwidth then resets decoder; CURRENT stays on the present frequency.
+- RTTY display recolored to FT8 dark/black + cyan + neon-green theme. Existing auto tone-pair detection, polarity AUTO and BFO AUTO remain enabled by default. Baud auto-detection is not present; selectable rates remain 45.45, 50 and 75 Bd. No on-air RTTY signal was available to test.
+- No compile/build/device test; user starts OSPI-DE manually.

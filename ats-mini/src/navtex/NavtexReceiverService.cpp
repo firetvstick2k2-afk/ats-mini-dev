@@ -166,6 +166,9 @@ void NavtexReceiverService::processSample(int16_t sample) {
   bool bit = false;
   if (!demod_.pushSample(sample, bit)) return;
   ++bitsDecoded_;
+  if (selfTestRunning_ && selfTestPhasingBitCount_ < NavtexSitorBSync::kPatternBits) {
+    selfTestPhasingBits_[selfTestPhasingBitCount_++] = bit ? 1U : 0U;
+  }
   uint8_t codeword = 0;
   if (!sync_.pushBit(bit, codeword)) return;
   ++codewordsDecoded_;
@@ -202,6 +205,14 @@ bool NavtexReceiverService::requestSelfTest() {
 }
 
 void NavtexReceiverService::runSelfTest() {
+  selfTestStatus_ = SelfTestStatus::Running;
+  selfTestRunning_ = true;
+  selfTestPhasingBitCount_ = 0;
+  selfTestPhasingErrors_ = 0;
+  bitsDecoded_ = codewordsDecoded_ = messagesCompleted_ = 0;
+  xSemaphoreTake(resultMutex_, portMAX_DELAY);
+  parser_.reset();
+  xSemaphoreGive(resultMutex_);
   const uint32_t startedAt = millis();
   Serial.printf("[NAVTEX-TEST] START heap=%u stack=%u\n",
                 static_cast<unsigned>(ESP.getFreeHeap()),
@@ -241,6 +252,8 @@ void NavtexReceiverService::runSelfTest() {
   if (slotCount > sizeof(slots)) {
     Serial.printf("[NAVTEX-TEST] ABORT slot overflow slots=%u capacity=%u\n",
                   static_cast<unsigned>(slotCount), static_cast<unsigned>(sizeof(slots)));
+    selfTestRunning_ = false;
+    selfTestStatus_ = SelfTestStatus::Failed;
     return;
   }
   for (size_t slot = 0; slot < slotCount; ++slot)
@@ -296,6 +309,23 @@ void NavtexReceiverService::runSelfTest() {
                 static_cast<unsigned long>(codewordsDecoded_),
                 static_cast<unsigned long>(messagesCompleted_),
                 static_cast<unsigned long>(millis() - startedAt));
+  uint8_t phasingErrors = 0;
+  for (uint8_t i = 0; i < NavtexSitorBSync::kPatternBits; ++i) {
+    const uint8_t word = static_cast<uint8_t>(i / 7U);
+    const uint8_t bitIndex = static_cast<uint8_t>(i % 7U);
+    const uint8_t expectedCode = (word & 1U) ? NavtexCcIr476::kAlpha : NavtexCcIr476::kRep;
+    const uint8_t expectedBit = static_cast<uint8_t>((expectedCode >> bitIndex) & 1U);
+    if (i >= selfTestPhasingBitCount_ || selfTestPhasingBits_[i] != expectedBit)
+      ++phasingErrors;
+  }
+  selfTestPhasingErrors_ = phasingErrors;
+  selfTestRunning_ = false;
+  selfTestStatus_ = messagesCompleted_ > 0 ? SelfTestStatus::Passed : SelfTestStatus::Failed;
+  Serial.printf("[NAVTEX-TEST] PHASING bits=%u errors=%u locked=%d\n",
+                static_cast<unsigned>(selfTestPhasingBitCount_),
+                static_cast<unsigned>(phasingErrors), sync_.status().locked ? 1 : 0);
+  Serial.printf("[NAVTEX-TEST] RESULT %s\n",
+                selfTestStatus_ == SelfTestStatus::Passed ? "PASS" : "FAIL");
 }
 
 void NavtexReceiverService::processCodeword(uint8_t code) {

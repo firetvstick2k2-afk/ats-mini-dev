@@ -127,9 +127,10 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_VFO         16
 #define MENU_SPECTRUM    17
 #define MENU_ALL_SPECTRUM 18
-#define MENU_DECODER_MENU 19
-#define MENU_SETTINGS    20
-#define MENU_FM_DX       21
+#define MENU_FM_DX       19
+#define MENU_DECODER_MENU 20
+#define MENU_SETTINGS    21
+#define MENU_BACK        22
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -163,13 +164,13 @@ int8_t spectrumMenuIdx = 0;
 static const char *spectrumMenu[] = { "Spet. VHF", "Spet. ALL" };
 static const char *spectrumMenuXXL[] = { "SPETTRO VHF", "SPETTRO COMPLETO" };
 
-static const char *menu[] =
+static const char *menu[]
 {
   "Volume", "Tastiera", "Bande", "Modalita", "BFO",
   "Passo", "Ricerca", "Scansione", "Memorie", "Squelch",
   "Larghezza", "Frequenza", "AGC/ATT", "AVC",
   "SoftMute", "DUAL RX", "VFO A/B", "Spettro VHF",
-  "Spettro completo", "Decoder", "Impostazioni", "FM DX",
+  "Spettro completo", "FM DX", "Decoder", "Impostazioni", "Indietro",
 };
 
 static const char *menuXXL[] =
@@ -178,7 +179,7 @@ static const char *menuXXL[] =
   "PASSO", "RICERCA", "SCANSIONE", "MEMORIE", "SQUELCH",
   "LARGHEZZA DI BANDA", "FREQUENZA", "AGC/ATTENUAZIONE", "AVC",
   "RIDUZIONE RUMORE", "DUAL RX", "VFO A/B", "SPETTRO VHF",
-  "SPETTRO COMPLETO", "DECODER", "IMPOSTAZIONI", "FM DX"
+  "SPETTRO COMPLETO", "FM DX", "DECODER", "IMPOSTAZIONI", "INDIETRO"
 };
 
 #define MENU_BRIGHTNESS   0
@@ -975,8 +976,9 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_DUAL_RX: dualRxStart(); break;
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
-    case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
     case MENU_FM_DX: fmDxUiOpen(); break;
+    case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
+    case MENU_BACK: currentCmd = CMD_NONE; break;
   }
 }
 

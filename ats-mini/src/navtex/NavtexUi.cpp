@@ -256,8 +256,22 @@ void drawNavtexPage() {
     line[len] = 0;
     spr.drawString(line, 8, 101);
   } else {
-    spr.setTextColor(0x7BEF);
-    spr.drawString(receiverService.active() ? "Waiting for NAVTEX message..." : "Receiver stopped", 160, 90);
+    const auto testStatus = receiverService.selfTestStatus();
+    if (testStatus == NavtexReceiverService::SelfTestStatus::Running) {
+      spr.setTextColor(0xFFE0);
+      spr.drawString("NAVTEX SELF-TEST RUNNING", 160, 88);
+    } else if (testStatus == NavtexReceiverService::SelfTestStatus::Failed) {
+      char testLine[40] = {};
+      snprintf(testLine, sizeof(testLine), "SELF-TEST FAILED  PHASING ERR:%u",
+               static_cast<unsigned>(receiverService.selfTestPhasingErrors()));
+      spr.setTextColor(0xF800);
+      spr.drawString(testLine, 160, 88, FONT_SMALL);
+      spr.setTextColor(0x7BEF);
+      spr.drawString("Check decoder diagnostics", 160, 108, FONT_SMALL);
+    } else {
+      spr.setTextColor(0x7BEF);
+      spr.drawString(receiverService.active() ? "Waiting for NAVTEX message..." : "Receiver stopped", 160, 90);
+    }
   }
   spr.setTextDatum(TC_DATUM);
   spr.setTextColor(0x7BEF);

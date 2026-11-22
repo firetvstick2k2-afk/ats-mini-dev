@@ -1010,7 +1010,7 @@ bool ftxUiTick(uint32_t now)
 
 void drawFtxDecoderPage()
 {
-  const uint16_t bg=0x0000, blue=0x001F, cyan=0x07FF;
+  const uint16_t bg=0x0000, cyan=0x07FF;
   spr.fillSprite(bg);
   // Keep only the display's outer frame; message rows are borderless.
   char frequencyText[24];
@@ -1059,7 +1059,7 @@ void drawFtxDecoderPage()
   if(ftxActionsOpen) {
     const int menuX=20, menuY=8, menuW=280, menuH=154;
     spr.fillRect(menuX,menuY,menuW,menuH,bg);
-    spr.drawRect(menuX,menuY,menuW,menuH,blue);
+    spr.drawRect(menuX,menuY,menuW,menuH,cyan);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);
@@ -1080,7 +1080,7 @@ void drawFtxDecoderPage()
                  preset->modulation==USB?"USB":preset->modulation==LSB?"LSB":"AM");
         const int y=menuY+29+row*19;
         if(index==ftxPresetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x07FF);
-        spr.setTextColor(index==ftxPresetSelection?0x0000:0xBDF7);
+        spr.setTextColor(index==ftxPresetSelection?0x0000:0xFFFF);
         spr.setTextDatum(TL_DATUM);
         spr.setFont(FONT_SMALL);
         spr.drawString(label,menuX+13,y);
@@ -1092,7 +1092,7 @@ void drawFtxDecoderPage()
       spr.setFont(FONT_SMALL);
       spr.drawString(page,menuX+menuW-10,menuY+7);
       spr.setTextDatum(MC_DATUM);
-      spr.setTextColor(ftxPresetPreviewActive?0x07E0:0xBDF7);
+      spr.setTextColor(ftxPresetPreviewActive?0x07E0:0xFFFF);
       spr.drawString(ftxPresetPreviewActive?"ABGESTIMMT":(ftxPresetPreviewPending?"ABSTIMMEN...":"BEREIT"),160,menuY+124);
       spr.setTextDatum(ML_DATUM);
       spr.setTextColor(0xFFFF);
@@ -1115,8 +1115,8 @@ void drawFtxDecoderPage()
       spr.drawString(pageMode==FtxMode::FT4 ? "FT4 ACTIONS" : "FT8 ACTIONS",menuX+12,menuY+7);
       for(uint8_t i=0;i<count;++i) {
         const int y=menuY+27+i*14;
-        if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,15,blue);
-        spr.setTextColor(i==ftxMenuSelection?0xFFFF:0xBDF7);
+        if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,15,cyan);
+        spr.setTextColor(i==ftxMenuSelection?0x0000:0xFFFF);
         spr.drawString(labels[i+(pageMode==FtxMode::FT4?3:0)],menuX+14,y);
       }
     }

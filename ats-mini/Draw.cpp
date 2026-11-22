@@ -14,6 +14,7 @@
 #include "FreqKeypad.h" // <--- Eingebundenes Keypad-Modul
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
+#include <math.h>
 
 // Layout-Prototypen
 void drawLayoutSmeter();
@@ -593,16 +594,20 @@ static void weatherAscii(const char* input, char* output, size_t capacity)
     if(c == 0xC3 && input[i+1])
     {
       const uint8_t next = static_cast<uint8_t>(input[i+1]);
-      char replacement = 0;
-      if(next == 0xA4 || next == 0x84) replacement = 'a';
-      else if(next == 0xB6 || next == 0x96) replacement = 'o';
-      else if(next == 0xBC || next == 0x9C) replacement = 'u';
-      else if(next == 0x9F) {
-        if(out + 2 < capacity) { output[out++] = 's'; output[out++] = 's'; }
+      const char* replacement = nullptr;
+      if(next == 0xA4) replacement = "ae";
+      else if(next == 0x84) replacement = "Ae";
+      else if(next == 0xB6) replacement = "oe";
+      else if(next == 0x96) replacement = "Oe";
+      else if(next == 0xBC) replacement = "ue";
+      else if(next == 0x9C) replacement = "Ue";
+      else if(next == 0x9F) replacement = "ss";
+      if(replacement)
+      {
+        for(size_t j=0; replacement[j] && out + 1 < capacity; ++j) output[out++] = replacement[j];
         ++i;
         continue;
       }
-      if(replacement) { output[out++] = replacement; ++i; continue; }
     }
     output[out++] = static_cast<char>(c);
   }

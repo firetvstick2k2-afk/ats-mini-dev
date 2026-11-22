@@ -198,7 +198,7 @@ void drawCwDecoderPage() {
       spr.setTextDatum(TR_DATUM); spr.setTextColor(white); spr.setFont(FONT_SMALL);
       spr.drawString(page,menuX+menuW-10,menuY+7);
       spr.setTextDatum(MC_DATUM); spr.setTextColor(green);
-      spr.drawString("ABGESTIMMT",160,menuY+124);
+      spr.drawString(frequencySelection==0?"ABGESTIMMT":"AUSWAHL",160,menuY+124);
       spr.setTextDatum(ML_DATUM); spr.setTextColor(white);
       spr.drawString("DREHEN: WÄHLEN",menuX+12,menuY+143);
       spr.setTextDatum(MR_DATUM);
@@ -221,4 +221,5 @@ void drawCwDecoderPage() {
         spr.drawString(labels[i],43,y+1);
       }
     }
-  }}
+  }
+}

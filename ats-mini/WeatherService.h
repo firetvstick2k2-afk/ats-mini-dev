@@ -34,7 +34,7 @@ public:
   };
 
   bool begin();
-  void update(bool wifiConnected);
+  void update(bool wifiConnected, bool enabled);
   bool setPostalCode(const char* postalCode);
   void requestRefresh();
   String postalCode() const;
@@ -55,6 +55,7 @@ private:
   TaskHandle_t taskHandle_ = nullptr;
   volatile bool refreshRequested_ = false;
   volatile bool wifiConnected_ = false;
+  volatile bool weatherEnabled_ = false;
   uint32_t lastAttemptMs_ = 0;
   bool settingsLoaded_ = false;
   uint32_t lastStartAttemptMs_ = 0;
@@ -62,3 +63,12 @@ private:
 
 extern WeatherService weatherService;
 extern uint8_t weatherPage;
+
+enum WeatherUiState : uint8_t {
+  WEATHER_UI_IDLE = 0,
+  WEATHER_UI_WAITING_WIFI,
+  WEATHER_UI_LOADING,
+  WEATHER_UI_READY,
+  WEATHER_UI_NO_LOCATION
+};
+extern volatile uint8_t weatherUiState;

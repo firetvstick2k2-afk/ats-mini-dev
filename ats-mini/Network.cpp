@@ -1123,9 +1123,10 @@ void webSetConfig(AsyncWebServerRequest *request)
   {
     if(request->hasParam("theme", true))
     {
-      themeIdx = request->getParam("theme", true)->value().toInt();
-      if(themeIdx < 0 || themeIdx >= getTotalThemes())
+      const int selectedTheme = request->getParam("theme", true)->value().toInt();
+      if(selectedTheme < 0 || selectedTheme >= getTotalThemes())
         return request->send(400, "text/plain", "Invalid theme selection.");
+      themeIdx = selectedTheme;
       prefsSave |= SAVE_SETTINGS;
     }
     scrollDirection = request->hasParam("scroll", true) ? -1 : 1;
@@ -1152,7 +1153,7 @@ void webSetConfig(AsyncWebServerRequest *request)
 
   String target = "/config/";
   target += section;
-  request->redirect(target);
+  request->redirect(target.c_str());
 
   if(section == "wifi" && haveSSID && wifiModeIdx > NET_AP_ONLY && WiFi.status() != WL_CONNECTED)
     netRequestConnect();

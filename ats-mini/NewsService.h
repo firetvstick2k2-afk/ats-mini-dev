@@ -13,13 +13,13 @@ public:
   struct Snapshot { Item items[MAX_ITEMS]={}; uint8_t count=0; uint32_t updatedAtMs=0; bool valid=false; bool fetching=false; bool failed=false; };
   bool begin(); void update(bool wifiConnected,bool active); void requestRefresh();
   Configuration configuration() const; bool setConfiguration(const Configuration& value);
-  bool hasEnabledFeeds() const; Snapshot snapshot() const;
+  bool hasEnabledFeeds() const;
   uint8_t itemCount() const; bool isFetching() const; bool hasFailed() const; bool getItem(uint8_t index, Item& item) const;
   static bool validFeedUrl(const char* url);
 private:
   static void taskEntry(void* context); void taskLoop(); void loadConfiguration();
   bool fetchFeeds(Snapshot& result); bool fetchFeed(uint8_t index,const Feed& feed,Snapshot& result);
-  Configuration configuration_={}; Snapshot snapshot_={};
+  Configuration configuration_={}; Snapshot* snapshot_=nullptr;
   mutable SemaphoreHandle_t configMutex_=nullptr,snapshotMutex_=nullptr;
   TaskHandle_t taskHandle_=nullptr;
   volatile bool wifiConnected_=false,active_=false,refreshRequested_=false;

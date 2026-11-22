@@ -41,7 +41,13 @@ int64_t parseDate(String s) {
   s.trim();struct tm t={};char* e=strptime(s.c_str(),"%a, %d %b %Y %H:%M:%S",&t);
   if(!e){memset(&t,0,sizeof(t));e=strptime(s.c_str(),"%d %b %Y %H:%M:%S",&t);}
   if(!e){memset(&t,0,sizeof(t));e=strptime(s.c_str(),"%Y-%m-%dT%H:%M:%S",&t);}
-  return e?(int64_t)timegm(&t):0;
+  if(!e)return 0;
+  int y=t.tm_year+1900; unsigned m=(unsigned)t.tm_mon+1, d=(unsigned)t.tm_mday;
+  y-=m<=2; const int era=(y>=0?y:y-399)/400; const unsigned yoe=(unsigned)(y-era*400);
+  const unsigned mp=(unsigned)((int)m+(m>2?-3:9)); const unsigned doy=(153*mp+2)/5+d-1;
+  const unsigned doe=yoe*365+yoe/4-yoe/100+doy;
+  const int64_t days=(int64_t)era*146097+(int64_t)doe-719468;
+  return days*86400LL+(int64_t)t.tm_hour*3600LL+(int64_t)t.tm_min*60LL+t.tm_sec;
 }
 void copy(char* dst,size_t cap,const String& s){if(!cap)return;size_t n=min((size_t)s.length(),cap-1);while(n&&n<s.length()&&(((uint8_t)s[n]&0xC0)==0x80))--n;memcpy(dst,s.c_str(),n);dst[n]=0;}
 String hostOf(const char* url){String s(url);int a=s.indexOf("://");a=a<0?0:a+3;int b=s.indexOf('/',a);if(b<0)b=s.length();s=s.substring(a,b);int c=s.indexOf(':');if(c>=0)s.remove(c);return s;}
@@ -57,18 +63,31 @@ void sortItems(NewsService::Snapshot& s){for(uint8_t i=0;i<s.count;i++)for(uint8
 NewsService newsService;
 bool NewsService::validFeedUrl(const char* u){if(!u)return false;size_t n=strlen(u);return n==0||(n<MAX_URL_BYTES&&(!strncmp(u,"https://",8)||!strncmp(u,"http://",7)));}
 void NewsService::loadConfiguration(){Preferences p;if(!p.begin("news",true,"settings"))return;for(uint8_t i=0;i<MAX_FEEDS;i++){char k[16];snprintf(k,sizeof(k),"url%u",i);p.getString(k,"").toCharArray(configuration_.feeds[i].url,MAX_URL_BYTES);snprintf(k,sizeof(k),"on%u",i);configuration_.feeds[i].enabled=p.getBool(k,false)&&configuration_.feeds[i].url[0]&&validFeedUrl(configuration_.feeds[i].url);}p.end();configurationLoaded_=true;}
-bool NewsService::begin(){if(!configMutex_)configMutex_=xSemaphoreCreateMutex();if(!snapshotMutex_)snapshotMutex_=xSemaphoreCreateMutex();if(!configMutex_||!snapshotMutex_)return false;if(!configurationLoaded_)loadConfiguration();if(taskHandle_)return true;return xTaskCreatePinnedToCore(taskEntry,"NewsWorker",12288,this,1,&taskHandle_,0)==pdPASS;}
+bool NewsService::begin(){
+  if(!configMutex_)configMutex_=xSemaphoreCreateMutex();
+  if(!snapshotMutex_)snapshotMutex_=xSemaphoreCreateMutex();
+  if(!configMutex_||!snapshotMutex_)return false;
+  if(!snapshot_){
+    void* memory=heap_caps_malloc(sizeof(Snapshot),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
+    if(!memory)memory=malloc(sizeof(Snapshot));
+    if(!memory)return false;
+    snapshot_=new(memory) Snapshot();
+  }
+  if(!configurationLoaded_)loadConfiguration();
+  if(taskHandle_)return true;
+  return xTaskCreatePinnedToCore(taskEntry,"NewsWorker",12288,this,1,&taskHandle_,0)==pdPASS;
+}
 NewsService::Configuration NewsService::configuration()const{Configuration c={};if(configMutex_){xSemaphoreTake(configMutex_,portMAX_DELAY);c=configuration_;xSemaphoreGive(configMutex_);}else c=configuration_;return c;}
 bool NewsService::setConfiguration(const Configuration& c){for(uint8_t i=0;i<MAX_FEEDS;i++)if(!validFeedUrl(c.feeds[i].url))return false;Preferences p;if(!p.begin("news",false,"settings"))return false;for(uint8_t i=0;i<MAX_FEEDS;i++){char k[16];snprintf(k,sizeof(k),"url%u",i);if(p.putString(k,c.feeds[i].url)==0&&c.feeds[i].url[0]){p.end();return false;}snprintf(k,sizeof(k),"on%u",i);p.putBool(k,c.feeds[i].enabled&&c.feeds[i].url[0]);}p.end();if(configMutex_)xSemaphoreTake(configMutex_,portMAX_DELAY);configuration_=c;configurationLoaded_=true;if(configMutex_)xSemaphoreGive(configMutex_);requestRefresh();return true;}
 bool NewsService::hasEnabledFeeds()const{Configuration c=configuration();for(uint8_t i=0;i<MAX_FEEDS;i++)if(c.feeds[i].enabled&&c.feeds[i].url[0])return true;return false;}
-NewsService::Snapshot NewsService::snapshot()const{Snapshot s={};if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);s=snapshot_;xSemaphoreGive(snapshotMutex_);}return s;}
-uint8_t NewsService::itemCount()const{if(!snapshotMutex_)return 0;xSemaphoreTake(snapshotMutex_,portMAX_DELAY);uint8_t n=snapshot_.count;xSemaphoreGive(snapshotMutex_);return n;}
-bool NewsService::isFetching()const{if(!snapshotMutex_)return false;xSemaphoreTake(snapshotMutex_,portMAX_DELAY);bool v=snapshot_.fetching;xSemaphoreGive(snapshotMutex_);return v;}
-bool NewsService::hasFailed()const{if(!snapshotMutex_)return false;xSemaphoreTake(snapshotMutex_,portMAX_DELAY);bool v=snapshot_.failed;xSemaphoreGive(snapshotMutex_);return v;}
-bool NewsService::getItem(uint8_t i,Item& item)const{if(!snapshotMutex_)return false;xSemaphoreTake(snapshotMutex_,portMAX_DELAY);bool ok=i<snapshot_.count;if(ok)item=snapshot_.items[i];xSemaphoreGive(snapshotMutex_);return ok;}
+
+uint8_t NewsService::itemCount()const{if(!snapshotMutex_||!snapshot_)return 0;xSemaphoreTake(snapshotMutex_,portMAX_DELAY);uint8_t n=snapshot_->count;xSemaphoreGive(snapshotMutex_);return n;}
+bool NewsService::isFetching()const{if(!snapshotMutex_||!snapshot_)return false;xSemaphoreTake(snapshotMutex_,portMAX_DELAY);bool v=snapshot_->fetching;xSemaphoreGive(snapshotMutex_);return v;}
+bool NewsService::hasFailed()const{if(!snapshotMutex_)return false;xSemaphoreTake(snapshotMutex_,portMAX_DELAY);bool v=snapshot_->failed;xSemaphoreGive(snapshotMutex_);return v;}
+bool NewsService::getItem(uint8_t i,Item& item)const{if(!snapshotMutex_)return false;xSemaphoreTake(snapshotMutex_,portMAX_DELAY);bool ok=i<snapshot_->count;if(ok)item=snapshot_->items[i];xSemaphoreGive(snapshotMutex_);return ok;}
 void NewsService::requestRefresh(){refreshRequested_=true;}
 void NewsService::update(bool wifi,bool active){wifiConnected_=wifi;active_=active;if(active&&(!lastAttemptMs_||millis()-lastAttemptMs_>=REFRESH_MS))requestRefresh();}
 void NewsService::taskEntry(void* p){static_cast<NewsService*>(p)->taskLoop();}
-void NewsService::taskLoop(){for(;;){if(refreshRequested_&&active_&&wifiConnected_){refreshRequested_=false;lastAttemptMs_=millis();if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);snapshot_.fetching=true;snapshot_.failed=false;xSemaphoreGive(snapshotMutex_);}void* memory=heap_caps_malloc(sizeof(Snapshot),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);if(!memory)memory=malloc(sizeof(Snapshot));Snapshot* fresh=memory?new(memory) Snapshot():nullptr;bool ok=fresh&&fetchFeeds(*fresh);if(fresh){fresh->fetching=false;fresh->failed=!ok;fresh->valid=fresh->count>0;fresh->updatedAtMs=millis();if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);snapshot_=*fresh;xSemaphoreGive(snapshotMutex_);}fresh->~Snapshot();heap_caps_free(fresh);}else if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);snapshot_.fetching=false;snapshot_.failed=true;xSemaphoreGive(snapshotMutex_);}}vTaskDelay(pdMS_TO_TICKS(250));}}
+void NewsService::taskLoop(){for(;;){if(refreshRequested_&&active_&&wifiConnected_){refreshRequested_=false;lastAttemptMs_=millis();if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);snapshot_->fetching=true;snapshot_->failed=false;xSemaphoreGive(snapshotMutex_);}void* memory=heap_caps_malloc(sizeof(Snapshot),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);if(!memory)memory=malloc(sizeof(Snapshot));Snapshot* fresh=memory?new(memory) Snapshot():nullptr;bool ok=fresh&&fetchFeeds(*fresh);if(fresh){fresh->fetching=false;fresh->failed=!ok;fresh->valid=fresh->count>0;fresh->updatedAtMs=millis();if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);*snapshot_=*fresh;xSemaphoreGive(snapshotMutex_);}fresh->~Snapshot();heap_caps_free(fresh);}else if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);snapshot_->fetching=false;snapshot_->failed=true;xSemaphoreGive(snapshotMutex_);}}vTaskDelay(pdMS_TO_TICKS(250));}}
 bool NewsService::fetchFeeds(Snapshot& s){Configuration c=configuration();bool any=false,success=false;for(uint8_t i=0;i<MAX_FEEDS&&s.count<MAX_ITEMS;i++)if(c.feeds[i].enabled&&c.feeds[i].url[0]){any=true;success=fetchFeed(i,c.feeds[i],s)||success;}sortItems(s);return any&&success;}
 bool NewsService::fetchFeed(uint8_t i,const Feed& f,Snapshot& s){WiFiClientSecure client;client.setInsecure();client.setTimeout(TIMEOUT_MS);HTTPClient http;http.setConnectTimeout(TIMEOUT_MS);http.setTimeout(TIMEOUT_MS);http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);http.setRedirectLimit(3);http.setReuse(false);http.setUserAgent("ATS-Mini-RSS/1.0");if(!http.begin(client,f.url))return false;int status=http.GET();if(status!=HTTP_CODE_OK){http.end();return false;}int len=http.getSize();if(len>(int)MAX_FEED_BYTES){http.end();return false;}String xml=http.getString();http.end();if(xml.length()<16||xml.length()>MAX_FEED_BYTES)return false;String fallback=hostOf(f.url),entry;int cursor=0,next=0;while(s.count<MAX_ITEMS&&nextEntry(xml,cursor,entry,next)){String title=tagValue(entry,"title"),encoded=tagValue(entry,"content:encoded"),desc=tagValue(entry,"description");if(!encoded.length())encoded=tagValue(entry,"content");String body=encoded.length()>=desc.length()?encoded:desc;String date=tagValue(entry,"pubDate");if(!date.length())date=tagValue(entry,"published");if(!date.length())date=tagValue(entry,"updated");String source=tagValue(entry,"source");if(!source.length())source=fallback;add(s,title,source,date,body,i);cursor=next;}return true;}

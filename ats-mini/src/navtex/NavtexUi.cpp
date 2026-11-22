@@ -1,5 +1,7 @@
 #include "NavtexUi.h"
 #include "NavtexPresetList.h"
+#include "NavtexReceiverService.h"
+#include "../audio/AudioCaptureService.h"
 #include "../DecoderMenuUi.h"
 #include "../../Common.h"
 #include "../../Menu.h"
@@ -22,6 +24,8 @@ int targetBandIndex = -1;
 Band targetBandOriginal{};
 bool targetBandSnapshotValid = false;
 constexpr uint32_t kPreviewDelayMs = 2000;
+NavtexReceiverService receiverService;
+int restoreNetworkMode = 0;
 
 bool tunePreset(const NavtexPreset& preset) {
   int bestBand = -1;
@@ -86,6 +90,14 @@ bool navtexUiOpen() {
   actionsOpen = presetsOpen = false;
   actionSelection = presetSelection = 0;
   previewPending = previewActive = originalValid = false;
+  restoreNetworkMode = wifiModeIdx;
+  netStop();
+  if (getWiFiStatus() != 0 || !receiverService.enter(true, sharedAudioCapture())) {
+    receiverService.exit();
+    netInit(restoreNetworkMode);
+    statusShow("NAVTEX start failed", "Check Wi-Fi and audio input");
+    return false;
+  }
   pageActive = true;
   return true;
 }
@@ -93,6 +105,8 @@ bool navtexUiOpen() {
 void navtexUiExit() {
   if (!pageActive) return;
   restorePreview();
+  receiverService.exit();
+  netInit(restoreNetworkMode);
   pageActive = false;
   actionsOpen = presetsOpen = false;
   currentCmd = CMD_NONE;
@@ -174,10 +188,38 @@ void drawNavtexPage() {
   spr.drawString("NAVTEX RECEIVER", 160, 10);
   spr.setTextColor(0xFFFF);
   spr.setFont(FONT_DEFAULT);
-  spr.drawString("SITOR-B / 518 kHz", 160, 42);
+  spr.drawString("SITOR-B / 100 BAUD", 160, 34);
+  char status[48] = {};
+  snprintf(status, sizeof(status), "%s  AUDIO %u",
+           receiverService.synchronized() ? "SYNC" : "SEARCH",
+           static_cast<unsigned>(receiverService.audioLevel()));
+  spr.setTextColor(receiverService.synchronized() ? 0x07E0 : 0xFFE0);
+  spr.drawString(status, 160, 58);
+
+  NavtexMessageParser::Message messages[NavtexMessageParser::kMaxMessages]{};
+  const uint8_t count = receiverService.copyMessages(messages, NavtexMessageParser::kMaxMessages);
+  if (count) {
+    const auto& latest = messages[count - 1];
+    char header[32] = {};
+    snprintf(header, sizeof(header), "ZCZC %c%c%s", latest.station, latest.subject, latest.serial);
+    spr.setTextColor(0x07FF);
+    spr.drawString(header, 8, 82, FONT_SMALL);
+    spr.setTextColor(0xFFFF);
+    spr.setTextDatum(TL_DATUM);
+    spr.setFont(FONT_SMALL);
+    char line[49] = {};
+    size_t len = strlen(latest.body);
+    if (len > 46) len = 46;
+    memcpy(line, latest.body, len);
+    line[len] = 0;
+    spr.drawString(line, 8, 101);
+  } else {
+    spr.setTextColor(0x7BEF);
+    spr.drawString(receiverService.active() ? "Waiting for NAVTEX message..." : "Receiver stopped", 160, 90);
+  }
+  spr.setTextDatum(TC_DATUM);
   spr.setTextColor(0x7BEF);
-  spr.drawString("Receiver integration in progress", 160, 78);
-  spr.drawString("CLICK: ACTIONS", 160, 130);
+  spr.drawString("CLICK: ACTIONS", 160, 145);
 
   if (!actionsOpen) return;
   if (presetsOpen) {

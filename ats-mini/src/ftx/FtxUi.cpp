@@ -871,7 +871,7 @@ void ftxUiRotate(int delta)
       restoreFtxPresetOriginal();
     ftxPresetSelection = static_cast<uint8_t>(next);
     if(ftxPresetSelection < ftxPresetScroll) ftxPresetScroll = ftxPresetSelection;
-    if(ftxPresetSelection >= ftxPresetScroll + 6) ftxPresetScroll = ftxPresetSelection - 5;
+    if(ftxPresetSelection >= ftxPresetScroll + 5) ftxPresetScroll = ftxPresetSelection - 4;
     scheduleFtxPresetPreview(millis());
     return;
   }
@@ -1079,8 +1079,8 @@ void drawFtxDecoderPage()
                  static_cast<unsigned>(preset->frequencyKHz%1000),
                  preset->modulation==USB?"USB":preset->modulation==LSB?"LSB":"AM");
         const int y=menuY+29+row*19;
-        if(index==ftxPresetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x07FF);
-        spr.setTextColor(index==ftxPresetSelection?0x0000:0xFFFF);
+        if(index==ftxPresetSelection) spr.drawRect(menuX+7,y-3,menuW-14,19,cyan);
+        spr.setTextColor(index==ftxPresetSelection?cyan:0xFFFF);
         spr.setTextDatum(TL_DATUM);
         spr.setFont(FONT_SMALL);
         spr.drawString(label,menuX+13,y);

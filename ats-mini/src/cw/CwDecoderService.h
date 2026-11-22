@@ -15,7 +15,6 @@ public:
   void clearText();
   void setTone(float toneHz);
   void resetDecoder();
-  float tone() const { return decoder_.getTone(); }
   void update();
   const char* text() const { return shownText_; }
   bool signal() const { return signal_; }

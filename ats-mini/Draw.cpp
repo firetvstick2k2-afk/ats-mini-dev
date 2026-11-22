@@ -776,7 +776,7 @@ static size_t newsAdvanceLines(const char* text, size_t offset, uint8_t lines)
   return pos;
 }
 
-static uint8_t newsPageCountForCurrentItem()
+uint8_t newsPageCountForCurrentItem()
 {
   const uint8_t count = newsService.itemCount();
   if(!count) return 1;

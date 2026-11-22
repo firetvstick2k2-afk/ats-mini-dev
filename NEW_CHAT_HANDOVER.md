@@ -12,6 +12,7 @@
 - CW opening now refreshes the displayed frequency from the receiver.
 - RESONIK-style adaptive Goertzel and reference filters were already present in `CwDecoder.h`; the main weak point was AUTO Tone detection in `CwDecoderService.cpp`. It now uses normalized tone coherence, a learned noise floor, and three stable windows before retuning.
 - GPIO11 capture is explicitly configured for 12-bit ADC reads and 11 dB attenuation. CW UI now shows average level, peak and clipping indication.
+- CW follows RESONIK's minimum receiver volume of 50 only when current volume is lower; it restores the exact previous volume on exit/failure. Existing higher volume is unchanged.
 - Relevant latest code commit: `729f14d860f5d053ef6d3368ee716f82c721510d` (central decoder frequency menu). Earlier commits and full detail are in `DEVELOPMENT_HANDOFF.md`.
 - **Build/test status:** source-only. No build was started, no firmware was flashed, and CW reception has not yet been verified on hardware. The user will start the OSPI-DE build after the implementation is complete.
 - Next: perform final source consistency review, update handoff if further changes are made, then tell user the exact latest commit and ask them to run OSPI-DE. Do not claim build success.

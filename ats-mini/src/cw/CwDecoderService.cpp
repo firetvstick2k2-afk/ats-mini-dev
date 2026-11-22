@@ -128,7 +128,7 @@ void CwDecoderService::consumeSamples(const int16_t* samples, size_t count) {
       const float rms = sqrtf(energy / static_cast<float>(kToneWindowSamples));
       float bestPower = 0.0f, secondPower = 0.0f;
       float bestHz = autoToneHz_;
-      for (int hz = 400; hz <= 1000; hz += 25) {
+      for (int hz = 400; hz <= 1000; hz += 10) {
         const float coeff = 2.0f * cosf(2.0f * 3.14159265358979323846f * hz / kSampleRate);
         float q1 = 0.0f, q2 = 0.0f;
         for (size_t n = 0; n < kToneWindowSamples; ++n) {
@@ -150,13 +150,13 @@ void CwDecoderService::consumeSamples(const int16_t* samples, size_t count) {
         ? bestPower / (energy * static_cast<float>(kToneWindowSamples))
         : 0.0f;
       const bool narrowTone = rms >= 8.0f &&
-        coherence > 0.08f && bestPower > secondPower * 1.25f;
+        coherence > 0.08f && bestPower > secondPower * 1.05f;
       if (!narrowTone) {
         if (toneNoiseFloor_ == 0.0f) toneNoiseFloor_ = rms;
         else toneNoiseFloor_ += (rms - toneNoiseFloor_) * (rms < toneNoiseFloor_ ? 0.08f : 0.01f);
         toneCandidateCount_ = 0;
       } else if (rms > fmaxf(8.0f, toneNoiseFloor_ * 1.8f)) {
-        if (fabsf(bestHz - toneCandidateHz_) <= 25.0f) {
+        if (fabsf(bestHz - toneCandidateHz_) <= 15.0f) {
           if (toneCandidateCount_ < 5) ++toneCandidateCount_;
         } else {
           toneCandidateHz_ = bestHz;

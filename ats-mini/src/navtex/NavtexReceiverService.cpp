@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <math.h>
+#include <stdint.h>
 
 namespace {
 constexpr size_t kQueueDepth = 64;
@@ -98,21 +99,104 @@ void NavtexReceiverService::workerTask() {
     if (xQueueReceive(queue_, &chunk, portMAX_DELAY) != pdTRUE) continue;
     if (!active_) continue;
     xSemaphoreTake(engineMutex_, portMAX_DELAY);
-    if (active_) processChunk(chunk);
+    if (active_) {
+      if (chunk.selfTest) runSelfTest();
+      else processChunk(chunk);
+    }
     xSemaphoreGive(engineMutex_);
   }
 }
 
-void NavtexReceiverService::processChunk(const AudioChunk& chunk) {
-  for (uint8_t i = 0; i < chunk.count; ++i) {
-    bool bit = false;
-    if (!demod_.pushSample(chunk.samples[i], bit)) continue;
-    ++bitsDecoded_;
+void NavtexReceiverService::processSample(int16_t sample) {
+  bool bit = false;
+  if (!demod_.pushSample(sample, bit)) return;
+  ++bitsDecoded_;
+  uint8_t codeword = 0;
+  if (!sync_.pushBit(bit, codeword)) return;
+  ++codewordsDecoded_;
+  processCodeword(codeword);
+}
 
-    uint8_t codeword = 0;
-    if (!sync_.pushBit(bit, codeword)) continue;
-    ++codewordsDecoded_;
-    processCodeword(codeword);
+void NavtexReceiverService::processChunk(const AudioChunk& chunk) {
+  for (uint8_t i = 0; i < chunk.count; ++i) processSample(chunk.samples[i]);
+}
+
+bool NavtexReceiverService::requestSelfTest() {
+  if (!active_ || !queue_) return false;
+  AudioChunk request{};
+  request.selfTest = true;
+  return xQueueSend(queue_, &request, 0) == pdTRUE;
+}
+
+void NavtexReceiverService::runSelfTest() {
+  // Complete, known NAVTEX frame. The generated samples travel through the
+  // same 4 kHz demodulator, phasing detector, FEC combiner and parser as RF audio.
+  static const char frame[] = "ZCZC CA23\\r\\nNAVAREA WARNING\\r\\nNNNN";
+  uint8_t codes[128]{};
+  size_t codeCount = 0;
+  bool figures = false;
+  for (size_t i = 0; frame[i] && codeCount < sizeof(codes) - 2; ++i) {
+    const char ch = frame[i];
+    uint8_t code = 0;
+    if (NavtexCcIr476::encode(ch, figures, code)) {
+      codes[codeCount++] = code;
+      continue;
+    }
+    if (!figures && NavtexCcIr476::encode(ch, true, code)) {
+      codes[codeCount++] = NavtexCcIr476::kFigures;
+      codes[codeCount++] = code;
+      figures = true;
+      continue;
+    }
+    if (figures && NavtexCcIr476::encode(ch, false, code)) {
+      codes[codeCount++] = NavtexCcIr476::kLetters;
+      codes[codeCount++] = code;
+      figures = false;
+      continue;
+    }
+    // Unknown glyphs are skipped rather than injecting an invalid codeword.
+  }
+
+  demod_.reset(); sync_.reset(); fec_.reset(); ccir_.reset();
+  const size_t slotCount = codeCount * 2U + NavtexSitorBFec::kDiversitySlots;
+  uint8_t slots[256]{};
+  if (slotCount > sizeof(slots)) return;
+  for (size_t slot = 0; slot < slotCount; ++slot)
+    slots[slot] = (slot & 1U) ? NavtexCcIr476::kAlpha : NavtexCcIr476::kRep;
+  for (size_t i = 0; i < codeCount; ++i) {
+    slots[2U * i] = codes[i];
+    slots[2U * i + NavtexSitorBFec::kDiversitySlots] = codes[i];
+  }
+
+  // Twelve alternating phasing characters precede the data slots.
+  float phase = 0.0f;
+  constexpr float kPi2 = 6.28318530718f;
+  constexpr float kAmplitude = 520.0f;
+  for (uint8_t word = 0; word < NavtexSitorBSync::kPhasingWords; ++word) {
+    const uint8_t phasing = (word & 1U) ? NavtexCcIr476::kAlpha : NavtexCcIr476::kRep;
+    for (uint8_t bitIndex = 0; bitIndex < 7; ++bitIndex) {
+      const bool mark = ((phasing >> bitIndex) & 1U) != 0;
+      const float step = kPi2 * (mark ? 1615.0f : 1785.0f) / 4000.0f;
+      for (uint8_t sample = 0; sample < 40; ++sample) {
+        const int16_t audio = static_cast<int16_t>(2048.0f + kAmplitude * sinf(phase));
+        processSample(audio);
+        phase += step;
+        if (phase >= kPi2) phase -= kPi2;
+      }
+    }
+  }
+  for (size_t slot = 0; slot < slotCount; ++slot) {
+    const uint8_t code = slots[slot];
+    for (uint8_t bitIndex = 0; bitIndex < 7; ++bitIndex) {
+      const bool mark = ((code >> bitIndex) & 1U) != 0;
+      const float step = kPi2 * (mark ? 1615.0f : 1785.0f) / 4000.0f;
+      for (uint8_t sample = 0; sample < 40; ++sample) {
+        const int16_t audio = static_cast<int16_t>(2048.0f + kAmplitude * sinf(phase));
+        processSample(audio);
+        phase += step;
+        if (phase >= kPi2) phase -= kPi2;
+      }
+    }
   }
 }
 

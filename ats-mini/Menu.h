@@ -62,6 +62,7 @@
 #define CMD_JS8_MONITOR  0x4200 // Independent JS8 RX audio monitor
 #define CMD_DECODER_MENU 0x4300 // Scrolling decoder submenu
 #define CMD_FM_DX       0x4400 // FM adaptive DX reception screen
+#define CMD_WEATHER     0x4500 // Two-page weather report
 
 
 

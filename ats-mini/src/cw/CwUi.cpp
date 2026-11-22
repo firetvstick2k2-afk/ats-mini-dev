@@ -29,6 +29,8 @@ bool applyCwPreset(const DecoderFrequencyPreset& preset) { int best=-1; uint16_t
 bool cwUiOpen() {
   restoreNetworkMode = wifiModeIdx;
   netStop();
+  currentFrequency = rx.getFrequency();
+  bands[bandIdx].currentFreq = currentFrequency;
   if (getWiFiStatus() != 0 || !service.enter(sharedAudioCapture(), true)) {
     service.exit();
     netInit(restoreNetworkMode);
@@ -113,9 +115,13 @@ void drawCwDecoderPage() {
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(cyan);
   spr.drawString(toneText,10,34,FONT_SMALL);
-  char levelText[20];
-  snprintf(levelText,sizeof(levelText),"LEVEL %u",static_cast<unsigned>(service.audioLevel()));
+  char levelText[40];
+  snprintf(levelText,sizeof(levelText),"LVL %u  PK %u%s",
+           static_cast<unsigned>(service.audioLevel()),
+           static_cast<unsigned>(service.audioPeak()),
+           service.audioClipped() ? " CLIP!" : "");
   spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(service.audioClipped() ? 0xF800 : cyan);
   spr.drawString(levelText,310,34,FONT_SMALL);
 
   const uint16_t level=service.audioLevel()>500?500:service.audioLevel();

@@ -151,10 +151,11 @@ void WeatherService::publish(const Snapshot& value) {
   portENTER_CRITICAL(&snapshotMux_); snapshot_ = value; portEXIT_CRITICAL(&snapshotMux_);
 }
 void WeatherService::requestRefresh() { refreshRequested_ = true; }
-void WeatherService::update(bool wifiConnected) {
+void WeatherService::update(bool wifiConnected, bool enabled) {
   static bool lastReported = false;
   static bool reportedOnce = false;
   wifiConnected_ = wifiConnected;
+  weatherEnabled_ = enabled;
   if (!reportedOnce || wifiConnected != lastReported) {
     reportedOnce = true;
     lastReported = wifiConnected;
@@ -170,7 +171,7 @@ void WeatherService::update(bool wifiConnected) {
     settingsLoaded_ = true;
   }
   const uint32_t now = millis();
-  if (wifiConnected_ && !taskHandle_ && hasConfiguredLocation() &&
+  if (weatherEnabled_ && wifiConnected_ && !taskHandle_ && hasConfiguredLocation() &&
       (!lastStartAttemptMs_ || now - lastStartAttemptMs_ >= 5000)) {
     lastStartAttemptMs_ = now ? now : 1;
     begin();
@@ -187,20 +188,20 @@ void WeatherService::taskLoop() {
   bool waitingLogged = false;
   for (;;) {
     const uint32_t now = millis();
-    const bool due = refreshRequested_ || !lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs;
+    const bool due = weatherEnabled_ && (refreshRequested_ || !lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs);
     if (strlen(postalCode_) != 5 && !waitingLogged) {
       weatherLog("%s", "[WEATHER] waiting: no valid postal code configured");
       waitingLogged = true;
     }
     if (strlen(postalCode_) == 5) waitingLogged = false;
-    if (!wifiConnected_ && strlen(postalCode_) == 5 && due) {
+    if (weatherEnabled_ && !wifiConnected_ && strlen(postalCode_) == 5 && due) {
       static bool wifiWaitLogged = false;
       if (!wifiWaitLogged) {
         weatherLog("%s", "[WEATHER] waiting: data-service WiFi is not connected");
         wifiWaitLogged = true;
       }
     }
-    if (wifiConnected_ && due && strlen(postalCode_) == 5) {
+    if (weatherEnabled_ && wifiConnected_ && due && strlen(postalCode_) == 5) {
       weatherLog("[WEATHER] refresh starting postal='%s' requested=%s\n",
         postalCode_, refreshRequested_ ? "yes" : "no");
       refreshRequested_ = false; lastAttemptMs_ = now;

@@ -622,3 +622,11 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Auf `development` committed. Kein Compile, GitHub Actions Build, Flash oder Hardwaretest. OSPI-DE-Build nicht gestartet; `main` unangetastet.
 
 - Nachkontrolle: Die blaue Farbe des FT8-Empfangsfortschrittsbalkens bleibt als Anzeigeelement erhalten; nur die FT8/FT4-Menürahmen und Auswahlfarben wurden vereinheitlicht. Korrekturcommit in `FtxUi.cpp`: `2444de8283cb3ec1b18269623c75224348b99a19`.
+
+
+## CW-Oberfläche an FT8 angeglichen — 2026-11-22
+- Rückmeldung aus dem Hardwaretest: Die vorherige CW-Anzeige mit mehreren umrahmten Daten-/Textfeldern war optisch unerwünscht. CW wurde deshalb auf die schlichte FT8-Hauptseitenstruktur umgestellt: große Frequenzanzeige, kompakte Status-/AUTO-TONE-/LEVEL-Zeile, ein einzelner Pegelbalken und borderloser Dekodiertext.
+- CW Actions und CW Presets verwenden jetzt schwarze Hintergründe und ausschließlich einen dünnen cyanfarbenen Auswahlrahmen ohne Füllung; normale Schrift bleibt weiß, ausgewählte Schrift cyan.
+- Preset-Scrollgrenze korrigiert: Bei fünf sichtbaren Zeilen wird ab Auswahl außerhalb des Fensters passend gescrollt (vorher wurde erst ab sechs Positionen verschoben, wodurch die Auswahl bei Position 6 unsichtbar werden konnte).
+- Geändert: `ats-mini/src/cw/CwUi.cpp`; Commit `64ed5d234fa795fb7f81af77b7df418453abcb1f` auf `development`.
+- RTTY wurde vom Nutzer noch nicht geprüft und deshalb nicht geändert. Kein Build/Compile/Flash durch den Assistenten; Nutzer startet Builds selbst. `main` bleibt unangetastet.

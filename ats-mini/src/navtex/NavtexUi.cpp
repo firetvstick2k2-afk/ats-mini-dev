@@ -121,7 +121,7 @@ void navtexUiRotate(int delta) {
     presetSelection = static_cast<uint8_t>(next);
     schedulePreview(millis());
   } else {
-    actionSelection = static_cast<uint8_t>((actionSelection + (delta > 0 ? 1 : 2)) % 3);
+    actionSelection = static_cast<uint8_t>((actionSelection + (delta > 0 ? 1 : 2)) % 4);
   }
 }
 
@@ -160,6 +160,13 @@ void navtexUiClick() {
       schedulePreview(millis());
       break;
     case 1:
+      if (receiverService.requestSelfTest())
+        statusShow("NAVTEX self-test", "Synthetic audio is being decoded");
+      else
+        statusShow("NAVTEX self-test", "Could not queue test signal");
+      actionsOpen = false;
+      break;
+    case 2:
       actionsOpen = false;
       break;
     default:
@@ -240,8 +247,8 @@ void drawNavtexPage() {
     DecoderMenuUi::draw("NAVTEX PRESETS", entries, nullptr, kNavtexPresetCount,
                         presetSelection, "TURN: SELECT", "CLICK: APPLY", state);
   } else {
-    const char* labels[] = {"NAVTEX PRESETS", "BACK", "EXIT NAVTEX"};
-    DecoderMenuUi::draw("NAVTEX ACTIONS", labels, nullptr, 3, actionSelection,
+    const char* labels[] = {"NAVTEX PRESETS", "RUN NAVTEX SELF-TEST", "BACK", "EXIT NAVTEX"};
+    DecoderMenuUi::draw("NAVTEX ACTIONS", labels, nullptr, 4, actionSelection,
                         "TURN: SELECT", "CLICK: OPEN", nullptr, true);
   }
 }

@@ -1981,7 +1981,7 @@ void drawRadioMenuPopup(uint16_t cmd)
       label = menu[MENU_BW]; valueText = getCurrentBandwidth()->desc; break;
     case CMD_SEEK:
       label = menu[MENU_SEEK];
-      valueText = seekMode() == SEEK_SCHEDULE ? "SCHEDULE" : "DEFAULT";
+      valueText = seekMode(false) == SEEK_SCHEDULE ? "SCHEDULE" : "DEFAULT";
       break;
     case CMD_SCAN:
       label = menu[MENU_SCAN]; valueText = "START SCAN"; break;

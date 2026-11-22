@@ -678,3 +678,45 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Der feste Abschluss bleibt: FM DX → Decoder → Einstellungen → Zurück. Zurück bleibt der letzte Eintrag und führt unmittelbar ins aktive Radio-Layout.
 - Neue Hauptmenü-Funktionen ausschließlich direkt VOR dem bisherigen Eintrag auf Position 20 einfügen (Einfügestelle Position 19). Keine neuen Funktionen zwischen Position 1 und 18 einfügen. Nachfolgende Positionsnummern dürfen sich dadurch verschieben, die relative Reihenfolge der bestehenden Einträge bleibt aber zwingend erhalten.
 - Für DE/EN/IT immer identisch umsetzen und Index-Konstanten sowie XXL-Label-Arrays synchron anpassen.
+
+
+## Wetter-Portierung aus ATS Mini OS (2026-11-22)
+
+Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch `dev/first-build-preparation`, wurde in den ATS-Mini-Dev-Stand auf `development` portiert und an dessen bestehende Architektur angepasst.
+
+### Integrierte Bestandteile
+- Eigenständiges Modul `WeatherService.h/.cpp`; kein Wettercode in den Radio- oder Layout-Kern gemischt.
+- Deutsche fünfstellige Postleitzahl wird im NVS-Namespace `weather` auf der vorhandenen `settings`-Partition gespeichert.
+- Datenkette: OpenPLZ-Postleitzahlauflösung → Open-Meteo-Geocoding → Bright Sky / DWD für aktuelle Bedingungen und stündliche Daten zur Fünf-Tage-Prognose.
+- HTTPS mit ESP32-Built-in-CA-Bundle, begrenzte Timeouts und JSON-Größenprüfung.
+- Hintergrund-Worker mit 15-Minuten-Aktualisierung und 60-Sekunden-Wiederholversuch nach fehlgeschlagenem Abruf. Der Worker startet nur bei echter STA-Verbindung und gültiger Postleitzahl; AP-only löst keine Internetabfragen aus.
+- Wetterstandort kann auf der vorhandenen WLAN-Web-Konfigurationsseite gespeichert werden (`POST /weather/save`).
+- Zweitseitige 320×170-Wetteranzeige: aktuelle Bedingungen mit Temperatur, Beschreibung, Luftfeuchtigkeit, Wind, Regen und Luftdruck sowie fünf Tage mit Symbolen, Höchst-/Tiefstwerten und Niederschlagswahrscheinlichkeit.
+- Lokale Wetter-Icons; schwarzer Hintergrund und blauer Rahmen. Die Anzeige wird bei Änderungen des asynchronen Wetter-Snapshots neu gezeichnet.
+- Encoder-Drehung und kurzer Klick wechseln zwischen den Wetterseiten; langer Druck kehrt zum Radio zurück.
+
+### Menüposition
+- Wetterbericht wurde als neue Hauptmenüfunktion an Index 19 / Position 20 eingefügt – unmittelbar vor dem bisherigen FM-DX-Eintrag.
+- Die bestehende Reihenfolge der vorherigen 19 Hauptfunktionen bleibt unverändert.
+- Der feste Abschluss lautet weiterhin FM DX → Decoder → Einstellungen → Zurück; diese Einträge verschieben sich um eine Position nach hinten.
+- Deutsch, Englisch und Italienisch einschließlich der italienischen XXL-Beschriftungen wurden synchronisiert.
+
+### Build-Abhängigkeit
+- ArduinoJson 7.4.2 wurde für OSPI und QSPI in `ats-mini/sketch.yaml` ergänzt.
+
+### Relevante Commits auf `development`
+- WeatherService interface: `b69a8827ce80be734c0decb9a12b72f3057f0f1c`
+- WeatherService implementation: `19f0c61acba15ed3d469bfadce38a0546090e040`
+- Menu command: `9e97feb6f7f01016de5ab77752ed16f87ac16a16`
+- ArduinoJson dependency (OSPI/QSPI): `1ac6642dfb25a9842a10898158a3bdefe9cfce9e`
+- Weather config form: `619042f7a6c50d616f38362ab8d0ec50934b90f8`
+- German menu: `b15e90a3d0708e3a754de6e9c48c5efe47c2873b`
+- English menu: `951e9d7a9662881ad576a9a3ece784179798332b`
+- Italian menu: `dc40611481bd45e1f19b5ecb0feb51a4c8f370d8`
+- Weather screen: `fd92f8b8820970173e35fe17b45267c633a069f2`
+- Weather UI integration and redraw: `d3c22569dc557ba893d48463952bba0289356c70`
+- WLAN configuration route: `dca759c188f51a8ea2cb4c3d3dcd469b8019d309`
+
+### Prüfstatus
+- Quelltext-/Integrationsprüfung: durchgeführt; Menüpositionen, Sprachvarianten, Wetter-Routen, Service-Aufrufe und Display-/Encoder-Einstiegspunkte wurden gegengeprüft.
+- Kein Build, kein GitHub-Actions-Lauf und kein Gerätetest ausgeführt. Die Portierung ist committed; Compiler- und Hardwareprüfung stehen noch aus.

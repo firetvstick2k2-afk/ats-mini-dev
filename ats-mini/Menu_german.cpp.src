@@ -2024,10 +2024,15 @@ void drawRadioMenuPopup(uint16_t cmd)
       else snprintf(value,sizeof(value),"%u dB",static_cast<unsigned>(isSSB()?SsbAvcIdx:AmAvcIdx));
       if(currentMode != FM) { barMax=90; barValue=isSSB()?SsbAvcIdx:AmAvcIdx; }
       break;
-    case CMD_MEMORY:
+    case CMD_MEMORY: {
       label = menu[MENU_MEMORY];
-      snprintf(value,sizeof(value),"MEMORY %02u",static_cast<unsigned>(memoryIdx+1));
+      const Memory memory = getMemory(memoryIdx);
+      if(!memory.freq) valueText = "- - -";
+      else if(memory.name[0]) valueText = memory.name;
+      else if(memory.mode == FM) snprintf(value,sizeof(value),"%3.2f MHz",memory.freq / 1000000.0);
+      else snprintf(value,sizeof(value),"%5lu kHz",static_cast<unsigned long>(memory.freq / 1000));
       break;
+    }
     case CMD_SQUELCH: {
       label = menu[MENU_SQUELCH];
       const uint8_t squelchValue = currentSquelch[currentMode] & 0x7f;

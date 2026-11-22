@@ -442,11 +442,15 @@ static bool wifiConnect()
  bool netWeatherPoll()
  {
    if(!weatherWifiSessionActive) return WiFi.status() == WL_CONNECTED;
-   if(WiFi.status() != WL_CONNECTED)
-     wifiMulti.run(0, wifiScanHidden);
+   static uint32_t lastWeatherWifiPoll = 0;
+   if(WiFi.status() != WL_CONNECTED &&
+      (!lastWeatherWifiPoll || millis() - lastWeatherWifiPoll >= 1000))
+   {
+     lastWeatherWifiPoll = millis();
+     wifiMulti.run(250, wifiScanHidden);
+   }
    return WiFi.status() == WL_CONNECTED;
  }
-
  void netWeatherEnd()
  {
    if(!weatherWifiSessionActive) return;

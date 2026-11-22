@@ -749,6 +749,42 @@ static void drawMoonCalendarScreen()
 }
 
 
+static size_t newsAdvanceLines(const char* text, size_t offset, uint8_t lines)
+{
+  const size_t length=strlen(text);
+  if(offset>length) offset=length;
+  size_t pos=offset;
+  for(uint8_t row=0;row<lines && pos<length;row++)
+  {
+    const char* line=text+pos;
+    size_t n=0,lastSpace=0;
+    while(line[n] && n<32){if(line[n]==' ')lastSpace=n;++n;}
+    if(line[n] && lastSpace>8)n=lastSpace;
+    if(!n) break;
+    pos+=n;
+    while(pos<length && text[pos]==' ')++pos;
+  }
+  return pos;
+}
+
+uint8_t newsPageCountForCurrentItem()
+{
+  const uint8_t count=newsService.itemCount();
+  if(!count) return 1;
+  NewsService::Item item;
+  if(!newsService.getItem(newsCurrentIndex%count,item)) return 1;
+  const size_t length=strlen(item.text);
+  size_t offset=0;
+  uint8_t pages=0;
+  do {
+    ++pages;
+    const size_t next=newsAdvanceLines(item.text,offset,4);
+    if(next<=offset || next>=length) break;
+    offset=next;
+  } while(pages<255);
+  return pages?pages:1;
+}
+
 void drawNewsScreen()
 {
   const uint8_t newsCount = newsService.itemCount();
@@ -758,7 +794,6 @@ void drawNewsScreen()
   constexpr uint16_t BLUE=0x001F, CYAN=0x07FF, GREEN=0x07E0, WHITE=0xFFFF, MUTED=0x8410, PANEL=0x0000;
   spr.fillScreen(PANEL); spr.drawRoundRect(3,3,w-6,164,6,BLUE);
 
-  // Keep only the section name in the top bar.
   spr.setTextDatum(TL_DATUM);
   spr.setFont(FONT_SMALL);
   spr.setTextColor(CYAN,PANEL);
@@ -782,10 +817,14 @@ void drawNewsScreen()
   char meta[20]; snprintf(meta,sizeof(meta),"%u/%u",index+1,newsCount);
   spr.drawString(meta,w-10,5);
 
-  // One-line headline ticker: advance through long titles instead of shrinking them.
+  // Smooth, deterministic one-line ticker: starts at the beginning of each headline.
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(WHITE,PANEL);
   constexpr size_t TITLE_WINDOW=35;
+  constexpr uint32_t TICKER_STEP_MS=260;
+  static uint8_t tickerIndex=255;
+  static uint32_t tickerStartMs=0;
+  if(tickerIndex!=index){tickerIndex=index;tickerStartMs=millis();}
   const size_t titleLength=strlen(item.title);
   if(titleLength<=TITLE_WINDOW)
   {
@@ -793,20 +832,19 @@ void drawNewsScreen()
   }
   else
   {
-    constexpr size_t GAP=4;
+    constexpr size_t GAP=6;
     const size_t cycle=titleLength+GAP;
-    const size_t offset=((millis()/350)%cycle);
+    const size_t offset=((millis()-tickerStartMs)/TICKER_STEP_MS)%cycle;
     char titleLine[TITLE_WINDOW+1];
     for(size_t n=0;n<TITLE_WINDOW;n++)
     {
-      size_t pos=(offset+n)%cycle;
+      const size_t pos=(offset+n)%cycle;
       titleLine[n]=(pos<titleLength)?item.title[pos]:' ';
     }
     titleLine[TITLE_WINDOW]='\0';
     spr.drawString(titleLine,10,25);
   }
 
-  // Large source/date row below the moving headline.
   spr.setTextColor(GREEN,PANEL);
   spr.setTextDatum(TL_DATUM);
   spr.drawString(item.source,10,45);
@@ -816,13 +854,10 @@ void drawNewsScreen()
   spr.drawString(dateLine,w-10,45);
   spr.drawFastHLine(9,65,w-18,BLUE);
 
-  // Four large body lines per page; turn pages rather than reducing font size.
-  const char* body=item.text;
-  constexpr size_t CHARS_PER_PAGE=128;
-  size_t offset=(size_t)newsCurrentPage*CHARS_PER_PAGE;
-  const size_t length=strlen(body);
-  if(offset>=length) offset=0;
-  body+=offset;
+  size_t bodyOffset=0;
+  for(uint8_t page=0;page<newsCurrentPage;page++)
+    bodyOffset=newsAdvanceLines(item.text,bodyOffset,4);
+  const char* body=item.text+bodyOffset;
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(WHITE,PANEL);
   for(uint8_t row=0;row<4 && *body;row++)
@@ -839,7 +874,7 @@ void drawNewsScreen()
   spr.setTextDatum(TL_DATUM);
   spr.drawString("Dreh: Textseiten  Klick: Naechste Meldung",10,151);
   spr.setTextDatum(TR_DATUM);
-  char pageText[20]; snprintf(pageText,sizeof(pageText),"SEITE %u",newsCurrentPage+1);
+  char pageText[24]; snprintf(pageText,sizeof(pageText),"SEITE %u/%u",newsCurrentPage+1,newsPageCountForCurrentItem());
   spr.drawString(pageText,w-10,151);
 }
 

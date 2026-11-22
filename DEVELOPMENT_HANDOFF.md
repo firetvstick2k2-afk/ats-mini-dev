@@ -1402,3 +1402,5 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Die bisherigen blauen Menüflächen und grünen Auswahlflächen wurden entfernt. Decoder-Hauptanzeigen und ihre jeweiligen Informationsfelder bleiben unverändert; geändert wurden nur die Menüs/Untermenüs.
 - Betroffene Dateien: `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/cw/CwUi.cpp`, `ats-mini/src/rtty/RttyUi.cpp`.
 - Auf `development` committed. Kein Compile, GitHub Actions Build, Flash oder Hardwaretest. OSPI-DE-Build nicht gestartet; `main` unangetastet.
+
+- Nachkontrolle: Die blaue Farbe des FT8-Empfangsfortschrittsbalkens bleibt als Anzeigeelement erhalten; nur die FT8/FT4-Menürahmen und Auswahlfarben wurden vereinheitlicht. Korrekturcommit in `FtxUi.cpp`: `2444de8283cb3ec1b18269623c75224348b99a19`.

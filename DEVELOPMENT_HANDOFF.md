@@ -1378,3 +1378,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Removed inline `WAIT` / `LISTEN` badges. The bottom status line shows the receiver's actually tuned frequency (`TUNED: x.xxx MHz`); dark/cyan/neon-green styling remains. Bottom-right hint: `ROTATE: SELECT  CLICK: TUNE`.
 - Source: `ats-mini/src/rtty/RttyUi.cpp`, commit `d59ac35db55347106f1eb75f4c347b2afcf4e7e4`.
 - Source-only review; no compile, Actions build, flash or hardware test. User starts OSPI-DE manually; `main` untouched.
+
+
+## Einheitliches Decoder-Frequenz-Presetfenster für FT8, CW und RTTY (2026-11-22)
+- Preset-Untermenüs in FT8/FT4, CW und RTTY wurden an das gezeigte „DECODER-FREQUENZ“-Fenster angeglichen: gemeinsamer 280×154-Rahmen, identischer Titel, fünf sichtbare Zeilen, Frequenz-/Modusdarstellung, Seitenzähler, cyanfarbene Auswahlzeile sowie Status-/Bedienzeile unten („DREHEN: WÄHLEN“ / „HALTEN: ZURÜCK“).
+- RTTY-Presets enthalten nun zusätzlich die fünf DWD-Pinneberg-RTTY-Frequenzen DDK 2, DDH 7, DDK 9, DDH 9 und DDH 8. DDH 47 bleibt wegen 147 kHz außerhalb des unterstützten RTTY-Abstimmbereichs ein allgemeiner Receiver-Preset; DWD-FAX-Einträge werden nicht als RTTY-Presets klassifiziert.
+- CW behält CURRENT und seine neun CW-Presets; FT8/FT4 und RTTY behalten ihre bestehende Preview-/Übernahme-Logik. Status im CW-Menü lautet bei CURRENT „ABGESTIMMT“, bei anderer noch nicht übernommener Auswahl „AUSWAHL“.
+- Änderungen: `FtxUi.cpp` Commit `57a6b1f3`; `CwUi.cpp` Commits `02eb5967`, `a5997787`; `RttyUi.cpp` Commit `96f4c1d0`; `DecoderFrequencyList.h` Commit `8f93dd83`.
+- Nur Source-Review. Kein Compile, kein GitHub Actions Build, kein Flash und kein Hardwaretest. Nutzer startet OSPI-DE manuell; `main` bleibt unangetastet.

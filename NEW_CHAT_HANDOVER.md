@@ -604,3 +604,12 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Removed inline WAIT/LISTEN badges. Bottom status line shows the receiver's tuned frequency as `TUNED: x.xxx MHz`; dark/cyan/neon-green palette retained.
 - Commit: `d59ac35db55347106f1eb75f4c347b2afcf4e7e4` (`ats-mini/src/rtty/RttyUi.cpp`).
 - No compile, Actions build or hardware test. Continue on `development` only; `main` untouched.
+
+
+## Decoder-Preset-Menüs – Layoutdetails präzisiert (2026-11-22)
+- Überschriften bleiben decoderabhängig: `FT8 PRESETS` / `FT4 PRESETS`, `CW PRESETS`, `RTTY PRESETS`.
+- Vereinheitlicht wird ausschließlich der Aufbau: identischer Rahmen und Innenabstand, fünf kompakte Frequenzzeilen, cyan/türkise Auswahlmarkierung, Seitenzähler oben rechts sowie Statusanzeige unten mittig mit `ABGESTIMMT` während einer aktiven/übernommenen Abstimmung. Bedienhinweise stehen links und rechts unten.
+- FT8/CW/RTTY Presetlisten und vorhandene Tuning-/Preview-Abläufe bleiben decoder-spezifisch erhalten.
+- Korrektur gegenüber dem vorherigen Eintrag: keine gemeinsame Überschrift `DECODER-FREQUENZ`; der Titel benennt jeweils den Decoder.
+- Geänderte Dateien: `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/cw/CwUi.cpp`, `ats-mini/src/rtty/RttyUi.cpp`; RTTY-Presetliste in `ats-mini/src/radio/DecoderFrequencyList.h` ergänzt.
+- Source-only; kein Compile, GitHub Actions Build, Flash oder Hardwaretest. Weiterhin nur `development`; `main` unangetastet. OSPI-DE-Build nicht gestartet.

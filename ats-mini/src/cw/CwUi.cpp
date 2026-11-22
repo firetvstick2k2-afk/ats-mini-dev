@@ -161,25 +161,64 @@ void drawCwDecoderPage() {
   spr.drawString("CLICK: ACTIONS   LONG PRESS: EXIT", 160, 162);
 
   if (menuOpen) {
-    constexpr uint16_t menuPanel = 0x0010, highlight = 0x03E0;
-    spr.fillRect(28, 31, 264, 126, menuPanel);
-    spr.drawRect(28, 31, 264, 126, cyan);
-    spr.setTextDatum(MC_DATUM);
-    spr.setTextColor(cyan, menuPanel);
-    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-    spr.drawString(frequencyMenuOpen ? "CW FREQUENCIES" : "CW DECODER ACTIONS", 160, 41);
-    if(frequencyMenuOpen) { const uint8_t count=cwPresetCount()+1; for(uint8_t row=0;row<6;++row) { uint8_t index=frequencyScroll+row; if(index>=count) break; char label[48]; if(index==0) snprintf(label,sizeof(label),"CURRENT %lu kHz",static_cast<unsigned long>(currentFrequency)); else { const DecoderFrequencyPreset* p=cwPresetAt(index-1); if(!p)continue; snprintf(label,sizeof(label),"%-12s %lu kHz",p->label,static_cast<unsigned long>(p->frequencyKHz)); } int y=58+row*16; uint16_t rowBg=index==frequencySelection?0x03E0:menuPanel; spr.fillRect(36,y-7,248,15,rowBg); spr.setTextDatum(ML_DATUM); spr.setTextColor(index==frequencySelection?0x0000:white,rowBg); spr.setFont(FONT_SMALL); spr.drawString(label,43,y+1); } }
-    else {
-    const char* labels[kMenuCount] = {"FREQUENCIES", "CLEAR TEXT", "RESET DECODER", "BACK", "EXIT CW"};
-    for (uint8_t i = 0; i < kMenuCount; ++i) {
-      const int y = 58 + i * 18;
-      const uint16_t rowBg = (i == menuIndex) ? highlight : menuPanel;
-      spr.fillRect(36, y - 7, 248, 16, rowBg);
-      spr.setTextDatum(ML_DATUM);
-      spr.setTextColor((i == menuIndex) ? 0x0000 : white, rowBg);
-      spr.setFont(FONT_SMALL);
-      spr.drawString(labels[i], 43, y + 1);
+    constexpr uint16_t menuPanel=0x0010, highlight=0x07FF;
+    if(frequencyMenuOpen) {
+      const int menuX=20,menuY=8,menuW=280,menuH=154;
+      spr.fillRect(menuX,menuY,menuW,menuH,menuPanel);
+      spr.drawRect(menuX,menuY,menuW,menuH,cyan);
+      spr.setTextDatum(TL_DATUM);
+      spr.setTextColor(cyan);
+      spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+      spr.drawString("DECODER-FREQUENZ",menuX+12,menuY+7);
+      const uint8_t count=cwPresetCount()+1;
+      for(uint8_t row=0;row<5;++row) {
+        const uint8_t index=frequencyScroll+row;
+        if(index>=count) break;
+        char label[40];
+        if(index==0) snprintf(label,sizeof(label),"CURRENT  %2lu.%03lu USB",
+          static_cast<unsigned long>(currentFrequency/1000),static_cast<unsigned long>(currentFrequency%1000));
+        else {
+          const DecoderFrequencyPreset* p=cwPresetAt(index-1);
+          if(!p) continue;
+          const char* name=p->label;
+          if(!strncmp(name,"CW ",3)) name+=3;
+          snprintf(label,sizeof(label),"%-8s %2lu.%03lu %s",name,
+            static_cast<unsigned long>(p->frequencyKHz/1000),static_cast<unsigned long>(p->frequencyKHz%1000),
+            p->modulation==USB?"USB":p->modulation==LSB?"LSB":"AM");
+        }
+        const int y=menuY+29+row*19;
+        if(index==frequencySelection) spr.fillRect(menuX+7,y-3,menuW-14,19,highlight);
+        spr.setTextDatum(TL_DATUM);
+        spr.setTextColor(index==frequencySelection?0x0000:white);
+        spr.setFont(FONT_SMALL);
+        spr.drawString(label,menuX+13,y);
+      }
+      char page[12];
+      snprintf(page,sizeof(page),"%02u/%02u",static_cast<unsigned>(frequencySelection+1),static_cast<unsigned>(count));
+      spr.setTextDatum(TR_DATUM); spr.setTextColor(white); spr.setFont(FONT_SMALL);
+      spr.drawString(page,menuX+menuW-10,menuY+7);
+      spr.setTextDatum(MC_DATUM); spr.setTextColor(green);
+      spr.drawString("ABGESTIMMT",160,menuY+124);
+      spr.setTextDatum(ML_DATUM); spr.setTextColor(white);
+      spr.drawString("DREHEN: WÄHLEN",menuX+12,menuY+143);
+      spr.setTextDatum(MR_DATUM);
+      spr.drawString("HALTEN: ZURÜCK",menuX+menuW-12,menuY+143);
+    } else {
+      spr.fillRect(28,31,264,126,menuPanel);
+      spr.drawRect(28,31,264,126,cyan);
+      spr.setTextDatum(MC_DATUM);
+      spr.setTextColor(cyan,menuPanel);
+      spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+      spr.drawString("CW DECODER ACTIONS",160,41);
+      const char* labels[kMenuCount]={"FREQUENCIES","CLEAR TEXT","RESET DECODER","BACK","EXIT CW"};
+      for(uint8_t i=0;i<kMenuCount;++i) {
+        const int y=58+i*18;
+        const uint16_t rowBg=i==menuIndex?0x03E0:menuPanel;
+        spr.fillRect(36,y-7,248,16,rowBg);
+        spr.setTextDatum(ML_DATUM);
+        spr.setTextColor(i==menuIndex?0x0000:white,rowBg);
+        spr.setFont(FONT_SMALL);
+        spr.drawString(labels[i],43,y+1);
+      }
     }
-    }
-  }
-}
+  }}

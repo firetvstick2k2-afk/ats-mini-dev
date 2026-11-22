@@ -12,6 +12,7 @@
 #include "src/rtty/RttyUi.h"
 #include "src/cw/CwUi.h"
 #include "src/js8/Js8Ui.h"
+#include "src/navtex/NavtexUi.h"
 #include "src/radio/FmDxUi.h"
 #include "FreqKeypad.h" // <--- Eingebundenes Keypad-Modul
 #include "SpectrumScanner.h"
@@ -1105,6 +1106,13 @@ void drawScreen()
   if(currentCmd > CMD_SETTINGS && currentCmd <= CMD_ABOUT)
   {
     drawSettingsPopup(currentCmd);
+    spr.pushSprite(0, 0);
+    return;
+  }
+
+  if(currentCmd == CMD_NAVTEX)
+  {
+    drawNavtexPage();
     spr.pushSprite(0, 0);
     return;
   }

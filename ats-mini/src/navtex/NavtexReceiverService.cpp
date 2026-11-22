@@ -147,8 +147,15 @@ void NavtexReceiverService::workerTask() {
     xSemaphoreTake(engineMutex_, portMAX_DELAY);
     if (active_) {
       if (chunk.selfTest) {
+        Serial.printf("[NAVTEX-TEST] WORKER received heap=%u stack=%u\\n",
+                      static_cast<unsigned>(ESP.getFreeHeap()),
+                      static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
         runSelfTest();
         selfTestQueued_ = false;
+        Serial.printf("[NAVTEX-TEST] WORKER finished bits=%lu words=%lu messages=%lu\\n",
+                      static_cast<unsigned long>(bitsDecoded_),
+                      static_cast<unsigned long>(codewordsDecoded_),
+                      static_cast<unsigned long>(messagesCompleted_));
       } else processChunk(chunk);
     }
     xSemaphoreGive(engineMutex_);
@@ -170,17 +177,35 @@ void NavtexReceiverService::processChunk(const AudioChunk& chunk) {
 }
 
 bool NavtexReceiverService::requestSelfTest() {
-  if (!active_ || !queue_) return false;
-  if (selfTestQueued_) return false;
+  Serial.printf("[NAVTEX-TEST] REQUEST active=%d queue=%p queued=%d\\n",
+                active_ ? 1 : 0, static_cast<void*>(queue_),
+                selfTestQueued_ ? 1 : 0);
+  if (!active_ || !queue_) {
+    Serial.println("[NAVTEX-TEST] REQUEST rejected: receiver inactive");
+    return false;
+  }
+  if (selfTestQueued_) {
+    Serial.println("[NAVTEX-TEST] REQUEST rejected: test already queued");
+    return false;
+  }
   selfTestQueued_ = true;
   AudioChunk request{};
   request.selfTest = true;
-  if (xQueueSend(queue_, &request, 0) == pdTRUE) return true;
+  const BaseType_t queued = xQueueSend(queue_, &request, 0);
+  Serial.printf("[NAVTEX-TEST] QUEUE result=%ld waiting=%u\\n",
+                static_cast<long>(queued),
+                static_cast<unsigned>(uxQueueMessagesWaiting(queue_)));
+  if (queued == pdTRUE) return true;
   selfTestQueued_ = false;
+  Serial.println("[NAVTEX-TEST] REQUEST failed: queue full");
   return false;
 }
 
 void NavtexReceiverService::runSelfTest() {
+  const uint32_t startedAt = millis();
+  Serial.printf("[NAVTEX-TEST] START heap=%u stack=%u\\n",
+                static_cast<unsigned>(ESP.getFreeHeap()),
+                static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
   // Complete, known NAVTEX frame. The generated samples travel through the
   // same 4 kHz demodulator, phasing detector, FEC combiner and parser as RF audio.
   static const char frame[] = "ZCZC CA23\r\nNAVAREA WARNING\r\nNNNN";
@@ -208,11 +233,16 @@ void NavtexReceiverService::runSelfTest() {
     }
     // Unknown glyphs are skipped rather than injecting an invalid codeword.
   }
+  Serial.printf("[NAVTEX-TEST] ENCODE codewords=%u\\n", static_cast<unsigned>(codeCount));
 
   demod_.reset(); sync_.reset(); fec_.reset(); ccir_.reset();
   const size_t slotCount = codeCount * 2U + NavtexSitorBFec::kDiversitySlots;
   uint8_t slots[256]{};
-  if (slotCount > sizeof(slots)) return;
+  if (slotCount > sizeof(slots)) {
+    Serial.printf("[NAVTEX-TEST] ABORT slot overflow slots=%u capacity=%u\\n",
+                  static_cast<unsigned>(slotCount), static_cast<unsigned>(sizeof(slots)));
+    return;
+  }
   for (size_t slot = 0; slot < slotCount; ++slot)
     slots[slot] = (slot & 1U) ? NavtexCcIr476::kAlpha : NavtexCcIr476::kRep;
   for (size_t i = 0; i < codeCount; ++i) {
@@ -260,6 +290,12 @@ void NavtexReceiverService::runSelfTest() {
     phase += flushStep;
     if (phase >= kPi2) phase -= kPi2;
   }
+  Serial.printf("[NAVTEX-TEST] DECODE COMPLETE locked=%d bits=%lu words=%lu messages=%lu elapsed=%lu ms\\n",
+                sync_.status().locked ? 1 : 0,
+                static_cast<unsigned long>(bitsDecoded_),
+                static_cast<unsigned long>(codewordsDecoded_),
+                static_cast<unsigned long>(messagesCompleted_),
+                static_cast<unsigned long>(millis() - startedAt));
 }
 
 void NavtexReceiverService::processCodeword(uint8_t code) {

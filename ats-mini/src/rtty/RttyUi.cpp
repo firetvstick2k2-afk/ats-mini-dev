@@ -378,20 +378,20 @@ bool rttyUiTick(uint32_t now) {
 }
 
 void drawRttyDecoderPage() {
-  constexpr uint16_t navy=0x0008,blueA=0x0359,blueB=0x047D,frame=0xF800,green=0x07E0,red=0xF800;
+  constexpr uint16_t navy=0x0000,blueA=0x0010,blueB=0x0020,frame=0x07FF,green=0x07E0,red=0xF800,cyan=0x07FF,white=0xFFFF;
   spr.fillSprite(navy);
-  spr.drawRect(2,2,316,166,0x001F);
+  spr.drawRect(2,2,316,166,cyan);
   spr.fillRect(8,5,304,31,blueA);
-  spr.drawRect(8,5,304,31,frame);
+  spr.drawRect(8,5,304,31,cyan);
   spr.setTextDatum(ML_DATUM);
-  spr.setTextColor(0xFFFF,blueA);
+  spr.setTextColor(green,blueA);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   char freq[40];
   snprintf(freq,sizeof(freq),"%lu kHz  %s",static_cast<unsigned long>(currentFrequency),currentMode==USB?"USB":currentMode==LSB?"LSB":"AM");
   spr.drawString(freq,16,20);
   const bool active=service.signal();
   spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(0xFFFF,blueA);
+  spr.setTextColor(green,blueA);
   spr.setFont(&lgfx::fonts::FreeSans9pt7b);
   char status[32];
   snprintf(status,sizeof(status),"%s %.2fBd",active?"RX":"NO RX",service.baud());
@@ -404,7 +404,7 @@ void drawRttyDecoderPage() {
   for(int row=0;row<4;++row) {
     const uint16_t panel=(row&1)?blueB:blueA;
     spr.fillRect(8,panelY[row],304,25,panel);
-    spr.drawRect(8,panelY[row],304,25,0x04BF);
+    spr.drawRect(8,panelY[row],304,25,cyan);
     size_t start=0,visible=0;
     const size_t rowOffset=static_cast<size_t>(row)*charsPerLine;
     if(len>rowOffset) {
@@ -416,7 +416,7 @@ void drawRttyDecoderPage() {
       char line[charsPerLine+1];
       memcpy(line,decoded+start,visible); line[visible]=0;
       spr.setTextDatum(ML_DATUM);
-      spr.setTextColor(0xFFFF,panel);
+      spr.setTextColor(green,panel);
       spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
       spr.drawString(line,14,panelY[row]+12);
     } else if(row==0 && !active) {
@@ -431,13 +431,13 @@ void drawRttyDecoderPage() {
   if(bfoAuto) snprintf(footer,sizeof(footer),"BFO AUTO  CLICK: ACTIONS  LONG: EXIT");
   else snprintf(footer,sizeof(footer),"ROTATE: BFO  CLICK: ACTIONS  LONG: EXIT  %+d Hz",static_cast<int>(currentBFO));
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(0xFFFF,navy);
+  spr.setTextColor(cyan,navy);
   spr.setFont(FONT_SMALL);
   spr.drawString(footer,160,163);
 
   if(menuOpen) {
     const int menuX=20,menuY=8,menuW=280,menuH=154;
-    constexpr uint16_t panel=0x1036,cyan=0x07FF;
+    constexpr uint16_t panel=0x0010,cyan=0x07FF;
     spr.fillRect(menuX,menuY,menuW,menuH,panel);
     spr.drawRect(menuX,menuY,menuW,menuH,cyan);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
@@ -458,8 +458,8 @@ void drawRttyDecoderPage() {
           static_cast<unsigned>(preset->frequencyKHz%1000),
           preset->modulation==USB?"USB":preset->modulation==LSB?"LSB":"AM");
         const int y=menuY+29+row*20;
-        if(index==presetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x0359);
-        spr.setTextColor(index==presetSelection?0xFFFF:0xBDF7);
+        if(index==presetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x03E0);
+        spr.setTextColor(index==presetSelection?0x0000:white);
         spr.drawString(label,menuX+13,y);
         if(index==presetSelection && (presetPreviewPending || presetPreviewActive)) {
           spr.setTextDatum(TR_DATUM);
@@ -497,15 +497,15 @@ void drawRttyDecoderPage() {
       spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
       for(uint8_t i=0;i<kMenuCount;++i) {
         const int y=menuY+27+i*17;
-        if(i==menuIndex) spr.fillRect(menuX+7,y-2,menuW-14,18,0x0359);
-        spr.setTextColor(i==menuIndex?0xFFFF:0xBDF7);
+        if(i==menuIndex) spr.fillRect(menuX+7,y-2,menuW-14,18,0x03E0);
+        spr.setTextColor(i==menuIndex?0x0000:white);
         spr.drawString(labels[i],menuX+14,y);
         char value[24]={};
         if(i==2) snprintf(value,sizeof(value),"%.2f Bd",baudChoices[baudIndex]);
         else if(i==3) snprintf(value,sizeof(value),"%s",polarityNames[polarityIndex]);
         if(value[0]) {
           spr.setTextDatum(TR_DATUM);
-          spr.setTextColor(i==menuIndex?0xFFFF:0xBDF7);
+          spr.setTextColor(i==menuIndex?0x0000:white);
           spr.drawString(value,menuX+menuW-14,y);
           spr.setTextDatum(TL_DATUM);
         }

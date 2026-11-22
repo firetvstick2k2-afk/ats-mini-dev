@@ -664,6 +664,11 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Brought the Italian main-menu index/action order into parity with DE/EN, retained Italian wording/XXL style, added the Decoder submenu (CW, RTTY, FT8/FT4, JS8 RX), decoder preset launch paths, decoder exit handling, and missing volume/brightness/settings popup renderers.
 - Static checks: zero missing function definitions versus EN/DE; 22 entries in Italian menu, menuXXL, settings and settingsXXL arrays. Source-only; no build or device test.
 - Commits: `bee6ee0b1309692662f1a6f4d8eff99716db53c5`, `41de33f4b5eccb329ecfe5c6e6e51a45c6111353`.
-- Still pending across DE/EN/IT: FM DX at menu position 20, Settings at position 22, Back after item 22 with immediate return to the active layout. No build without explicit user request.
+- Additional parity pass aligned Italian volume click and settings navigation. Final static comparison has no missing functions; remaining body differences are intentional/localized `clickHandler`, Italian `drawXXLText`, and Italian `drawFullScreenMenu`. Latest Italian source commit: `32fc256b514d810884b778325e414453a980dadd`.
 
-- Additional parity pass aligned Italian volume click and settings navigation. Final static comparison has no missing functions; remaining body differences are intentional/localized `clickHandler`, Italian `drawXXLText`, and Italian `drawFullScreenMenu`. All three main menus contain 22 entries. Latest Italian source commit: `32fc256b514d810884b778325e414453a980dadd`.
+## 2026-11-22 — Main-menu order and Back entry
+- All three language menus now use the same 23-entry order: FM DX (20), Decoder (21), Settings (22), and Back (23). The Italian XXL menu labels follow the same order.
+- Back clears the menu command immediately and returns to the active radio layout.
+- Static checks confirm 23 entries in DE/EN/IT and 23 Italian XXL labels; index defines and handlers match. No compile/build/device test performed.
+- Commits: German f3eea02b4b2f501094374a69d6a0943f5e14ddcc; English 40ef8950a587b55308eb13b0a71f917066123e55; Italian ff723652f836740fba0e88f46868ac906c5b1747.
+- No build unless explicitly requested.

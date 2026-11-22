@@ -57,7 +57,7 @@ void cwUiExit() {
 
 void cwUiRotate(int16_t delta) {
   if (!pageActive || !delta || !menuOpen) return;
-  if(frequencyMenuOpen) { int count=cwPresetCount()+1; int next=static_cast<int>(frequencySelection)+(delta>0?1:-1); if(next<0)next=count-1; if(next>=count)next=0; frequencySelection=static_cast<uint8_t>(next); if(frequencySelection<frequencyScroll)frequencyScroll=frequencySelection; if(frequencySelection>=frequencyScroll+6)frequencyScroll=frequencySelection-5; return; }
+  if(frequencyMenuOpen) { int count=cwPresetCount()+1; int next=static_cast<int>(frequencySelection)+(delta>0?1:-1); if(next<0)next=count-1; if(next>=count)next=0; frequencySelection=static_cast<uint8_t>(next); if(frequencySelection<frequencyScroll)frequencyScroll=frequencySelection; if(frequencySelection>=frequencyScroll+5)frequencyScroll=frequencySelection-4; return; }
   int next = static_cast<int>(menuIndex) + delta;
   while (next < 0) next += kMenuCount;
   menuIndex = static_cast<uint8_t>(next % kMenuCount);
@@ -83,142 +83,136 @@ bool cwUiTick(uint32_t now) {
 }
 
 void drawCwDecoderPage() {
-  constexpr uint16_t bg = 0x0000, panel = 0x0010, panelAlt = 0x0020;
-  constexpr uint16_t border = 0x07FF, green = 0x07E0, cyan = 0x07FF, white = 0xFFFF, grey = 0x8410;
+  constexpr uint16_t bg=0x0000, cyan=0x07FF, green=0x07E0, white=0xFFFF, grey=0x7BEF;
   spr.fillSprite(bg);
-  spr.drawRect(2, 2, 316, 166, cyan);
 
-  spr.fillRect(8, 5, 304, 29, panel);
-  spr.drawRect(8, 5, 304, 29, border);
+  // Match the clean, borderless FT8 page: no decorative boxes around CW data.
+  char frequencyText[24];
+  snprintf(frequencyText,sizeof(frequencyText),"%lu.%03lu",
+           static_cast<unsigned long>(currentFrequency/1000),
+           static_cast<unsigned long>(currentFrequency%1000));
+  spr.setTextColor(white);
+  spr.setTextDatum(TL_DATUM);
+  const int frequencyWidth=spr.drawString(frequencyText,8,5,&lgfx::fonts::Orbitron_Light_24);
   spr.setTextDatum(ML_DATUM);
-  spr.setTextColor(green, panel);
-  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-  char header[48];
-  snprintf(header, sizeof(header), "%lu kHz  %s",
-           static_cast<unsigned long>(currentFrequency),
-           currentMode == FM ? "FM" : currentMode == USB ? "USB" : currentMode == LSB ? "LSB" : "AM");
-  spr.drawString(header, 15, 19);
+  spr.setTextColor(cyan);
+  spr.drawString("kHz",8+frequencyWidth+7,19,FONT_SMALL);
 
-  const bool active = service.signal();
-  const bool audioPresent = service.audioPresent();
+  const bool active=service.signal();
+  const bool audioPresent=service.audioPresent();
   char status[40];
-  snprintf(status, sizeof(status), "%s %s %d WPM",
-           audioPresent ? "AUDIO" : "NO AUDIO", active ? "CW" : "SEARCH", service.wpm());
+  snprintf(status,sizeof(status),"%s  %s  %d WPM",
+           audioPresent?"AUDIO":"NO AUDIO",active?"CW":"SEARCH",service.wpm());
   spr.setTextDatum(TR_DATUM);
-  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-  spr.setTextColor(audioPresent ? green : grey, panel);
-  spr.drawString(status, 304, 19);
+  spr.setTextColor(audioPresent?green:grey);
+  spr.drawString(status,311,15,FONT_SMALL);
 
-  spr.fillRect(8, 39, 304, 22, panelAlt);
-  spr.drawRect(8, 39, 304, 22, border);
-  spr.setTextDatum(ML_DATUM);
-  spr.setFont(&lgfx::fonts::FreeSans9pt7b);
-  char info[48];
-  snprintf(info, sizeof(info), "AUTO TONE  %.0f Hz", service.tone());
-  spr.setTextColor(cyan, panelAlt);
-  spr.drawString(info, 15, 50);
+  char toneText[32];
+  snprintf(toneText,sizeof(toneText),"AUTO TONE  %.0f Hz",service.tone());
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(cyan);
+  spr.drawString(toneText,10,34,FONT_SMALL);
+  char levelText[20];
+  snprintf(levelText,sizeof(levelText),"LEVEL %u",static_cast<unsigned>(service.audioLevel()));
   spr.setTextDatum(TR_DATUM);
-  snprintf(info, sizeof(info), "LEVEL %u", static_cast<unsigned>(service.audioLevel()));
-  spr.drawString(info, 304, 50);
+  spr.drawString(levelText,310,34,FONT_SMALL);
 
-  // A compact level bar gives immediate feedback from the shared audio input.
-  const uint16_t level = service.audioLevel() > 500 ? 500 : service.audioLevel();
-  spr.drawRect(8, 64, 304, 5, border);
-  if (level) spr.fillRect(9, 65, (302 * level) / 500, 3, service.audioPresent() ? green : cyan);
+  const uint16_t level=service.audioLevel()>500?500:service.audioLevel();
+  spr.drawRect(8,49,304,10,cyan);
+  spr.fillRect(10,51,300,6,bg);
+  if(level) spr.fillRect(10,51,(300*level)/500,6,audioPresent?green:cyan);
 
-  const char* decoded = service.text();
-  const size_t len = strlen(decoded);
-  constexpr size_t charsPerLine = 31;
-  const int rowY[4] = {73, 94, 115, 136};
-  const size_t visibleChars = charsPerLine * 4;
-  const size_t first = len > visibleChars ? len - visibleChars : 0;
-  for (int row = 0; row < 4; ++row) {
-    const uint16_t rowPanel = (row & 1) ? panelAlt : panel;
-    spr.fillRect(8, rowY[row], 304, 18, rowPanel);
-    spr.drawRect(8, rowY[row], 304, 18, border);
-    const size_t offset = first + static_cast<size_t>(row) * charsPerLine;
-    if (offset < len) {
-      size_t count = len - offset;
-      if (count > charsPerLine) count = charsPerLine;
-      char line[charsPerLine + 1];
-      memcpy(line, decoded + offset, count);
-      line[count] = 0;
-      spr.setTextDatum(ML_DATUM);
-      spr.setTextColor(green, rowPanel);
+  const char* decoded=service.text();
+  const size_t len=strlen(decoded);
+  constexpr size_t charsPerLine=34;
+  const int rowY[4]={68,91,114,137};
+  const size_t visibleChars=charsPerLine*4;
+  const size_t first=len>visibleChars?len-visibleChars:0;
+  for(int row=0;row<4;++row) {
+    const size_t offset=first+static_cast<size_t>(row)*charsPerLine;
+    if(offset<len) {
+      size_t count=len-offset;
+      if(count>charsPerLine) count=charsPerLine;
+      char line[charsPerLine+1];
+      memcpy(line,decoded+offset,count);
+      line[count]=0;
+      spr.setTextDatum(TL_DATUM);
+      spr.setTextColor(green);
       spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-      spr.drawString(line, 13, rowY[row] + 9);
-    } else if (row == 0 && !active) {
-      spr.setTextDatum(ML_DATUM);
-      spr.setTextColor(grey, rowPanel);
-      spr.setFont(&lgfx::fonts::FreeSans9pt7b);
-      spr.drawString("WAITING FOR CW SIGNAL...", 13, rowY[row] + 9);
+      spr.drawString(line,12,rowY[row]);
+    } else if(row==0&&!active) {
+      spr.setTextDatum(TL_DATUM);
+      spr.setTextColor(grey);
+      spr.setFont(FONT_SMALL);
+      spr.drawString("WAITING FOR CW SIGNAL...",12,rowY[row]);
     }
   }
 
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(cyan, bg);
+  spr.setTextColor(cyan);
   spr.setFont(FONT_SMALL);
-  spr.drawString("CLICK: ACTIONS   LONG PRESS: EXIT", 160, 162);
+  spr.drawString("CLICK: ACTIONS   LONG PRESS: EXIT",160,162);
 
-  if (menuOpen) {
-    constexpr uint16_t menuPanel=0x0000, highlight=0x07FF;
+  if(menuOpen) {
+    const int menuX=20,menuY=8,menuW=280,menuH=154;
+    spr.fillRect(menuX,menuY,menuW,menuH,bg);
+    spr.drawRect(menuX,menuY,menuW,menuH,cyan);
+    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(cyan);
+
     if(frequencyMenuOpen) {
-      const int menuX=20,menuY=8,menuW=280,menuH=154;
-      spr.fillRect(menuX,menuY,menuW,menuH,menuPanel);
-      spr.drawRect(menuX,menuY,menuW,menuH,cyan);
-      spr.setTextDatum(TL_DATUM);
-      spr.setTextColor(cyan);
-      spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
       spr.drawString("CW PRESETS",menuX+12,menuY+7);
       const uint8_t count=cwPresetCount()+1;
       for(uint8_t row=0;row<5;++row) {
         const uint8_t index=frequencyScroll+row;
         if(index>=count) break;
         char label[40];
-        if(index==0) snprintf(label,sizeof(label),"CURRENT  %2lu.%03lu USB",
-          static_cast<unsigned long>(currentFrequency/1000),static_cast<unsigned long>(currentFrequency%1000));
-        else {
+        if(index==0) {
+          snprintf(label,sizeof(label),"CURRENT  %2lu.%03lu USB",
+                   static_cast<unsigned long>(currentFrequency/1000),
+                   static_cast<unsigned long>(currentFrequency%1000));
+        } else {
           const DecoderFrequencyPreset* p=cwPresetAt(index-1);
           if(!p) continue;
           const char* name=p->label;
           if(!strncmp(name,"CW ",3)) name+=3;
           snprintf(label,sizeof(label),"%-8s %2lu.%03lu %s",name,
-            static_cast<unsigned long>(p->frequencyKHz/1000),static_cast<unsigned long>(p->frequencyKHz%1000),
-            p->modulation==USB?"USB":p->modulation==LSB?"LSB":"AM");
+                   static_cast<unsigned long>(p->frequencyKHz/1000),
+                   static_cast<unsigned long>(p->frequencyKHz%1000),
+                   p->modulation==USB?"USB":p->modulation==LSB?"LSB":"AM");
         }
         const int y=menuY+29+row*19;
-        if(index==frequencySelection) spr.fillRect(menuX+7,y-3,menuW-14,19,highlight);
+        if(index==frequencySelection) spr.drawRect(menuX+7,y-3,menuW-14,19,cyan);
         spr.setTextDatum(TL_DATUM);
-        spr.setTextColor(index==frequencySelection?0x0000:white);
+        spr.setTextColor(index==frequencySelection?cyan:white);
         spr.setFont(FONT_SMALL);
         spr.drawString(label,menuX+13,y);
       }
       char page[12];
       snprintf(page,sizeof(page),"%02u/%02u",static_cast<unsigned>(frequencySelection+1),static_cast<unsigned>(count));
-      spr.setTextDatum(TR_DATUM); spr.setTextColor(white); spr.setFont(FONT_SMALL);
+      spr.setTextDatum(TR_DATUM);
+      spr.setTextColor(white);
+      spr.setFont(FONT_SMALL);
       spr.drawString(page,menuX+menuW-10,menuY+7);
-      spr.setTextDatum(MC_DATUM); spr.setTextColor(green);
+      spr.setTextDatum(MC_DATUM);
+      spr.setTextColor(green);
       spr.drawString(frequencySelection==0?"ABGESTIMMT":"AUSWAHL",160,menuY+124);
-      spr.setTextDatum(ML_DATUM); spr.setTextColor(white);
+      spr.setTextDatum(ML_DATUM);
+      spr.setTextColor(white);
       spr.drawString("DREHEN: WÄHLEN",menuX+12,menuY+143);
       spr.setTextDatum(MR_DATUM);
       spr.drawString("HALTEN: ZURÜCK",menuX+menuW-12,menuY+143);
     } else {
-      spr.fillRect(28,31,264,126,menuPanel);
-      spr.drawRect(28,31,264,126,cyan);
-      spr.setTextDatum(MC_DATUM);
-      spr.setTextColor(cyan,menuPanel);
-      spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-      spr.drawString("CW DECODER ACTIONS",160,41);
-      const char* labels[kMenuCount]={"FREQUENCIES","CLEAR TEXT","RESET DECODER","BACK","EXIT CW"};
+      spr.drawString("CW ACTIONS",menuX+12,menuY+7);
+      const char* labels[kMenuCount]={"CW PRESETS","CLEAR TEXT","RESET DECODER","BACK","EXIT CW"};
       for(uint8_t i=0;i<kMenuCount;++i) {
-        const int y=58+i*18;
-        const uint16_t rowBg=i==menuIndex?highlight:menuPanel;
-        spr.fillRect(36,y-7,248,16,rowBg);
-        spr.setTextDatum(ML_DATUM);
-        spr.setTextColor(i==menuIndex?0x0000:white,rowBg);
+        const int y=menuY+29+i*22;
+        if(i==menuIndex) spr.drawRect(menuX+7,y-3,menuW-14,19,cyan);
+        spr.setTextDatum(TL_DATUM);
+        spr.setTextColor(i==menuIndex?cyan:white);
         spr.setFont(FONT_SMALL);
-        spr.drawString(labels[i],43,y+1);
+        spr.drawString(labels[i],menuX+13,y);
       }
     }
   }

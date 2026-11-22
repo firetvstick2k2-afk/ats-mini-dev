@@ -1489,3 +1489,14 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 - Ein laufender HTTPS-Abruf darf vor dem WLAN-Abbau zu Ende laufen; dadurch wird die Verbindung nicht mitten in einer Anfrage getrennt.
 - Der Wetter-Worker startet nur während der geöffneten Wetterseite und beginnt nach dem Verlassen keine weiteren periodischen Abrufe.
 - Quelländerungen: Common.h, Network.cpp, WeatherService.h/.cpp, ats-mini.ino, Draw.cpp. Source-Review erforderlich; kein Build/Hardwaretest gestartet.
+
+
+## Mondkalender – Offline-Berechnung mit bedarfsgesteuertem NTP (2026-11-22)
+- Das Mondkalender-Modul `MoonCalendar.h/.cpp` wurde aus `firetvstick2k2-afk/Mini_OS`, Branch `dev/first-build-preparation`, portiert.
+- Mondphase, Beleuchtungsgrad, Mondalter sowie nächste Vollmond- und Neumondtermine werden lokal berechnet; für die Berechnung selbst ist keine Netzwerkverbindung erforderlich.
+- Nur wenn die Systemzeit noch nicht gültig ist, startet der Mondkalender dieselbe temporäre WLAN-Sitzung wie der Wetterbericht und versucht eine NTP-Synchronisierung. Nach erfolgreichem Zeitabgleich bzw. beim Verlassen wird der vorherige WLAN-Modus wiederhergestellt.
+- Anzeige im 320×170-Display mit Mondgrafik, Phasenname, Beleuchtung, Mondalter und lokalzeitlich formatierten Ereignisterminen.
+- Hauptmenü: direkt nach Wetterbericht und unmittelbar vor FM DX; Deutsch, Englisch und Italienisch einschließlich italienischer XXL-Bezeichnungen synchronisiert.
+- Bedienung: Encoder-Klick oder langer Tastendruck schließt den Mondkalender.
+- Geänderte Dateien: `MoonCalendar.h/.cpp`, `Menu.h`, Sprachdateien, `ats-mini.ino`, `Draw.cpp`, diese Übergabedokumente.
+- Nur statische Quellprüfung durchgeführt. Kein Build, kein GitHub Actions-Lauf und kein Gerätetest gestartet.

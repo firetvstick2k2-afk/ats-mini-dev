@@ -40,6 +40,13 @@ static const char pageConfig[] PROGMEM = R"HTML(<H1>{{title}}</H1>
     <TR><TH COLSPAN="2" CLASS="HEADING"><INPUT TYPE="SUBMIT" VALUE="Save"></TH></TR>
   </TABLE>
 </FORM>
+<FORM ACTION="/weather/save" METHOD="POST" CLASS="CONFIGFORM">
+  <TABLE COLUMNS="2">
+    <TR><TH COLSPAN="2" CLASS="HEADING">Weather report</TH></TR>
+    <TR><TD CLASS="LABEL">German postal code</TD><TD><INPUT TYPE="TEXT" NAME="postal" INPUTMODE="NUMERIC" PATTERN="[0-9]{5}" MINLENGTH="5" MAXLENGTH="5" REQUIRED VALUE="{{postal}}"></TD></TR>
+    <TR><TH COLSPAN="2" CLASS="HEADING"><INPUT TYPE="SUBMIT" VALUE="Save weather location"></TH></TR>
+  </TABLE>
+</FORM>
 <SCRIPT>
 function browserDateTime(submit) {
   const enabled = document.getElementById('browserdatetime').checked;

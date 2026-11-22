@@ -62,6 +62,7 @@ void NavtexMessageParser::push(char input) {
   }
 
   if (state_ == State::Header) {
+    if (ch == ' ' && headerLength_ == 0) return;
     if (ch == '\r' || ch == '\n' || ch < 32 || ch > 126) return;
     if (headerLength_ < 4) header_[headerLength_++] = ch;
     if (headerLength_ == 4) {

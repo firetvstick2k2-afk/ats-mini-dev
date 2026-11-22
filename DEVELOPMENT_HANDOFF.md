@@ -1410,3 +1410,9 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Source change committed; compile, GitHub Actions build, flash and hardware appearance are not yet verified. Build #31 was reported started before these four commits and therefore does not include this selection-outline update.
 - Before recommending the next build, inspect the latest Actions history and determine the next user-facing build number. Do not start the workflow automatically.
 - Nachkontrolle: FT8 Actions verwendet ebenfalls explizit den Outline-only-Modus; der ergänzende Call-Site-Commit ist `5a60f89bec07bd02b440841eac96300fa736bab1`.
+
+## Build tracking — 2026-11-22 (Update)
+- User confirmed: **Build #32** is being started manually for the current `development` revision.
+- This revision includes the outline-only selection appearance for CW Actions, FT8/FT4 Actions and RTTY Actions (black background, thin cyan outline; no blue fill).
+- Build #32 is user-reported as started; GitHub Actions run ID/link and outcome are not yet verified. Do not treat the build number as the Actions run ID.
+- Do not start a workflow on the user's behalf. When available, associate the actual Actions run and result with Build #32.

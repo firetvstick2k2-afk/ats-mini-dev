@@ -689,6 +689,22 @@ void loop()
   // Weather networking runs in its own worker; this only publishes STA state
   // and starts the worker when a valid location has been configured.
   weatherService.update(WiFi.status() == WL_CONNECTED);
+  static uint32_t lastWeatherDrawUpdate = UINT32_MAX;
+  static bool lastWeatherDrawFetching = false;
+  static bool lastWeatherDrawValid = false;
+  if(currentCmd == CMD_WEATHER)
+  {
+    const WeatherService::Snapshot weatherState = weatherService.snapshot();
+    if(weatherState.updatedAtMs != lastWeatherDrawUpdate ||
+       weatherState.fetching != lastWeatherDrawFetching ||
+       weatherState.valid != lastWeatherDrawValid)
+    {
+      lastWeatherDrawUpdate = weatherState.updatedAtMs;
+      lastWeatherDrawFetching = weatherState.fetching;
+      lastWeatherDrawValid = weatherState.valid;
+      needRedraw = true;
+    }
+  }
 
   uint32_t encCounts = consumeEncoderCounts();
   int16_t encCount = (int16_t)(encCounts & 0xFFFF);

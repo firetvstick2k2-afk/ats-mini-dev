@@ -88,7 +88,7 @@ void schedulePreview(uint32_t now) {
 }
 
 bool navtexUiOpen() {
-  Serial.printf("[NAVTEX] OPEN begin heap=%u stack=%u wifiMode=%d\\n",
+  Serial.printf("[NAVTEX] OPEN begin heap=%u stack=%u wifiMode=%d\n",
                 static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),
                 static_cast<int>(wifiModeIdx));
@@ -97,10 +97,10 @@ bool navtexUiOpen() {
   previewPending = previewActive = originalValid = false;
   restoreNetworkMode = wifiModeIdx;
 
-  Serial.printf("[NAVTEX] WIFI STOP begin mode=%d\\n", static_cast<int>(WiFi.getMode()));
+  Serial.printf("[NAVTEX] WIFI STOP begin mode=%d\n", static_cast<int>(WiFi.getMode()));
   netStop();
   const int8_t wifiStatus = getWiFiStatus();
-  Serial.printf("[NAVTEX] WIFI STOP done status=%d mode=%d heap=%u stack=%u\\n",
+  Serial.printf("[NAVTEX] WIFI STOP done status=%d mode=%d heap=%u stack=%u\n",
                 static_cast<int>(wifiStatus), static_cast<int>(WiFi.getMode()),
                 static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
@@ -114,7 +114,7 @@ bool navtexUiOpen() {
 
   Serial.println("[NAVTEX] RECEIVER ENTER begin");
   const bool receiverStarted = receiverService.enter(true, sharedAudioCapture());
-  Serial.printf("[NAVTEX] RECEIVER ENTER done result=%d heap=%u stack=%u\\n",
+  Serial.printf("[NAVTEX] RECEIVER ENTER done result=%d heap=%u stack=%u\n",
                 receiverStarted ? 1 : 0, static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
   if (!receiverStarted) {
@@ -125,7 +125,7 @@ bool navtexUiOpen() {
     return false;
   }
   pageActive = true;
-  Serial.printf("[NAVTEX] READY heap=%u stack=%u\\n",
+  Serial.printf("[NAVTEX] READY heap=%u stack=%u\n",
                 static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
   return true;

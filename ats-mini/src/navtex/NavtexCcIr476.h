@@ -55,6 +55,15 @@ public:
 
   bool figuresMode() const { return figures_; }
 
+  // Test-signal encoder: find the canonical CCIR-476 word for a glyph.
+  static bool encode(char ch, bool figures, uint8_t& code) {
+    for (uint8_t candidate = 0; candidate < 128; ++candidate) {
+      const char glyph = figures ? figureFor(candidate) : letterFor(candidate);
+      if (glyph == ch) { code = candidate; return true; }
+    }
+    return false;
+  }
+
 private:
   static char letterFor(uint8_t code) {
     switch (code) {

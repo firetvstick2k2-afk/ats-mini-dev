@@ -405,6 +405,65 @@ static bool wifiConnect()
   return(wifiStatus == WL_CONNECTED);
 }
 
+ // Temporary WiFi session for the weather screen. Preserve and restore the
+ // receiver's original WiFi mode when the weather screen is closed.
+ static bool weatherWifiSessionActive = false;
+ static wifi_mode_t weatherPreviousWifiMode = WIFI_MODE_NULL;
+
+ void netWeatherBegin()
+ {
+   if(weatherWifiSessionActive) return;
+   weatherPreviousWifiMode = WiFi.getMode();
+   weatherWifiSessionActive = true;
+
+   if(weatherPreviousWifiMode == WIFI_MODE_NULL)
+     WiFi.mode(WIFI_STA);
+   else if(weatherPreviousWifiMode == WIFI_AP)
+     WiFi.mode(WIFI_AP_STA);
+
+   wifiMulti.APlistClean();
+   prefs.begin("network", true, STORAGE_PARTITION);
+   wifiScanHidden = prefs.getBool("wifiscanhidden", false);
+   for(int j=0; j<3; ++j)
+   {
+     char nameSSID[16], namePASS[16];
+     sprintf(nameSSID, "wifissid%d", j+1);
+     sprintf(namePASS, "wifipass%d", j+1);
+     String ssid = prefs.getString(nameSSID, "");
+     String password = prefs.getString(namePASS, "");
+     if(ssid.length()) wifiMulti.addAP(ssid.c_str(), password.c_str());
+   }
+   prefs.end();
+
+   if(WiFi.status() != WL_CONNECTED)
+     wifiMulti.run(0, wifiScanHidden);
+ }
+
+ bool netWeatherPoll()
+ {
+   if(!weatherWifiSessionActive) return WiFi.status() == WL_CONNECTED;
+   if(WiFi.status() != WL_CONNECTED)
+     wifiMulti.run(0, wifiScanHidden);
+   return WiFi.status() == WL_CONNECTED;
+ }
+
+ void netWeatherEnd()
+ {
+   if(!weatherWifiSessionActive) return;
+   if(weatherPreviousWifiMode == WIFI_MODE_NULL)
+   {
+     WiFi.disconnect(true);
+     WiFi.mode(WIFI_MODE_NULL);
+   }
+   else if(weatherPreviousWifiMode == WIFI_AP)
+   {
+     WiFi.disconnect(false);
+     WiFi.mode(WIFI_AP);
+   }
+   weatherWifiSessionActive = false;
+   weatherPreviousWifiMode = WIFI_MODE_NULL;
+ }
+
 //
 // Initialize internal web server
 //

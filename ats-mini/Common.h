@@ -263,6 +263,9 @@ int8_t getWiFiStatus();
 char *getWiFiIPAddress();
 void netInit(uint8_t netMode);
 void netStop();
+void netWeatherBegin();
+bool netWeatherPoll();
+void netWeatherEnd();
 bool ntpIsAvailable();
 bool ntpSyncTime();
 

@@ -9,6 +9,7 @@ Last updated: 2026-11-22
 - **Stable branch:** `main` remains untouched until a feature is complete, built, verified on hardware and explicitly approved for promotion.
 - **Branch policy:** use only `development`; do not create temporary feature/test branches.
 - **Build workflow:** `.github/workflows/build.yml` currently uses `workflow_dispatch` only. A push does not start a firmware build. Do not start a workflow/build unless the user asks for it.
+- **Build tracking (binding):** Before asking the user to start a firmware build after source changes, inspect the current GitHub Actions workflow/run history and identify the next build/run number. State the exact suggested run number (for example, “Please start Build #60”) so the user can compare it with the latest run and notice if a build was skipped. After the user reports starting a build, record that build number and, whenever the workflow data is accessible, verify the actual Actions run ID/status rather than assuming the user-facing build number equals GitHub's run ID. Never invent a run number or claim a workflow check that was not possible. Update this handoff with the build number, run ID/link if known, commit/revision built, and result when available.
 - **Commit/push permission:** the assistant is authorized to commit and push completed, reviewed changes directly to `development`. No additional approval is needed for ordinary development commits or handoff updates.
 - **Handoff rule:** keep this file current after meaningful changes, decisions, test results and newly agreed next steps. It is the primary source of truth when opening a new chat.
 
@@ -1395,3 +1396,9 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - FT8/FT4-Presetmenü ebenfalls auf ungefüllten cyanfarbenen Auswahlrahmen umgestellt; Scrollgrenze auf fünf sichtbare Zeilen korrigiert.
 - Commits auf `development`: RTTY `dd1371a5ed33ad3d28e027be940ddaf0baddd91d`; FT8 `96ddf9a1984eeb459bf331c353c8136aef252624`.
 - Geänderte Dateien: `ats-mini/src/rtty/RttyUi.cpp`, `ats-mini/src/ftx/FtxUi.cpp`. Kein Build/Compile/Flash durch den Assistenten; Nutzer startet Builds selbst. `main` unangetastet.
+
+## Build tracking — 2026-11-22
+- User confirmed that **Build #31** has been started manually for the current `development` revision, which includes the CW decoder changes and the decoder Actions-menu changes.
+- The exact GitHub Actions run ID/link and outcome have not yet been confirmed in this handoff. Do not equate the user-facing build number (#31) with the GitHub Actions run ID.
+- Before requesting the next build after further source changes, inspect the latest workflow/run history where available and tell the user the exact next build number to start. Record the requested number, actual run ID/link, built commit and result when known.
+

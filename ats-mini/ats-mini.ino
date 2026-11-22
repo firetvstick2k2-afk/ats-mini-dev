@@ -1487,6 +1487,18 @@ void loop()
 
   needRedraw |= statusTick(millis());
 
+  // The Decoder layout's waterfall advances one scan line per render.
+  // Refresh it at the same 120 ms cadence used by the Mini OS decoder graph,
+  // instead of waiting for an RSSI change or encoder input to redraw the UI.
+  static uint32_t lastDecoderWaterfallRefresh = 0;
+  const uint32_t waterfallNow = millis();
+  if(currentCmd == CMD_NONE && uiLayoutIdx == 3 &&
+     (waterfallNow - lastDecoderWaterfallRefresh) >= 120)
+  {
+    needRedraw = true;
+    lastDecoderWaterfallRefresh = waterfallNow;
+  }
+
   if(needRedraw) {
     drawScreen();
     // Statischer Rahmen und blaue Seiten des Eco-Wasserfalls beim Redraw

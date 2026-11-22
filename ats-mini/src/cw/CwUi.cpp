@@ -4,6 +4,7 @@
 #include "Common.h"
 #include "Menu.h"
 #include "Utils.h"
+#include "../radio/DecoderFrequencyList.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -12,10 +13,16 @@ CwDecoderService service;
 bool pageActive = false;
 bool menuOpen = false;
 bool menuEditing = false;
+bool frequencyMenuOpen = false;
+uint8_t frequencySelection = 0;
+uint8_t frequencyScroll = 0;
 uint8_t menuIndex = 0;
 uint8_t restoreNetworkMode = NET_OFF;
 uint32_t lastRefresh = 0;
-constexpr uint8_t kMenuCount = 4;
+constexpr uint8_t kMenuCount = 5;
+uint8_t cwPresetCount() { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) if(kDecoderFrequencyPresets[i].decoder==DecoderKind::CW) ++n; return n; }
+const DecoderFrequencyPreset* cwPresetAt(uint8_t wanted) { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) if(kDecoderFrequencyPresets[i].decoder==DecoderKind::CW && n++==wanted) return &kDecoderFrequencyPresets[i]; return nullptr; }
+bool applyCwPreset(const DecoderFrequencyPreset& preset) { int best=-1; uint16_t span=UINT16_MAX; for(int i=0;i<getTotalBands();++i) if(bands[i].bandType!=FM_BAND_TYPE && preset.frequencyKHz>=bands[i].minimumFreq && preset.frequencyKHz<=bands[i].maximumFreq) { uint16_t width=bands[i].maximumFreq-bands[i].minimumFreq; if(width<span){span=width;best=i;} } if(best<0)return false; bands[best].currentFreq=static_cast<uint16_t>(preset.frequencyKHz); bands[best].bandMode=preset.modulation; bands[best].bandwidthIdx=preset.bandwidthChoice; selectBand(static_cast<uint8_t>(best),false); currentMode=preset.modulation; currentFrequency=rx.getFrequency(); service.resetDecoder(); return true; }
 }
 
 bool cwUiOpen() {
@@ -29,6 +36,8 @@ bool cwUiOpen() {
   }
   menuOpen = false;
   menuEditing = false;
+  frequencyMenuOpen = false;
+  frequencySelection = frequencyScroll = 0;
   menuIndex = 0;
   pageActive = true;
   lastRefresh = 0;
@@ -40,6 +49,7 @@ void cwUiExit() {
   pageActive = false;
   menuOpen = false;
   menuEditing = false;
+  frequencyMenuOpen = false;
   service.exit();
   netInit(restoreNetworkMode);
   currentCmd = CMD_NONE;
@@ -47,6 +57,7 @@ void cwUiExit() {
 
 void cwUiRotate(int16_t delta) {
   if (!pageActive || !delta || !menuOpen) return;
+  if(frequencyMenuOpen) { int count=cwPresetCount()+1; int next=static_cast<int>(frequencySelection)+(delta>0?1:-1); if(next<0)next=count-1; if(next>=count)next=0; frequencySelection=static_cast<uint8_t>(next); if(frequencySelection<frequencyScroll)frequencyScroll=frequencySelection; if(frequencySelection>=frequencyScroll+6)frequencyScroll=frequencySelection-5; return; }
   int next = static_cast<int>(menuIndex) + delta;
   while (next < 0) next += kMenuCount;
   menuIndex = static_cast<uint8_t>(next % kMenuCount);
@@ -60,12 +71,8 @@ void cwUiClick() {
     menuIndex = 0;
     return;
   }
-  switch (menuIndex) {
-    case 0: service.clearText(); break;
-    case 1: service.resetDecoder(); break;
-    case 2: menuOpen = false; break;
-    case 3: cwUiExit(); break;
-  }
+  if(frequencyMenuOpen) { if(frequencySelection==0) service.resetDecoder(); else { const DecoderFrequencyPreset* preset=cwPresetAt(frequencySelection-1); if(preset && !applyCwPreset(*preset)) statusShow("CW preset failed","No matching receiver band"); } frequencyMenuOpen=false; return; }
+  switch (menuIndex) { case 0: frequencyMenuOpen=true; frequencySelection=frequencyScroll=0; break; case 1: service.clearText(); break; case 2: service.resetDecoder(); break; case 3: menuOpen=false; break; case 4: cwUiExit(); break; }
 }
 
 bool cwUiTick(uint32_t now) {
@@ -160,8 +167,10 @@ void drawCwDecoderPage() {
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(cyan, menuPanel);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-    spr.drawString("CW DECODER ACTIONS", 160, 41);
-    const char* labels[kMenuCount] = {"CLEAR TEXT", "RESET DECODER", "BACK", "EXIT CW"};
+    spr.drawString(frequencyMenuOpen ? "CW FREQUENCIES" : "CW DECODER ACTIONS", 160, 41);
+    if(frequencyMenuOpen) { const uint8_t count=cwPresetCount()+1; for(uint8_t row=0;row<6;++row) { uint8_t index=frequencyScroll+row; if(index>=count) break; char label[48]; if(index==0) snprintf(label,sizeof(label),"CURRENT %lu kHz",static_cast<unsigned long>(currentFrequency)); else { const DecoderFrequencyPreset* p=cwPresetAt(index-1); if(!p)continue; snprintf(label,sizeof(label),"%-12s %lu kHz",p->label,static_cast<unsigned long>(p->frequencyKHz)); } int y=58+row*16; uint16_t rowBg=index==frequencySelection?0x03E0:menuPanel; spr.fillRect(36,y-7,248,15,rowBg); spr.setTextDatum(ML_DATUM); spr.setTextColor(index==frequencySelection?0x0000:white,rowBg); spr.setFont(FONT_SMALL); spr.drawString(label,43,y+1); } }
+    else {
+    const char* labels[kMenuCount] = {"FREQUENCIES", "CLEAR TEXT", "RESET DECODER", "BACK", "EXIT CW"};
     for (uint8_t i = 0; i < kMenuCount; ++i) {
       const int y = 58 + i * 18;
       const uint16_t rowBg = (i == menuIndex) ? highlight : menuPanel;
@@ -170,6 +179,7 @@ void drawCwDecoderPage() {
       spr.setTextColor((i == menuIndex) ? 0x0000 : white, rowBg);
       spr.setFont(FONT_SMALL);
       spr.drawString(labels[i], 43, y + 1);
+    }
     }
   }
 }

@@ -187,4 +187,4 @@ void drawCwDecoderPage() {
                           "TURN: SELECT", "CLICK: OPEN");
     }
   }
-}}
+}

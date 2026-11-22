@@ -156,7 +156,9 @@ bool NewsService::fetchFeed(uint8_t i,const Feed& f,Snapshot& s){
           String encoded=tagValue(entry,"content:encoded"),desc=tagValue(entry,"description");
           if(!encoded.length())encoded=tagValue(entry,"content");
           if(!encoded.length())encoded=tagValue(entry,"summary");
-          String body=encoded.length()>=desc.length()?encoded:desc;
+          // Prefer the feed's short description/teaser for clean on-screen text.
+          // Full content:encoded often contains promotional/link markup and injected fragments.
+          String body=desc.length()?desc:encoded;
           String date=tagValue(entry,"pubDate");
           if(!date.length())date=tagValue(entry,"published");
           if(!date.length())date=tagValue(entry,"updated");

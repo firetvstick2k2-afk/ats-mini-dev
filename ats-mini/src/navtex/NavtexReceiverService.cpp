@@ -16,7 +16,7 @@ bool NavtexReceiverService::enter(bool wifiOff, AudioCaptureService& capture) {
   (void)wifiOff; (void)capture;
   return false;
 #else
-  Serial.printf("[NAVTEX] ENTER begin wifiOff=%d initialized=%d heap=%u stack=%u\\n",
+  Serial.printf("[NAVTEX] ENTER begin wifiOff=%d initialized=%d heap=%u stack=%u\n",
                 wifiOff ? 1 : 0, initialized_ ? 1 : 0,
                 static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
@@ -28,7 +28,7 @@ bool NavtexReceiverService::enter(bool wifiOff, AudioCaptureService& capture) {
   }
   Serial.println("[NAVTEX] AUDIO begin");
   const bool audioReady = capture.begin();
-  Serial.printf("[NAVTEX] AUDIO done result=%d heap=%u stack=%u\\n",
+  Serial.printf("[NAVTEX] AUDIO done result=%d heap=%u stack=%u\n",
                 audioReady ? 1 : 0, static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
   if (!audioReady) return false;
@@ -36,14 +36,14 @@ bool NavtexReceiverService::enter(bool wifiOff, AudioCaptureService& capture) {
   if (!initialized_) {
     Serial.println("[NAVTEX] QUEUE create");
     queue_ = xQueueCreate(kQueueDepth, sizeof(AudioChunk));
-    Serial.printf("[NAVTEX] QUEUE result=%p heap=%u\\n",
+    Serial.printf("[NAVTEX] QUEUE result=%p heap=%u\n",
                   static_cast<void*>(queue_), static_cast<unsigned>(ESP.getFreeHeap()));
     Serial.println("[NAVTEX] MUTEX create engine");
     engineMutex_ = xSemaphoreCreateMutex();
-    Serial.printf("[NAVTEX] MUTEX engine=%p\\n", static_cast<void*>(engineMutex_));
+    Serial.printf("[NAVTEX] MUTEX engine=%p\n", static_cast<void*>(engineMutex_));
     Serial.println("[NAVTEX] MUTEX create result");
     resultMutex_ = xSemaphoreCreateMutex();
-    Serial.printf("[NAVTEX] MUTEX result=%p\\n", static_cast<void*>(resultMutex_));
+    Serial.printf("[NAVTEX] MUTEX result=%p\n", static_cast<void*>(resultMutex_));
     if (!queue_ || !engineMutex_ || !resultMutex_) {
       Serial.println("[NAVTEX] TASK CREATE skipped: allocation failed");
       if (queue_) vQueueDelete(queue_);
@@ -54,13 +54,13 @@ bool NavtexReceiverService::enter(bool wifiOff, AudioCaptureService& capture) {
       task_ = nullptr;
       return false;
     }
-    Serial.printf("[NAVTEX] WORKER CREATE stack=%u priority=%u core=%d\\n",
+    Serial.printf("[NAVTEX] WORKER CREATE stack=%u priority=%u core=%d\n",
                   static_cast<unsigned>(kWorkerStackBytes),
                   static_cast<unsigned>(kWorkerPriority), static_cast<int>(kWorkerCore));
     const BaseType_t taskResult = xTaskCreatePinnedToCore(
         taskEntry, "navtex-worker", kWorkerStackBytes,
         this, kWorkerPriority, &task_, kWorkerCore);
-    Serial.printf("[NAVTEX] WORKER CREATE result=%ld handle=%p heap=%u\\n",
+    Serial.printf("[NAVTEX] WORKER CREATE result=%ld handle=%p heap=%u\n",
                   static_cast<long>(taskResult), static_cast<void*>(task_),
                   static_cast<unsigned>(ESP.getFreeHeap()));
     if (taskResult != pdPASS) {
@@ -99,7 +99,7 @@ bool NavtexReceiverService::enter(bool wifiOff, AudioCaptureService& capture) {
     Serial.println("[NAVTEX] AUDIO SUBSCRIBE failed");
     return false;
   }
-  Serial.printf("[NAVTEX] AUDIO SUBSCRIBE done heap=%u stack=%u\\n",
+  Serial.printf("[NAVTEX] AUDIO SUBSCRIBE done heap=%u stack=%u\n",
                 static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
   return true;

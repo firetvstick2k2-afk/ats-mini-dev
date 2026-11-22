@@ -5,7 +5,7 @@
 #include <freertos/semphr.h>
 class NewsService {
 public:
-  static constexpr uint8_t MAX_FEEDS=4, MAX_ITEMS=16;
+  static constexpr uint8_t MAX_FEEDS=4, MAX_ITEMS=40, MAX_ITEMS_PER_FEED=10;
   static constexpr size_t MAX_URL_BYTES=192, TITLE_BYTES=144, SOURCE_BYTES=48, DATE_BYTES=32, TEXT_BYTES=1200;
   struct Feed { char url[MAX_URL_BYTES]={}; bool enabled=false; };
   struct Configuration { Feed feeds[MAX_FEEDS]={}; };

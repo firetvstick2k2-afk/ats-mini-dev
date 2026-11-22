@@ -754,7 +754,7 @@ static size_t newsAdvanceLines(const char* text, size_t offset, uint8_t lines)
   const size_t length=strlen(text);
   if(offset>length) offset=length;
   size_t pos=offset;
-  constexpr int MAX_LINE_WIDTH=300;
+  constexpr int MAX_LINE_WIDTH=270;
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   for(uint8_t row=0;row<lines && pos<length;row++)
   {
@@ -775,25 +775,6 @@ static size_t newsAdvanceLines(const char* text, size_t offset, uint8_t lines)
   }
   return pos;
 }
-
-uint8_t newsPageCountForCurrentItem()
-{
-  const uint8_t count=newsService.itemCount();
-  if(!count) return 1;
-  NewsService::Item item;
-  if(!newsService.getItem(newsCurrentIndex%count,item)) return 1;
-  const size_t length=strlen(item.text);
-  size_t offset=0;
-  uint16_t pages=0;
-  do {
-    ++pages;
-    const size_t next=newsAdvanceLines(item.text,offset,3);
-    if(next<=offset || next>=length) break;
-    offset=next;
-  } while(pages<255);
-  return pages>255?255:(uint8_t)(pages?pages:1);
-}
-
 void drawNewsScreen()
 {
   const uint8_t newsCount=newsService.itemCount();
@@ -801,7 +782,7 @@ void drawNewsScreen()
   const bool failed=newsService.hasFailed();
   const int w=spr.width();
   constexpr uint16_t WHITE=0xFFFF, SOFT_WHITE=0xD6BA, MUTED=0x9CF3, BLACK=0x0000;
-  constexpr int TEXT_WIDTH=300;
+  constexpr int TEXT_WIDTH=270;
   const auto* newsFont=&lgfx::fonts::FreeSansBold9pt7b;
 
   spr.fillScreen(BLACK);
@@ -882,7 +863,7 @@ void drawNewsScreen()
   }
 
   // Thin separator below the moving headline.
-  spr.drawFastHLine(10,46,w-20,SOFT_WHITE);
+  spr.drawFastHLine(10,47,w-20,WHITE);
 
   spr.setFont(FONT_SMALL);
   spr.setTextColor(SOFT_WHITE,BLACK);
@@ -923,10 +904,10 @@ void drawNewsScreen()
   spr.setFont(FONT_DEFAULT);
   spr.setTextColor(MUTED,BLACK);
   spr.setTextDatum(TL_DATUM);
-  spr.drawString("Dreh: Seiten  Klick: Meldung",10,151);
+  spr.drawString("Dreh: Seite  Klick: News",10,151);
   spr.setTextDatum(TR_DATUM);
   char pageText[24];
-  snprintf(pageText,sizeof(pageText),"SEITE %u/%u",newsCurrentPage+1,newsPageCountForCurrentItem());
+  snprintf(pageText,sizeof(pageText),"%u/%u",newsCurrentPage+1,newsPageCountForCurrentItem());
   spr.drawString(pageText,w-10,151);
 }
 

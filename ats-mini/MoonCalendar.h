@@ -3,6 +3,15 @@
 #include <Arduino.h>
 #include <time.h>
 
+enum MoonUiState : uint8_t {
+  MOON_UI_IDLE = 0,
+  MOON_UI_WAITING_WIFI,
+  MOON_UI_SYNCING_TIME,
+  MOON_UI_READY
+};
+
+extern volatile uint8_t moonUiState;
+
 class MoonCalendar {
 public:
   struct Snapshot {

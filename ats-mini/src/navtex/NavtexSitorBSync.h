@@ -44,7 +44,7 @@ public:
       return false;
     }
 
-    codeValue_ = static_cast<uint8_t>((codeValue_ << 1U) | (bit ? 1U : 0U));
+    const bool decodedBit = bit ^ status_.inverted;\n    codeValue_ = static_cast<uint8_t>((codeValue_ << 1U) | (decodedBit ? 1U : 0U));
     if (++codeBits_ < 7) return false;
 
     codeword = codeValue_ & 0x7F;

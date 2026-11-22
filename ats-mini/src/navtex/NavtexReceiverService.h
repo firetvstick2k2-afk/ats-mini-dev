@@ -52,6 +52,7 @@ private:
   NavtexCcIr476 ccir_;
   NavtexMessageParser parser_;
   volatile bool active_ = false;
+  volatile bool selfTestQueued_ = false;
   bool initialized_ = false;
   volatile uint16_t audioLevel_ = 0;
   volatile uint32_t droppedBlocks_ = 0;

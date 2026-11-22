@@ -197,7 +197,7 @@ void drawCwDecoderPage() {
         "CW FREQUENCIES", "CLEAR TEXT", "RESET DECODER", "BACK", "EXIT CW"
       };
       DecoderMenuUi::draw("CW ACTIONS", labels, nullptr, kMenuCount, menuIndex,
-                          "TURN: SELECT", "CLICK: OPEN");
+                          "TURN: SELECT", "CLICK: OPEN", nullptr, true);
     }
   }
 }

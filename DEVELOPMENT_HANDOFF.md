@@ -1432,3 +1432,9 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Static verification: 23 labels in each DE/EN/IT main-menu array; Italian menuXXL also has 23 entries. Verified the four index defines and all three click handlers. No compile/build/device test performed.
 - Commits on development: German f3eea02b4b2f501094374a69d6a0943f5e14ddcc; English 40ef8950a587b55308eb13b0a71f917066123e55; Italian ff723652f836740fba0e88f46868ac906c5b1747.
 - Build remains user-controlled; do not start one without an explicit request.
+
+## Verbindliche Menü-Reihenfolge für zukünftige Änderungen — 2026-11-22
+- Die bestehende Reihenfolge der Hauptmenü-Funktionen von Position 1 bis einschließlich Position 20 ist verbindlich und darf nicht umsortiert, vertauscht oder entfernt werden. Position 1 bleibt immer Lautstärke; die Reihenfolge der bestehenden Einträge bis FM DX bleibt erhalten.
+- Der feste Abschluss des Menüs bleibt in dieser Reihenfolge: FM DX, danach Decoder, danach Einstellungen, danach Zurück. Zurück bleibt der letzte Eintrag und führt direkt ins aktive Radio-Layout.
+- Neue Hauptmenü-Funktionen werden ausschließlich unmittelbar VOR dem bisherigen Eintrag auf Position 20 eingefügt (also an der Einfügestelle Position 19). Keine neuen Funktionen zwischen Position 1 und 18 einschieben und keine vorhandenen Einträge umsortieren. Beim Einfügen dürfen sich die nachfolgenden numerischen Positionen verschieben; ihre relative Reihenfolge muss unverändert bleiben.
+- Diese Regel gilt gleichermaßen für Deutsch, Englisch und Italienisch sowie für alle zugehörigen Index-Konstanten und XXL-Label-Arrays. Bei jeder Menüerweiterung alle drei Sprachen synchron halten.

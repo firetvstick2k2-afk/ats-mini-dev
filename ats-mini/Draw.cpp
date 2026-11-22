@@ -3,6 +3,7 @@
 #include "Storage.h"
 #include "Utils.h"
 #include "Menu.h"
+#include "WeatherService.h"
 #include "BleMode.h"
 #include "Draw.h"
 #include "src/ftx/FtxUi.h"
@@ -581,8 +582,174 @@ static void drawDualRxScreen()
   spr.drawString(dualRxSetupStage == 4 ? "Click Encoder to Stop Dual RX" : "Click Encoder to Start", 160, 165);
 }
 
+// Weather report rendering is kept separate from the radio layouts.
+static void weatherAscii(const char* input, char* output, size_t capacity)
+{
+  if(!capacity) return;
+  size_t out = 0;
+  for(size_t i = 0; input && input[i] && out + 1 < capacity; ++i)
+  {
+    const uint8_t c = static_cast<uint8_t>(input[i]);
+    if(c == 0xC3 && input[i+1])
+    {
+      const uint8_t next = static_cast<uint8_t>(input[i+1]);
+      char replacement = 0;
+      if(next == 0xA4 || next == 0x84) replacement = 'a';
+      else if(next == 0xB6 || next == 0x96) replacement = 'o';
+      else if(next == 0xBC || next == 0x9C) replacement = 'u';
+      else if(next == 0x9F) {
+        if(out + 2 < capacity) { output[out++] = 's'; output[out++] = 's'; }
+        ++i;
+        continue;
+      }
+      if(replacement) { output[out++] = replacement; ++i; continue; }
+    }
+    output[out++] = static_cast<char>(c);
+  }
+  output[out] = '\0';
+}
+
+static void drawWeatherIcon(int cx, int cy, uint8_t code, int scale)
+{
+  const uint16_t cloud = 0xBDF7;
+  const bool storm = code >= 95;
+  const bool rain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 85 && code <= 86);
+  const bool snow = code >= 71 && code <= 77;
+  const bool fog = code == 45 || code == 48;
+  if(code == 0 || code == 1 || code == 2)
+  {
+    spr.fillCircle(cx, cy-8*scale, 9*scale, 0xFFE0);
+    for(int a=0; a<8; ++a)
+    {
+      const float angle=a*0.785398f;
+      spr.drawLine(cx+static_cast<int>(cosf(angle)*13*scale),cy-8*scale+static_cast<int>(sinf(angle)*13*scale),
+                   cx+static_cast<int>(cosf(angle)*18*scale),cy-8*scale+static_cast<int>(sinf(angle)*18*scale),0xFFE0);
+    }
+  }
+  if(code != 0)
+  {
+    spr.fillCircle(cx-9*scale,cy+2*scale,9*scale,cloud);
+    spr.fillCircle(cx+2*scale,cy-4*scale,12*scale,cloud);
+    spr.fillCircle(cx+13*scale,cy+3*scale,8*scale,cloud);
+    spr.fillRoundRect(cx-16*scale,cy,34*scale,11*scale,5*scale,cloud);
+  }
+  if(rain)
+  {
+    for(int i=0;i<3;++i) spr.drawLine(cx-10*scale+i*10*scale,cy+15*scale,cx-14*scale+i*10*scale,cy+23*scale,0x5DDF);
+  }
+  else if(snow)
+  {
+    for(int i=0;i<3;++i) spr.drawCircle(cx-10*scale+i*10*scale,cy+19*scale,2*scale,0xFFFF);
+  }
+  else if(storm)
+  {
+    spr.fillTriangle(cx+1*scale,cy+10*scale,cx-7*scale,cy+25*scale,cx+1*scale,cy+25*scale,0xFFE0);
+    spr.fillTriangle(cx+1*scale,cy+20*scale,cx+10*scale,cy+20*scale,cx-1*scale,cy+34*scale,0xFFE0);
+  }
+  else if(fog)
+  {
+    for(int i=0;i<3;++i) spr.drawFastHLine(cx-18*scale,cy+14*scale+i*5*scale,36*scale,0x7BEF);
+  }
+}
+
+static void drawWeatherScreen()
+{
+  const WeatherService::Snapshot weather = weatherService.snapshot();
+  const int w = spr.width();
+  constexpr uint16_t FRAME=0x001F, WHITE_TEXT=0xFFFF, MUTED_TEXT=0xA514, PANEL=0x0000;
+  spr.fillScreen(PANEL);
+  spr.fillRoundRect(3,3,w-6,164,7,PANEL);
+  spr.drawRoundRect(3,3,w-6,164,7,FRAME);
+  spr.setTextDatum(TL_DATUM);
+  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+  spr.setTextColor(WHITE_TEXT,PANEL);
+  if(!weather.valid)
+  {
+    spr.drawString("WETTERBERICHT",12,12);
+    spr.setTextColor(MUTED_TEXT,PANEL);
+    spr.drawString(weather.fetching ? "Wetterdaten werden geladen..." : "Keine Wetterdaten vorhanden",12,66);
+    spr.drawString("PLZ in der WLAN-Webseite einstellen",12,91);
+    spr.setFont(FONT_DEFAULT);
+    spr.setTextColor(MUTED_TEXT,PANEL);
+    spr.drawString("Lang druecken: Zurueck",12,145);
+    return;
+  }
+
+  char displayLocation[sizeof(weather.location)*2+1];
+  weatherAscii(weather.location,displayLocation,sizeof(displayLocation));
+  spr.drawString(displayLocation,12,8);
+  spr.setFont(FONT_DEFAULT);
+  spr.setTextColor(MUTED_TEXT,PANEL);
+  spr.setTextDatum(TR_DATUM);
+  spr.drawString(weather.stale ? "LETZTE DATEN" : (weatherPage == 0 ? "AKTUELL 1/2" : "VORSCHAU 2/2"),w-12,12);
+  spr.drawFastHLine(10,27,w-20,FRAME);
+
+  if(weatherPage == 0)
+  {
+    drawWeatherIcon(58,78,weather.weatherCode,2);
+    char temperature[16];
+    snprintf(temperature,sizeof(temperature),"%d",weather.temperatureC);
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(WHITE_TEXT,PANEL);
+    spr.setFont(FONT_DIGITS);
+    spr.drawString(temperature,126,34);
+    spr.setFont(&lgfx::fonts::FreeSansBold18pt7b);
+    spr.drawString("C",235,48);
+    spr.drawCircle(229,48,3,WHITE_TEXT);
+    spr.setFont(&lgfx::fonts::FreeSans9pt7b);
+    spr.drawString(weather.description,126,83);
+    char feels[32];
+    snprintf(feels,sizeof(feels),"Gefuehlt %d C",weather.feelsLikeC);
+    spr.setFont(FONT_SMALL);
+    spr.setTextColor(MUTED_TEXT,PANEL);
+    spr.drawString(feels,126,105);
+
+    const int x0=9, y=127, gap=4, boxW=(w-18-3*gap)/4, boxH=30;
+    const char* labels[]={"FEUCHTE","WIND","REGEN","DRUCK"};
+    char values[4][20];
+    snprintf(values[0],sizeof(values[0]),"%u%%",weather.humidity);
+    snprintf(values[1],sizeof(values[1]),"%u km/h",weather.windKmh);
+    snprintf(values[2],sizeof(values[2]),"%u%%",weather.precipitation);
+    snprintf(values[3],sizeof(values[3]),"%u hPa",weather.pressureHpa);
+    for(int i=0;i<4;++i)
+    {
+      const int x=x0+i*(boxW+gap);
+      spr.drawRoundRect(x,y,boxW,boxH,2,FRAME);
+      spr.setFont(FONT_DEFAULT); spr.setTextColor(MUTED_TEXT,PANEL); spr.setTextDatum(TL_DATUM);
+      spr.drawString(labels[i],x+4,y+3);
+      spr.setFont(FONT_SMALL); spr.setTextColor(WHITE_TEXT,PANEL);
+      spr.drawString(values[i],x+4,y+15);
+    }
+  }
+  else
+  {
+    const int left=7, gap=3, cardW=(w-14-4*gap)/5, top=34;
+    for(uint8_t i=0;i<WeatherService::FORECAST_DAYS;++i)
+    {
+      const int x=left+i*(cardW+gap);
+      spr.drawRoundRect(x,top,cardW,124,3,FRAME);
+      spr.setFont(FONT_SMALL); spr.setTextDatum(MC_DATUM); spr.setTextColor(WHITE_TEXT,PANEL);
+      spr.drawCenterString(weather.weekdays[i],x+cardW/2,top+7);
+      drawWeatherIcon(x+cardW/2,top+43,weather.days[i].weatherCode,1);
+      char value[12];
+      snprintf(value,sizeof(value),"%d",weather.days[i].maximumC);
+      spr.setFont(FONT_LARGE); spr.drawCenterString(value,x+cardW/2,top+65);
+      snprintf(value,sizeof(value),"%d",weather.days[i].minimumC);
+      spr.setFont(FONT_SMALL); spr.setTextColor(MUTED_TEXT,PANEL);
+      spr.drawCenterString(value,x+cardW/2,top+94);
+      snprintf(value,sizeof(value),"%u%%",weather.days[i].precipitationChance);
+      spr.setFont(FONT_DEFAULT); spr.drawCenterString(value,x+cardW/2,top+110);
+      spr.drawFastHLine(x+5,top+122,cardW-10,0x5DDF);
+    }
+  }
+  spr.setTextDatum(TL_DATUM);
+  spr.setFont(FONT_DEFAULT);
+  spr.setTextColor(MUTED_TEXT,PANEL);
+  spr.drawString("Drehen/Klick: Seite  |  Lang: Zurueck",12,155);
+}
+
 //
-// Draw screen according to given command
+ // Draw screen according to given command
 //
 void drawScreen()
 {
@@ -592,6 +759,13 @@ void drawScreen()
   if(currentCmd == CMD_MENU || currentCmd == CMD_SETTINGS || currentCmd == CMD_SPECTRUM_MENU || currentCmd == CMD_DECODER_MENU)
   {
     drawFullScreenMenu(currentCmd);
+    spr.pushSprite(0, 0);
+    return;
+  }
+
+  if(currentCmd == CMD_WEATHER)
+  {
+    drawWeatherScreen();
     spr.pushSprite(0, 0);
     return;
   }

@@ -2169,6 +2169,96 @@ void drawVolumePopup()
 }
 
 
+
+void drawRadioMenuPopup(uint16_t cmd)
+{
+  const uint16_t bg=0x0000, blue=0x001F, cyan=0x07FF, white=0xFFFF;
+  char value[48] = "";
+  const char *label = "RADIO";
+  const char *valueText = value;
+  int barMax = 0, barValue = 0;
+
+  switch(cmd) {
+    case CMD_BAND:
+      label = menu[MENU_BAND]; valueText = bands[bandIdx].bandName; break;
+    case CMD_MODE:
+      label = menu[MENU_MODE]; valueText = bandModeDesc[currentMode]; break;
+    case CMD_STEP:
+      label = menu[MENU_STEP]; valueText = getCurrentStep()->desc; break;
+    case CMD_BANDWIDTH:
+      label = menu[MENU_BW]; valueText = getCurrentBandwidth()->desc; break;
+    case CMD_SEEK:
+      label = menu[MENU_SEEK];
+      valueText = seekMode(false) == SEEK_SCHEDULE ? "PROGRAMMATO" : "STANDARD";
+      break;
+    case CMD_SCAN:
+      label = menu[MENU_SCAN]; valueText = "AVVIA SCANSIONE"; break;
+    case CMD_AGC:
+      label = menu[MENU_AGC_ATT];
+      if(!agcIdx) valueText = "ON";
+      else snprintf(value,sizeof(value),"MANUALE %02u",static_cast<unsigned>(agcNdx));
+      break;
+    case CMD_SOFTMUTE:
+      label = menu[MENU_SOFTMUTE];
+      snprintf(value,sizeof(value),"%u dB",static_cast<unsigned>(softMuteMaxAttIdx));
+      barMax = 32; barValue = softMuteMaxAttIdx; break;
+    case CMD_AVC:
+      label = menu[MENU_AVC];
+      if(isSSB() && ssbAvcHold) valueText = "BLOCCO";
+      else snprintf(value,sizeof(value),"%u dB",static_cast<unsigned>(isSSB()?SsbAvcIdx:AmAvcIdx));
+      if(currentMode != FM) { barMax=90; barValue=isSSB()?SsbAvcIdx:AmAvcIdx; }
+      break;
+    case CMD_MEMORY: {
+      label = menu[MENU_MEMORY];
+      const Memory memory = getMemory(memoryIdx);
+      if(!memory.freq) valueText = "- - -";
+      else if(memory.name[0]) valueText = memory.name;
+      else if(memory.mode == FM) snprintf(value,sizeof(value),"%3.2f MHz",memory.freq / 1000000.0);
+      else snprintf(value,sizeof(value),"%5lu kHz",static_cast<unsigned long>(memory.freq / 1000));
+      break;
+    }
+    case CMD_SQUELCH: {
+      label = menu[MENU_SQUELCH];
+      const uint8_t squelchValue = currentSquelch[currentMode] & 0x7f;
+      const bool snr = (currentSquelch[currentMode] & 0x80) != 0;
+      if(squelchValue) snprintf(value,sizeof(value),"%u %s",static_cast<unsigned>(squelchValue),snr?"dB SNR":"dB RSSI");
+      else valueText = snr ? "OFF (SNR)" : "OFF (RSSI)";
+      barMax=127; barValue=squelchValue;
+      break;
+    }
+    case CMD_BFO:
+      label = "BFO"; snprintf(value,sizeof(value),"%+d Hz",currentBFO);
+      barMax=5000; barValue=abs(currentBFO); break;
+    default: valueText = ""; break;
+  }
+
+  spr.fillSprite(bg);
+  spr.drawRect(8,6,304,143,cyan);
+  spr.drawRect(9,7,302,141,blue);
+  spr.fillRect(8,7,4,22,cyan);
+  const char *section = "MENU";
+  int sectionWidth = drawXXLText(section,18,8,cyan,FONT_SMALL);
+  sectionWidth += drawXXLText(" / ",18+sectionWidth,8,cyan,FONT_SMALL);
+  drawXXLText(label,18+sectionWidth,8,white,FONT_SMALL);
+  spr.drawFastHLine(10,34,300,blue);
+
+  spr.drawRoundRect(20,48,280,88,8,cyan);
+  drawXXLTextCentered(label,160,60,0xBDF7,FONT_SMALL);
+  drawXXLTextCentered(valueText,160,91,white,FONT_LARGE);
+
+  if(barMax > 0) {
+    spr.fillRoundRect(42,116,236,8,4,0x39E7);
+    const int width = constrain(barValue,0,barMax) * 236 / barMax;
+    if(width > 0) spr.fillRoundRect(42,116,width,8,4,white);
+  }
+  spr.drawFastHLine(10,143,300,blue);
+  drawXXLText("RUOTA: MODIFICA",12,151,cyan,FONT_DEFAULT);
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(cyan);
+  spr.setFont(FONT_DEFAULT);
+  drawXXLTextRight("CLIC: OK",308,151,cyan,FONT_DEFAULT);
+}
+
 void drawBrightnessPopup()
 {
   const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF;

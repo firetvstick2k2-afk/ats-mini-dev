@@ -22,6 +22,7 @@ public:
     int16_t feelsLikeC = 0;
     uint8_t humidity = 0;
     uint8_t precipitation = 0;
+    uint8_t snowChance = 0;
     uint16_t pressureHpa = 0;
     uint16_t windKmh = 0;
     uint8_t weatherCode = 0;

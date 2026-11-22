@@ -10,7 +10,7 @@
 #include <strings.h>
 #include <new>
 namespace {
-constexpr size_t MAX_FEED_BYTES=98304;
+constexpr size_t MAX_FEED_BYTES=65536;
 constexpr uint32_t TIMEOUT_MS=12000, REFRESH_MS=1800000;
 constexpr int64_t MIN_EPOCH=1700000000LL;
 String tagValue(const String& block,const char* tag) {

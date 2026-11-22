@@ -15,6 +15,9 @@
 #include "AllBandSpectrum.h"
 #include "src/radio/DecoderFrequencyList.h"
 #include "src/ftx/FtxUi.h"
+#include "src/js8/Js8Ui.h"
+#include "src/rtty/RttyUi.h"
+#include "src/cw/CwUi.h"
 #include "src/radio/FmDxController.h"
 #include "src/radio/FmDxUi.h"
 #include "Storage.h"
@@ -105,28 +108,28 @@ static int visibleBandIndexAtOffset(int offset)
   return idx;
 }
 
-#define MENU_MODE         0
-#define MENU_BAND         1
-#define MENU_VOLUME       2
-#define MENU_KEYPAD       3
-#define MENU_DUAL_RX      4
-#define MENU_VFO          5
-#define MENU_FREQ_INPUT   6
-#define MENU_BFO          7
-#define MENU_STEP         8
-#define MENU_SEEK         9
-#define MENU_SCAN        10
-#define MENU_MEMORY      11
-#define MENU_SQUELCH     12
-#define MENU_BW          13
-#define MENU_AGC_ATT     14
-#define MENU_AVC         15
-#define MENU_SOFTMUTE    16
-#define MENU_SETTINGS    17
-#define MENU_SPECTRUM    18
-#define MENU_ALL_SPECTRUM 19
-#define MENU_DECODER_FREQUENCIES 20
-#define MENU_FM_DX 21
+#define MENU_VOLUME       0
+#define MENU_KEYPAD       1
+#define MENU_BAND         2
+#define MENU_MODE         3
+#define MENU_BFO          4
+#define MENU_STEP         5
+#define MENU_SEEK         6
+#define MENU_SCAN         7
+#define MENU_MEMORY       8
+#define MENU_SQUELCH      9
+#define MENU_BW          10
+#define MENU_FREQ_INPUT  11
+#define MENU_AGC_ATT     12
+#define MENU_AVC         13
+#define MENU_SOFTMUTE    14
+#define MENU_DUAL_RX     15
+#define MENU_VFO         16
+#define MENU_SPECTRUM    17
+#define MENU_ALL_SPECTRUM 18
+#define MENU_DECODER_MENU 19
+#define MENU_SETTINGS    20
+#define MENU_FM_DX       21
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -135,14 +138,23 @@ static const char *decoderCategoryLabels[] = {
   "FT4",
   "RTTY",
   "DWD / Pinneberg",
-  "NCDXF Beacons",
-  "Time Signals",
-  "Shortwave Broadcast",
+  "NCDXF Baken",
+  "Segnali orari",
+  "Radiodiffusione",
   "SSB QSO",
-  "Signal / Data",
+  "Segnali / Dati",
   "CB",
 };
 static uint8_t decoderCategoryIndex = 0;
+static uint8_t decoderMenuIdx = 0;
+static const char *decoderMenu[] = {
+  "INDIETRO", "FREQUENZE DECODER", "DECODER CW",
+  "DECODER RTTY", "FT8 / FT4", "MONITOR JS8 RX"
+};
+static const char *decoderMenuXXL[] = {
+  "INDIETRO", "FREQUENZE DECODER", "DECODER CW",
+  "DECODER RTTY", "FT8 / FT4", "MONITOR JS8 RX"
+};
 static uint8_t decoderPresetIndex = 0;
 static bool decoderPresetView = false;
 static uint32_t decoderSelectionChangedAt = 0;
@@ -153,19 +165,20 @@ static const char *spectrumMenuXXL[] = { "SPETTRO VHF", "SPETTRO COMPLETO" };
 
 static const char *menu[] =
 {
-  "Modalita", "Bande", "Volume", "Tastiera", "DUAL RX", "VFO A/B",
-  "Freq.", "BFO", "Passo", "Ricerca", "Scans.", "Memorie", "Squelch",
-  "Banda", "AGC/ATT", "AVC", "SoftMute", "Impostaz.", "Spet. VHF", "Spet. ALL", "Decoder Freq.", "FM DX",
+  "Volume", "Tastiera", "Bande", "Modalita", "BFO",
+  "Passo", "Ricerca", "Scansione", "Memorie", "Squelch",
+  "Larghezza", "Frequenza", "AGC/ATT", "AVC",
+  "SoftMute", "DUAL RX", "VFO A/B", "Spettro VHF",
+  "Spettro completo", "Decoder", "Impostazioni", "FM DX",
 };
 
-// Full labels are used only by the XXL full-screen menu.
-// Keep the compact menu[] labels at 10 characters or fewer.
 static const char *menuXXL[] =
 {
-  "MODALITA", "BANDE", "VOLUME", "TASTIERA", "DUAL RX", "VFO A/B",
-  "FREQUENZA", "BFO", "PASSO", "RICERCA", "SCANSIONE", "MEMORIE", "SQUELCH",
-  "LARGHEZZA DI BANDA", "AGC/ATTENUAZIONE", "AVC", "RIDUZIONE RUMORE",
-  "IMPOSTAZIONI", "SPETTRO VHF", "SPETTRO COMPLETO", "FREQUENZE DECODER", "FM DX"
+  "VOLUME", "TASTIERA", "BANDE", "MODALITA", "BFO",
+  "PASSO", "RICERCA", "SCANSIONE", "MEMORIE", "SQUELCH",
+  "LARGHEZZA DI BANDA", "FREQUENZA", "AGC/ATTENUAZIONE", "AVC",
+  "RIDUZIONE RUMORE", "DUAL RX", "VFO A/B", "SPETTRO VHF",
+  "SPETTRO COMPLETO", "DECODER", "IMPOSTAZIONI", "FM DX"
 };
 
 #define MENU_BRIGHTNESS   0
@@ -962,8 +975,22 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_DUAL_RX: dualRxStart(); break;
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
-    case MENU_DECODER_FREQUENCIES: decoderFrequencyOpen(); break;
+    case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
     case MENU_FM_DX: fmDxUiOpen(); break;
+  }
+}
+
+static void clickDecoderMenu(int idx)
+{
+  switch(idx)
+  {
+    case 0: currentCmd = CMD_MENU; break;
+    case 1: decoderFrequencyOpen(); break;
+    case 2: if(cwUiOpen()) currentCmd = CMD_CW_DECODER; break;
+    case 3: if(rttyUiOpen(45.45f)) currentCmd = CMD_RTTY_DECODER; break;
+    case 4: if(ftxUiOpen(FtxMode::FT8)) currentCmd = CMD_FTX_DECODER; break;
+    case 5: if(js8UiOpen()) currentCmd = CMD_JS8_MONITOR; break;
+    default: currentCmd = CMD_MENU; break;
   }
 }
 
@@ -1016,6 +1043,7 @@ bool doSideBar(uint16_t cmd, int16_t enc, int16_t enca)
   switch(cmd)
   {
     case CMD_MENU:       doMenu(scrollDirection * enc);break;
+    case CMD_DECODER_MENU: decoderMenuIdx = wrap_range(decoderMenuIdx, scrollDirection * enc, 0, LAST_ITEM(decoderMenu)); break;
     case CMD_SPECTRUM_MENU: spectrumMenuIdx = wrap_range(spectrumMenuIdx, scrollDirection * enc, 0, LAST_ITEM(spectrumMenu)); break;
     case CMD_MODE:       doMode(scrollDirection * enc);break;
     case CMD_STEP:       doStep(scrollDirection * enc);break;
@@ -1059,8 +1087,12 @@ bool clickHandler(uint16_t cmd, bool shortPress)
   switch(cmd)
   {
     case CMD_MENU:     clickMenu(menuIdx, shortPress);break;
+    case CMD_DECODER_MENU: clickDecoderMenu(decoderMenuIdx); break;
     case CMD_DECODER_FREQUENCIES: decoderFrequencyClick(); break;
     case CMD_FTX_DECODER: ftxUiExit(); break;
+    case CMD_CW_DECODER: cwUiExit(); break;
+    case CMD_RTTY_DECODER: rttyUiExit(); break;
+    case CMD_JS8_MONITOR: js8UiExit(); break;
     case CMD_SPECTRUM_MENU:
       if(spectrumMenuIdx == 0) spectrumScannerStart();
       else currentCmd = CMD_SPECTRUM_MENU; // All-band scanner is reserved for a later feature.
@@ -1783,6 +1815,54 @@ static int drawXXLText(const char *text, int x, int y, uint16_t color, const lgf
   return cursor - x;
 }
 
+
+static int measureXXLText(const char *text, const lgfx::IFont *font)
+{
+  spr.setFont(font);
+  int width = 0;
+  while (*text)
+  {
+    char glyph[2] = {0, 0};
+    bool sharpS = false;
+    char base = *text++;
+    if ((uint8_t)base == 0xC3 && *text)
+    {
+      uint8_t next = (uint8_t)*text++;
+      switch (next)
+      {
+        case 0x84: base='A'; break;
+        case 0x96: base='O'; break;
+        case 0x9C: base='U'; break;
+        case 0xA4: base='a'; break;
+        case 0xB6: base='o'; break;
+        case 0xBC: base='u'; break;
+        case 0x9F: base='s'; sharpS=true; break;
+        default: base='?'; break;
+      }
+    }
+    glyph[0] = base;
+    const int glyphWidth = spr.textWidth(glyph);
+    width += sharpS ? glyphWidth * 2 : glyphWidth;
+  }
+  return width;
+}
+
+
+static int drawXXLTextCentered(const char *text, int centerX, int y, uint16_t color, const lgfx::IFont *font)
+{
+  const int width = measureXXLText(text, font);
+  drawXXLText(text, centerX - width / 2, y, color, font);
+  return width;
+}
+
+
+static int drawXXLTextRight(const char *text, int rightX, int y, uint16_t color, const lgfx::IFont *font)
+{
+  const int width = measureXXLText(text, font);
+  drawXXLText(text, rightX - width, y, color, font);
+  return width;
+}
+
 void drawFullScreenMenu(uint16_t cmd)
 {
   const uint16_t bg = 0x0000;
@@ -1790,11 +1870,12 @@ void drawFullScreenMenu(uint16_t cmd)
   const uint16_t cyan = 0x07FF;
   const bool settingsPage = cmd == CMD_SETTINGS;
   const bool spectrumPage = cmd == CMD_SPECTRUM_MENU;
-  const int rawIdx = settingsPage ? settingsIdx : (spectrumPage ? spectrumMenuIdx : menuIdx);
+  const bool decoderPage = cmd == CMD_DECODER_MENU;
+  const int rawIdx = settingsPage ? settingsIdx : (spectrumPage ? spectrumMenuIdx : (decoderPage ? decoderMenuIdx : menuIdx));
   const int idx = (settingsPage && rawIdx > MENU_ZOOM) ? rawIdx - 1 : rawIdx;
-  const int count = settingsPage ? ITEM_COUNT(settings) - 1 : (spectrumPage ? ITEM_COUNT(spectrumMenu) : ITEM_COUNT(menu));
-  const char *title = settingsPage ? "IMPOSTAZ." : (spectrumPage ? "SPETTRO" : "MENU PRINC.");
-  const char *selected = settingsPage ? ((rawIdx == MENU_WEBLOG && !webDiagEnabled) ? "REGISTRO DIAGNOSTICO: OFF" : (rawIdx == MENU_WEBLOG ? "REGISTRO DIAGNOSTICO: ON" : settingsXXL[rawIdx])) : (spectrumPage ? spectrumMenuXXL[idx] : menuXXL[idx]);
+  const int count = settingsPage ? ITEM_COUNT(settings) - 1 : (spectrumPage ? ITEM_COUNT(spectrumMenu) : (decoderPage ? ITEM_COUNT(decoderMenu) : ITEM_COUNT(menu)));
+  const char *title = settingsPage ? "IMPOSTAZ." : (spectrumPage ? "SPETTRO" : (decoderPage ? "DECODER" : "MENU PRINC."));
+  const char *selected = settingsPage ? ((rawIdx == MENU_WEBLOG && !webDiagEnabled) ? "REGISTRO DIAGNOSTICO: OFF" : (rawIdx == MENU_WEBLOG ? "REGISTRO DIAGNOSTICO: ON" : settingsXXL[rawIdx])) : (spectrumPage ? spectrumMenuXXL[idx] : (decoderPage ? decoderMenuXXL[idx] : menuXXL[idx]));
   const char *displaySelected = selected;
   // Render menu labels in uppercase without corrupting UTF-8 umlauts.
   char uppercaseLabel[96];
@@ -1844,7 +1925,7 @@ void drawFullScreenMenu(uint16_t cmd)
   spr.setFont(FONT_SMALL);
   spr.setTextColor(cyan);
   spr.drawString("CLIC: OK", 307, 151, FONT_SMALL);
-  if(!settingsPage && !spectrumPage && (idx == MENU_SPECTRUM || idx == MENU_ALL_SPECTRUM)) {
+  if(!settingsPage && !spectrumPage && !decoderPage && (idx == MENU_SPECTRUM || idx == MENU_ALL_SPECTRUM)) {
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(0xBDF7);
     spr.setFont(FONT_SMALL);
@@ -1964,16 +2045,26 @@ bool decoderFrequencyClick()
   {
     if(!tuneDecoderFrequencyPreset(presetIndex))
     {
-      statusShow("Preset cannot be tuned", "No matching receiver band");
+      statusShow("Preset non sintonizzabile", "Nessuna banda compatibile");
       return true;
     }
     decoderLastTunedPreset = decoderPresetIndex;
   }
   const DecoderKind decoder = kDecoderFrequencyPresets[presetIndex].decoder;
+  if(decoder == DecoderKind::CW)
+  {
+    if(cwUiOpen()) currentCmd = CMD_CW_DECODER;
+    return true;
+  }
   if(decoder == DecoderKind::FT8 || decoder == DecoderKind::FT4)
   {
     if(ftxUiOpen(decoder == DecoderKind::FT8 ? FtxMode::FT8 : FtxMode::FT4))
       currentCmd = CMD_FTX_DECODER;
+    return true;
+  }
+  if(decoder == DecoderKind::RTTY)
+  {
+    if(rttyUiOpen(kDecoderFrequencyPresets[presetIndex].recommendedBaud)) currentCmd = CMD_RTTY_DECODER;
     return true;
   }
   currentCmd = CMD_NONE;
@@ -2034,4 +2125,187 @@ void drawDecoderFrequencyMenu()
   const char* status = decoderLastTunedPreset == decoderPresetIndex ? "SINTONIZZATO" : "SINTONIA IN 2 SEC.";
   DecoderMenuUi::draw("FREQUENZE DECODER", labels, values, category.presetCount,
                       decoderPresetIndex, "RUOTA: SELEZIONA", "CLIC: APRI", status);
+}
+
+
+
+void drawVolumePopup()
+{
+  const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF;
+  spr.fillSprite(bg);
+  spr.fillRect(8, 7, 4, 22, cyan);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(0xFFFF);
+  drawXXLText("MENU / VOLUME",18,8,0xFFFF,FONT_SMALL);
+  spr.drawFastHLine(10, 34, 300, blue);
+  spr.fillRoundRect(24, 51, 272, 78, 8, 0x0821);
+  spr.drawRoundRect(24, 51, 272, 78, 8, cyan);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(0xFFFF);
+  drawXXLText("Volume",42,62,0xFFFF,FONT_SMALL);
+  spr.setTextDatum(TR_DATUM);
+  char value[8];
+  snprintf(value, sizeof(value), "%u", volume);
+  spr.drawString(value, 274, 56, FONT_LARGE);
+  spr.fillRoundRect(42, 103, 236, 10, 5, 0x39E7);
+  const int width = static_cast<int>(volume) * 236 / 63;
+  if(width > 0) spr.fillRoundRect(42, 103, width, 10, 5, 0xFFFF);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(cyan);
+  drawXXLText("RUOTA: REGOLA",12,151,cyan,FONT_SMALL);
+  spr.setTextDatum(TR_DATUM);
+  drawXXLTextRight("CLIC: CONFERMA",308,151,cyan,FONT_SMALL);
+}
+
+
+void drawBrightnessPopup()
+{
+  const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF;
+  spr.fillSprite(bg);
+  spr.fillRect(8, 7, 4, 22, cyan);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(0xFFFF);
+  spr.setFont(FONT_SMALL);
+  drawXXLText("IMPOSTAZIONI / LUMINOSITA",18,8,0xFFFF,FONT_SMALL);
+  spr.drawFastHLine(10, 34, 300, blue);
+  spr.fillRoundRect(24, 51, 272, 78, 8, 0x0821);
+  spr.drawRoundRect(24, 51, 272, 78, 8, cyan);
+  spr.setTextDatum(TL_DATUM);
+  drawXXLText("Luminosita",42,62,0xFFFF,FONT_SMALL);
+  spr.setTextDatum(TR_DATUM);
+  char value[8];
+  snprintf(value, sizeof(value), "%u", currentBrt);
+  spr.drawString(value, 274, 56, FONT_LARGE);
+  spr.fillRoundRect(42, 103, 236, 10, 5, 0x39E7);
+  const int width = static_cast<int>(currentBrt - 10) * 236 / 245;
+  if(width > 0) spr.fillRoundRect(42, 103, width, 10, 5, 0xFFFF);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(cyan);
+  drawXXLText("RUOTA: REGOLA",12,151,cyan,FONT_SMALL);
+  spr.setTextDatum(TR_DATUM);
+  drawXXLTextRight("CLIC: INDIETRO",308,151,cyan,FONT_SMALL);
+}
+
+
+static int settingsIndexForCommand(uint16_t cmd)
+{
+  switch(cmd) {
+    case CMD_CAL: return MENU_CALIBRATION;
+    case CMD_THEME: return MENU_THEME;
+    case CMD_UI: return MENU_UI;
+    case CMD_RDS: return MENU_RDS;
+    case CMD_DATETIME: return MENU_DATETIME;
+    case CMD_ZOOM: return MENU_ZOOM;
+    case CMD_SCROLL: return MENU_SCROLL;
+    case CMD_SLEEP: return MENU_SLEEP;
+    case CMD_SLEEPMODE: return MENU_SLEEPMODE;
+    case CMD_UTCOFFSET: return MENU_UTCOFFSET;
+    case CMD_USBMODE: return MENU_USBMODE;
+    case CMD_TCPMODE: return MENU_TCPMODE;
+    case CMD_BLEMODE: return MENU_BLEMODE;
+    case CMD_WIFIMODE: return MENU_WIFIMODE;
+    case CMD_FM_REGION: return MENU_FM_REGION;
+    case CMD_FM_STEREO: return MENU_FM_STEREO;
+    case CMD_DSP_PATCHES: return MENU_DSP_PATCHES;
+    case CMD_UPDATEFW: return MENU_UPDATEFW;
+    case CMD_ABOUT: return MENU_ABOUT;
+    default: return -1;
+  }
+}
+
+
+static void drawDateTimePopupLine(const char *text, uint8_t start, uint8_t length,
+                                  int centerX, int y, bool active,
+                                  uint16_t textColor, uint16_t highlightColor)
+{
+  char prefix[12], field[8];
+  snprintf(prefix,sizeof(prefix),"%.*s",start,text);
+  snprintf(field,sizeof(field),"%.*s",length,text + start);
+  spr.setFont(FONT_SMALL);
+  spr.setTextDatum(MC_DATUM);
+  spr.setTextColor(textColor);
+  spr.drawString(text,centerX,y,FONT_SMALL);
+  if(!active) return;
+
+  const int left = centerX - spr.textWidth(text,FONT_SMALL) / 2;
+  const int fieldX = left + spr.textWidth(prefix,FONT_SMALL);
+  const int fieldWidth = spr.textWidth(field,FONT_SMALL);
+  spr.fillRoundRect(fieldX - 3,y - 8,fieldWidth + 6,16,3,highlightColor);
+  spr.setTextDatum(ML_DATUM);
+  spr.setTextColor(0x0000,highlightColor);
+  spr.drawString(field,fieldX,y,FONT_SMALL);
+}
+
+
+void drawSettingsPopup(uint16_t cmd)
+{
+  const uint16_t bg=0x0000, blue=0x001F, cyan=0x07FF, white=0xFFFF;
+  const int settingIndex=settingsIndexForCommand(cmd);
+  char value[48] = "";
+  const char *valueText=value;
+  switch(cmd) {
+    case CMD_CAL:
+      snprintf(value,sizeof(value),"%+d Hz",currentMode==USB?bands[bandIdx].usbCal:bands[bandIdx].lsbCal);
+      break;
+    case CMD_THEME: valueText=theme[themeIdx].name; break;
+    case CMD_UI: valueText=uiLayoutDesc[uiLayoutIdx]; break;
+    case CMD_RDS: valueText=rdsMode[rdsModeIdx].desc; break;
+    case CMD_DATETIME:
+      snprintf(value,sizeof(value),"%04u-%02u-%02u  %02u:%02u:%02u",
+        (unsigned)dateTimeYear,(unsigned)dateTimeMonth,(unsigned)dateTimeDay,
+        (unsigned)dateTimeHour,(unsigned)dateTimeMinute,(unsigned)dateTimeSecond);
+      break;
+    case CMD_ZOOM: valueText=zoomMenu?"ON":"OFF"; break;
+    case CMD_SCROLL: valueText=scrollDirection>0?"AVANTI":"INDIETRO"; break;
+    case CMD_SLEEP: snprintf(value,sizeof(value),"%u",currentSleep); break;
+    case CMD_SLEEPMODE: valueText=sleepModeDesc[sleepModeIdx]; break;
+    case CMD_UTCOFFSET: valueText=utcOffsets[utcOffsetIdx].desc; break;
+    case CMD_USBMODE: valueText=usbModeDesc[usbModeIdx]; break;
+    case CMD_TCPMODE: valueText=tcpModeDesc[tcpModeIdx]; break;
+    case CMD_BLEMODE: valueText=bleModeDesc[bleModeMenuIdx]; break;
+    case CMD_WIFIMODE: valueText=wifiModeDesc[wifiModeIdx]; break;
+    case CMD_FM_REGION: valueText=fmRegions[FmRegionIdx].desc; break;
+    case CMD_FM_STEREO: valueText=fmStereoDesc[fmStereoIdx]; break;
+    case CMD_DSP_PATCHES: snprintf(value,sizeof(value),"PATCH %u",dspPatchesIdx); break;
+    case CMD_UPDATEFW: valueText=updateFwActions[updateFwIdx]; break;
+    case CMD_ABOUT: valueText="ATS MINI V4"; break;
+    default: valueText=""; break;
+  }
+
+  spr.fillSprite(bg);
+  spr.fillRect(8,7,4,22,cyan);
+  const char *section="IMPOSTAZIONI";
+  int titleWidth=drawXXLText(section,18,8,cyan,FONT_SMALL);
+  drawXXLText(" / ",18+titleWidth,8,cyan,FONT_SMALL);
+  const int sectionWidth=titleWidth+drawXXLText(" / ",18+titleWidth,8,cyan,FONT_SMALL);
+  const char *label=settingIndex>=0?settingLabel(settingIndex):"";
+  drawXXLText(label,18+sectionWidth,8,white,FONT_SMALL);
+  spr.drawFastHLine(10,34,300,blue);
+  spr.fillRoundRect(20,48,280,88,8,0x0821);
+  spr.drawRoundRect(20,48,280,88,8,cyan);
+  drawXXLTextCentered(label,160,60,0xBDF7,FONT_SMALL);
+  if(cmd == CMD_DATETIME)
+  {
+    static const uint8_t starts[] = { 0, 5, 8, 0, 3, 6 };
+    static const uint8_t lengths[] = { 4, 2, 2, 2, 2, 2 };
+    char date[16], time[16];
+    snprintf(date,sizeof(date),"%04u-%02u-%02u",
+      (unsigned)dateTimeYear,(unsigned)dateTimeMonth,(unsigned)dateTimeDay);
+    snprintf(time,sizeof(time),"%02u:%02u:%02u",
+      (unsigned)dateTimeHour,(unsigned)dateTimeMinute,(unsigned)dateTimeSecond);
+    drawDateTimePopupLine(date,starts[dateTimeField],lengths[dateTimeField],
+      160,88,dateTimeField <= DATETIME_DAY,white,cyan);
+    drawDateTimePopupLine(time,starts[dateTimeField],lengths[dateTimeField],
+      160,112,dateTimeField >= DATETIME_HOUR,white,cyan);
+  }
+  else
+  {
+    drawXXLTextCentered(valueText,160,88,white,FONT_LARGE);
+  }
+  spr.drawFastHLine(10,143,300,blue);
+  drawXXLText("RUOTA: MODIFICA",12,151,cyan,FONT_DEFAULT);
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(cyan);
+  spr.setFont(FONT_DEFAULT);
+  drawXXLTextRight("CLIC: SELEZIONA",308,151,cyan,FONT_DEFAULT);
 }

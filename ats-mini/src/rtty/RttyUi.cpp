@@ -444,7 +444,7 @@ void drawRttyDecoderPage() {
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);
     if(presetMenuOpen) {
-      spr.drawString("DECODER-FREQUENZ",menuX+12,menuY+7);
+      spr.drawString("RTTY PRESETS",menuX+12,menuY+7);
       const uint8_t count=rttyPresetCount();
       for(uint8_t row=0;row<5;++row) {
         const uint8_t index=presetScroll+row;

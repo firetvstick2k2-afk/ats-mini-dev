@@ -49,7 +49,7 @@ static const char pageConfig[] PROGMEM = R"HTML(<H1>{{title}}</H1>
 </FORM>
 <FORM ACTION="/news/save" METHOD="POST" CLASS="CONFIGFORM">
   <TABLE COLUMNS="2">
-    <TR><TH COLSPAN="2" CLASS="HEADING">RSS News feeds (8 slots)</TH></TR>
+    <TR><TH COLSPAN="2" CLASS="HEADING">RSS News feeds (4 slots)</TH></TR>
     {{{news_feeds}}}
     <TR><TH COLSPAN="2" CLASS="HEADING"><INPUT TYPE="SUBMIT" VALUE="Save RSS feeds"></TH></TR>
   </TABLE>

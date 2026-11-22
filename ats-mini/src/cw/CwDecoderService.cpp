@@ -30,6 +30,7 @@ bool CwDecoderService::enter(AudioCaptureService& capture, bool wifiOff) {
   wpm_ = 0;
   dcEstimate_ = 2048.0f;
   devSum_ = 0.0f;
+  devPeak_ = 0.0f;
   devCount_ = 0;
   xSemaphoreGive(mutex_);
 
@@ -173,22 +174,21 @@ void CwDecoderService::consumeSamples(const int16_t* samples, size_t count) {
       toneWindowCount_ = 0;
     }
   }
-  float blockPeak = 0.0f;
   for (size_t i = 0; i < count; ++i) {
     const float value = static_cast<float>(samples[i]);
     dcEstimate_ += (value - dcEstimate_) * 0.001f;
     const float deviation = fabsf(value - dcEstimate_);
     devSum_ += deviation;
-    if (deviation > blockPeak) blockPeak = deviation;
+    if (deviation > devPeak_) devPeak_ = deviation;
     if (samples[i] <= 4 || samples[i] >= 4091) ++clippedCount_;
     if (++devCount_ >= kSampleRate / 2) {
       audioLevel_ = static_cast<uint16_t>(devSum_ / devCount_);
-      audioPeak_ = static_cast<uint16_t>(blockPeak > 65535.0f ? 65535.0f : blockPeak);
+      audioPeak_ = static_cast<uint16_t>(devPeak_ > 65535.0f ? 65535.0f : devPeak_);
       audioClipped_ = clippedCount_ >= 4;
       devSum_ = 0.0f;
+      devPeak_ = 0.0f;
       devCount_ = 0;
       clippedCount_ = 0;
-      blockPeak = 0.0f;
     }
   }
   xSemaphoreGive(mutex_);

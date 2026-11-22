@@ -1365,3 +1365,9 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The radio's RF frequency/BFO is not automatically shifted. The DSP audio-tone tracker is the safer first-stage solution; moving BFO/frequency without a reliable signal lock could tune away from a station. Consider a controlled optional AFC/BFO feature only after real-device recordings validate tone lock and decoding.
 - Important: auto-tone estimator is heuristic and uncalibrated. The CW mark/space detector, speed estimator, and signal classification still need validation and likely further tuning with real CW audio. The audio level green threshold (12 ADC mean-absolute-deviation units) and Goertzel energy threshold (180000) are initial values, not calibrated.
 - Source changes only; no compile, GitHub Actions build, or hardware verification performed. Do not start a build; user runs OSPI-DE manually.
+
+
+## CW frequency Actions and RTTY FT8 theme (2026-11-22)
+- CW Actions now includes FREQUENCIES. The submenu lists CURRENT (the frequency already tuned when opening the menu) followed by the nine CW presets from DecoderFrequencyList.h. Selecting a preset chooses the narrowest receiver band covering it, applies its USB mode/bandwidth preset and resets the decoder. CURRENT keeps the present frequency and resets the decoder.
+- RTTY UI colors changed from blue/red styling to the FT8 dark/black, cyan and neon-green palette. Existing RTTY AUTO capabilities retained: tone-pair detection, polarity AUTO and BFO AUTO. Baud remains user-selectable (45.45/50/75 Bd); automatic baud classification is not implemented. No live RTTY transmission was available for validation.
+- CW/RTTY changes are source-only. No compile, Actions build or hardware test performed. User starts OSPI-DE manually.

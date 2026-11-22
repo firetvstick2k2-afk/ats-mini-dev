@@ -757,43 +757,79 @@ void drawNewsScreen()
   const int w = spr.width();
   constexpr uint16_t BLUE=0x001F, CYAN=0x07FF, GREEN=0x07E0, WHITE=0xFFFF, MUTED=0x8410, PANEL=0x0000;
   spr.fillScreen(PANEL); spr.drawRoundRect(3,3,w-6,164,6,BLUE);
-  spr.setTextDatum(TL_DATUM); spr.setFont(FONT_SMALL); spr.setTextColor(CYAN,PANEL);
-  spr.drawString("NACHRICHTEN",10,6); spr.setFont(FONT_DEFAULT); spr.setTextColor(MUTED,PANEL);
+
+  // Large, readable news header and metadata for the 320x170 display.
+  spr.setTextDatum(TL_DATUM);
+  spr.setFont(FONT_SMALL);
+  spr.setTextColor(CYAN,PANEL);
+  spr.drawString("NACHRICHTEN",10,5);
+
   if(!newsCount)
   {
-    spr.drawFastHLine(9,23,w-18,BLUE); spr.setTextDatum(MC_DATUM); spr.setTextColor(WHITE,PANEL);
-    spr.drawCenterString(fetching ? "RSS-Feeds werden geladen..." : "Keine Nachrichten vorhanden",w/2,72);
+    spr.drawFastHLine(9,25,w-18,BLUE);
+    spr.setTextDatum(MC_DATUM); spr.setTextColor(WHITE,PANEL);
+    spr.drawString(fetching ? "RSS-Feeds werden geladen..." : "Keine Nachrichten vorhanden",w/2,72);
     spr.setTextColor(MUTED,PANEL);
-    spr.drawCenterString(failed ? "Abruf fehlgeschlagen / Feed pruefen" : "RSS-Adressen in der Weboberflaeche eintragen",w/2,94);
-    spr.drawString("Lang druecken: Zurueck",10,148); return;
+    spr.drawString(failed ? "Abruf fehlgeschlagen / Feed pruefen" : "RSS-Adressen in der Weboberflaeche eintragen",w/2,96);
+    spr.setTextDatum(TL_DATUM); spr.drawString("Lang druecken: Zurueck",10,145); return;
   }
+
   const uint8_t index=newsCurrentIndex%newsCount;
   NewsService::Item item;
   if(!newsService.getItem(index,item)) return;
-  spr.setTextDatum(TR_DATUM); char meta[20]; snprintf(meta,sizeof(meta),"%u/%u",index+1,newsCount); spr.drawString(meta,w-10,8);
-  spr.setTextDatum(TL_DATUM); spr.setTextColor(WHITE,PANEL); spr.setFont(FONT_DEFAULT);
-  const char* title=item.title; char titleLine[44];
+
+  spr.setTextDatum(TR_DATUM);
+  char meta[20]; snprintf(meta,sizeof(meta),"%u/%u",index+1,newsCount);
+  spr.drawString(meta,w-10,5);
+
+  // Headline: two large lines.
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(WHITE,PANEL);
+  const char* title=item.title;
   for(uint8_t row=0;row<2 && *title;row++)
   {
-    size_t n=0,lastSpace=0;
-    while(title[n] && n<40){titleLine[n]=title[n];if(title[n]==' ')lastSpace=n;++n;}
+    char line[36]; size_t n=0,lastSpace=0;
+    while(title[n] && n<32){line[n]=title[n];if(title[n]==' ')lastSpace=n;++n;}
     if(title[n] && lastSpace>8)n=lastSpace;
-    titleLine[n]='\0'; spr.drawString(titleLine,10,21+row*11); title+=n; while(*title==' ')++title;
+    line[n]='\\0';
+    spr.drawString(line,10,24+row*17);
+    title+=n; while(*title==' ')++title;
   }
-  spr.setTextColor(GREEN,PANEL); spr.drawString(item.source,10,44);
-  spr.setTextColor(MUTED,PANEL); spr.setTextDatum(TR_DATUM); spr.drawString(item.date,w-10,44);
-  spr.drawFastHLine(9,56,w-18,BLUE); spr.setTextDatum(TL_DATUM); spr.setTextColor(WHITE,PANEL);
-  const char* body=item.text; size_t offset=(size_t)newsCurrentPage*240; size_t length=strlen(body); if(offset>=length)offset=0; body+=offset;
-  for(uint8_t row=0;row<6 && *body;row++)
+
+  // Source and date share a full-size metadata line.
+  spr.setTextColor(GREEN,PANEL);
+  spr.setTextDatum(TL_DATUM);
+  spr.drawString(item.source,10,59);
+  spr.setTextColor(MUTED,PANEL);
+  spr.setTextDatum(TR_DATUM);
+  spr.drawString(item.date,w-10,59);
+  spr.drawFastHLine(9,78,w-18,BLUE);
+
+  // Four readable body lines per page; remaining text is reached by turning pages.
+  const char* body=item.text;
+  constexpr size_t CHARS_PER_PAGE=136;
+  size_t offset=(size_t)newsCurrentPage*CHARS_PER_PAGE;
+  const size_t length=strlen(body);
+  if(offset>=length) offset=0;
+  body+=offset;
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(WHITE,PANEL);
+  for(uint8_t row=0;row<4 && *body;row++)
   {
-    char line[42]; size_t n=0,lastSpace=0;
-    while(body[n] && n<40){line[n]=body[n];if(body[n]==' ')lastSpace=n;++n;}
+    char line[36]; size_t n=0,lastSpace=0;
+    while(body[n] && n<32){line[n]=body[n];if(body[n]==' ')lastSpace=n;++n;}
     if(body[n] && lastSpace>8)n=lastSpace;
-    line[n]='\0'; spr.drawString(line,10,61+row*13); body+=n; while(*body==' ')++body;
+    line[n]='\\0';
+    spr.drawString(line,10,83+row*17);
+    body+=n; while(*body==' ')++body;
   }
-  spr.setTextColor(MUTED,PANEL); spr.setTextDatum(TL_DATUM);
-  spr.drawString("Dreh: Textseiten  Klick: Naechste Meldung",10,145);
-  spr.setTextDatum(TR_DATUM); char pageText[20]; snprintf(pageText,sizeof(pageText),"SEITE %u",newsCurrentPage+1); spr.drawString(pageText,w-10,155);
+
+  spr.setTextColor(MUTED,PANEL);
+  spr.setTextDatum(TL_DATUM);
+  spr.drawString("Dreh: Textseiten  Klick: Naechste Meldung",10,151);
+  spr.setTextDatum(TR_DATUM);
+  char pageText[20]; snprintf(pageText,sizeof(pageText),"SEITE %u",newsCurrentPage+1);
+  spr.drawString(pageText,w-10,151);
 }
 
 static void drawWeatherScreen()

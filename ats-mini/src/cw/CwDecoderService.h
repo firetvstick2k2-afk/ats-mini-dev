@@ -19,6 +19,8 @@ public:
   void update();
   const char* text() const { return shownText_; }
   bool signal() const { return signal_; }
+  bool audioPresent() const { return audioPresent_; }
+  float tone() const { return autoToneHz_; }
   uint16_t audioLevel() const { return audioLevel_; }
   int wpm() const { return wpm_; }
 
@@ -31,11 +33,15 @@ private:
   AudioCaptureService* capture_ = nullptr;
   SemaphoreHandle_t mutex_ = nullptr;
   volatile bool active_ = false;
-  bool initialized_ = false, wifiBlocked_ = false, signal_ = false;
+  bool initialized_ = false, wifiBlocked_ = false, signal_ = false, audioPresent_ = false;
   volatile uint16_t audioLevel_ = 0;
   float dcEstimate_ = 2048.0f, devSum_ = 0.0f;
   uint32_t devCount_ = 0;
   char shownText_[CwDecoder::TEXT_MAX + 1] = {};
   int wpm_ = 0;
+  static constexpr size_t kToneWindowSamples = 256;
+  int16_t toneWindow_[kToneWindowSamples] = {};
+  size_t toneWindowCount_ = 0;
+  float autoToneHz_ = 700.0f;
   uint32_t lastUiMs_ = 0, lastToneMs_ = 0;
 };

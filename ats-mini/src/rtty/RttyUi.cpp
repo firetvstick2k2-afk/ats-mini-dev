@@ -444,9 +444,9 @@ void drawRttyDecoderPage() {
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);
     if(presetMenuOpen) {
-      spr.drawString("RTTY PRESETS",menuX+12,menuY+7);
+      spr.drawString("DECODER-FREQUENZ",menuX+12,menuY+7);
       const uint8_t count=rttyPresetCount();
-      for(uint8_t row=0;row<6;++row) {
+      for(uint8_t row=0;row<5;++row) {
         const uint8_t index=presetScroll+row;
         if(index>=count) break;
         const DecoderFrequencyPreset* preset=rttyPresetAt(index);
@@ -455,32 +455,31 @@ void drawRttyDecoderPage() {
         if(!strncmp(name,"RTTY ",5)) name+=5;
         else if(!strncmp(name,"PINNEBERG ",10)) name+=10;
         char label[40];
-        snprintf(label,sizeof(label),"%-8s %2u.%03u MHz %s",name,
+        snprintf(label,sizeof(label),"%-8s %2u.%03u %s",name,
           static_cast<unsigned>(preset->frequencyKHz/1000),
           static_cast<unsigned>(preset->frequencyKHz%1000),
           preset->modulation==USB?"USB":preset->modulation==LSB?"LSB":"AM");
-        const int y=menuY+29+row*18;
-        if(index==presetSelection) spr.fillRect(menuX+7,y-2,menuW-14,17,0x03E0);
+        const int y=menuY+29+row*19;
+        if(index==presetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x07FF);
         spr.setTextColor(index==presetSelection?0x0000:white);
         spr.setFont(FONT_SMALL);
+        spr.setTextDatum(TL_DATUM);
         spr.drawString(label,menuX+13,y);
       }
       char page[12];
       snprintf(page,sizeof(page),"%02u/%02u",static_cast<unsigned>(presetSelection+1),static_cast<unsigned>(count));
       spr.setTextDatum(TR_DATUM);
-      spr.setTextColor(0xFFFF);
-      spr.drawString(page,menuX+menuW-10,menuY+7);
-      char tuned[40];
-      snprintf(tuned,sizeof(tuned),"TUNED: %lu.%03lu MHz",
-        static_cast<unsigned long>(currentFrequency/1000),
-        static_cast<unsigned long>(currentFrequency%1000));
-      spr.setTextDatum(ML_DATUM);
-      spr.setTextColor(presetPreviewActive?green:cyan);
+      spr.setTextColor(white);
       spr.setFont(FONT_SMALL);
-      spr.drawString(tuned,menuX+12,menuY+137);
-      spr.setTextDatum(TR_DATUM);
-      spr.setTextColor(cyan);
-      spr.drawString("ROTATE: SELECT  CLICK: TUNE",menuX+menuW-12,menuY+137);
+      spr.drawString(page,menuX+menuW-10,menuY+7);
+      spr.setTextDatum(MC_DATUM);
+      spr.setTextColor(presetPreviewActive?green:0xBDF7);
+      spr.drawString(presetPreviewActive?"ABGESTIMMT":(presetPreviewPending?"ABSTIMMEN...":"BEREIT"),160,menuY+124);
+      spr.setTextDatum(ML_DATUM);
+      spr.setTextColor(white);
+      spr.drawString("DREHEN: WÄHLEN",menuX+12,menuY+143);
+      spr.setTextDatum(MR_DATUM);
+      spr.drawString("HALTEN: ZURÜCK",menuX+menuW-12,menuY+143);
       spr.setTextDatum(TL_DATUM);
     } else {
       const char* labels[kMenuCount]={

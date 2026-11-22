@@ -812,7 +812,8 @@ void drawNewsScreen()
   spr.drawString(item.source,10,45);
   spr.setTextColor(MUTED,PANEL);
   spr.setTextDatum(TR_DATUM);
-  spr.drawString(item.date,w-10,45);
+  char dateLine[16]; snprintf(dateLine,sizeof(dateLine),"%.14s",item.date);
+  spr.drawString(dateLine,w-10,45);
   spr.drawFastHLine(9,65,w-18,BLUE);
 
   // Four large body lines per page; turn pages rather than reducing font size.

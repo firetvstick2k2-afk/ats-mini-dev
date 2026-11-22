@@ -131,7 +131,7 @@ static String webPage(const char *body, const char *title, std::initializer_list
                       std::initializer_list<PageFragment> fragments = {});
 static const String webRadioPage();
 static const String webMemoryPage();
-static const String webConfigPage();
+static const String webConfigPage(const char *section);
 
 struct SplashUploadState
 {
@@ -854,9 +854,33 @@ static void webInit()
   });
   server.on("/memory", HTTP_POST, webSetMemories);
 
-  server.on("/config", HTTP_ANY, [] (AsyncWebServerRequest *request) {
+  server.on("/config", HTTP_GET, [] (AsyncWebServerRequest *request) {
     if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    request->send(200, "text/html", webConfigPage());
+    request->send(200, "text/html", webConfigPage("overview"));
+  });
+  server.on("/config/wifi", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    request->send(200, "text/html", webConfigPage("wifi"));
+  });
+  server.on("/config/display", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    request->send(200, "text/html", webConfigPage("display"));
+  });
+  server.on("/config/time", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    request->send(200, "text/html", webConfigPage("time"));
+  });
+  server.on("/config/splash", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    request->send(200, "text/html", webConfigPage("splash"));
+  });
+  server.on("/config/weather", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    request->send(200, "text/html", webConfigPage("weather"));
+  });
+  server.on("/config/news", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    request->send(200, "text/html", webConfigPage("news"));
   });
 
   server.on("/news/save", HTTP_POST, [] (AsyncWebServerRequest *request) {
@@ -876,7 +900,7 @@ static void webInit()
     }
     if(!newsService.setConfiguration(config))
       return request->send(500,"text/plain; charset=utf-8","RSS configuration could not be saved.");
-    request->redirect("/config");
+    request->redirect("/config/news");
   });
 
   server.on("/weather/save", HTTP_POST, [] (AsyncWebServerRequest *request) {
@@ -886,7 +910,7 @@ static void webInit()
     const String postal = request->getParam("postal", true)->value();
     if(!weatherService.setPostalCode(postal.c_str()))
       return request->send(400, "text/plain; charset=utf-8", "Ungültige Postleitzahl. Bitte genau fünf Ziffern eingeben.");
-    request->redirect("/config");
+    request->redirect("/config/weather");
   });
 
   server.on("/splash.png", HTTP_GET, [] (AsyncWebServerRequest *request) {
@@ -1015,135 +1039,122 @@ void webSetConfig(AsyncWebServerRequest *request)
 {
   if(!webIsAuthenticated(request)) return request->requestAuthentication();
 
+  String section = request->hasParam("section", true)
+    ? request->getParam("section", true)->value() : "wifi";
   uint32_t prefsSave = 0;
-  uint32_t epoch;
+  uint32_t epoch = 0;
   bool setClock = false;
+  bool haveSSID = false;
 
-  if(request->hasParam("datetime", true))
+  if(section == "time" && request->hasParam("datetime", true))
   {
     String dateTime = request->getParam("datetime", true)->value();
-    if(dateTime != "")
+    if(dateTime.length() && !webParseUTCDateTime(dateTime, &epoch))
+      return request->send(400, "text/plain", "Date/time must use the YYYY-mm-dd HH:MM:SS format and contain a valid UTC date and time.");
+    setClock = dateTime.length() > 0;
+  }
+
+  if(section == "splash")
+  {
+    if(request->hasParam("deletesplash", true))
     {
-      if(!webParseUTCDateTime(dateTime, &epoch))
-        return request->send(400, "text/plain", "Date/time must use the YYYY-mm-dd HH:MM:SS format and contain a valid UTC date and time.");
-      setClock = true;
+      LittleFS.remove(SPLASH_TEMP_PATH);
+      LittleFS.remove(SPLASH_PATH);
     }
-  }
-
-  if(request->hasParam("deletesplash", true))
-  {
-    LittleFS.remove(SPLASH_TEMP_PATH);
-    LittleFS.remove(SPLASH_PATH);
-  }
-  else if(request->hasParam("splash", true, true))
-  {
-    String filename = request->getParam("splash", true, true)->value();
-
-    if(filename != "")
+    else if(request->hasParam("splash", true, true))
     {
-      SplashUploadState *state = static_cast<SplashUploadState *>(request->_tempObject);
-      if(state && state->tooLarge)
-        return request->send(413, "text/plain", "The splash image must not exceed 512 KB.");
-
-      if(!filename.endsWith(".png"))
+      String filename = request->getParam("splash", true, true)->value();
+      if(filename.length())
       {
-        LittleFS.remove(SPLASH_TEMP_PATH);
-        return request->send(400, "text/plain", "The splash image filename must end in .png.");
-      }
-
-      if(!LittleFS.exists(SPLASH_TEMP_PATH))
-        return request->send(500, "text/plain", "The splash image could not be stored.");
-
-      String error = splashValidate();
-      if(error != "")
-      {
-        LittleFS.remove(SPLASH_TEMP_PATH);
-        return request->send(400, "text/plain", error);
-      }
-
-      if(!LittleFS.rename(SPLASH_TEMP_PATH, SPLASH_PATH))
-      {
-        LittleFS.remove(SPLASH_TEMP_PATH);
-        return request->send(500, "text/plain", "The splash image could not be installed.");
+        SplashUploadState *state = static_cast<SplashUploadState *>(request->_tempObject);
+        if(state && state->tooLarge)
+          return request->send(413, "text/plain", "The splash image must not exceed 512 KB.");
+        if(!filename.endsWith(".png"))
+        {
+          LittleFS.remove(SPLASH_TEMP_PATH);
+          return request->send(400, "text/plain", "The splash image filename must end in .png.");
+        }
+        if(!LittleFS.exists(SPLASH_TEMP_PATH))
+          return request->send(500, "text/plain", "The splash image could not be stored.");
+        String error = splashValidate();
+        if(error.length())
+        {
+          LittleFS.remove(SPLASH_TEMP_PATH);
+          return request->send(400, "text/plain", error);
+        }
+        if(!LittleFS.rename(SPLASH_TEMP_PATH, SPLASH_PATH))
+        {
+          LittleFS.remove(SPLASH_TEMP_PATH);
+          return request->send(500, "text/plain", "The splash image could not be installed.");
+        }
       }
     }
   }
 
-  // Start modifying preferences
-  prefs.begin("network", false, STORAGE_PARTITION);
-
-  // Save user name and password
-  if(request->hasParam("username", true) && request->hasParam("password", true))
+  if(section == "wifi")
   {
-    loginUsername = request->getParam("username", true)->value();
-    loginPassword = request->getParam("password", true)->value();
-
-    prefs.putString("loginusername", loginUsername);
-    prefs.putString("loginpassword", loginPassword);
-  }
-
-  // Save SSIDs and their passwords
-  bool haveSSID = false;
-  for(int j=0 ; j<3 ; j++)
-  {
-    char nameSSID[16], namePASS[16];
-
-    sprintf(nameSSID, "wifissid%d", j+1);
-    sprintf(namePASS, "wifipass%d", j+1);
-
-    if(request->hasParam(nameSSID, true) && request->hasParam(namePASS, true))
+    prefs.begin("network", false, STORAGE_PARTITION);
+    if(request->hasParam("username", true) && request->hasParam("password", true))
     {
-      String ssid = request->getParam(nameSSID, true)->value();
-      String pass = request->getParam(namePASS, true)->value();
-      prefs.putString(nameSSID, ssid);
-      prefs.putString(namePASS, pass);
-      haveSSID |= ssid != "" && pass != "";
+      loginUsername = request->getParam("username", true)->value();
+      loginPassword = request->getParam("password", true)->value();
+      prefs.putString("loginusername", loginUsername);
+      prefs.putString("loginpassword", loginPassword);
     }
-  }
-
-  // Save hidden SSID scanning preference
-  wifiScanHidden = request->hasParam("wifiscanhidden", true);
-  prefs.putBool("wifiscanhidden", wifiScanHidden);
-
-  // Save time zone
-  if(request->hasParam("utcoffset", true))
-  {
-    int idx = request->getParam("utcoffset", true)->value().toInt();
-    if(idx >= 0 && idx < getTotalUTCOffsets())
+    for(int j=0; j<3; ++j)
     {
+      char nameSSID[16], namePASS[16];
+      sprintf(nameSSID, "wifissid%d", j+1);
+      sprintf(namePASS, "wifipass%d", j+1);
+      if(request->hasParam(nameSSID, true) && request->hasParam(namePASS, true))
+      {
+        String ssid = request->getParam(nameSSID, true)->value();
+        String pass = request->getParam(namePASS, true)->value();
+        prefs.putString(nameSSID, ssid);
+        prefs.putString(namePASS, pass);
+        haveSSID |= ssid.length() && pass.length();
+      }
+    }
+    wifiScanHidden = request->hasParam("wifiscanhidden", true);
+    prefs.putBool("wifiscanhidden", wifiScanHidden);
+    prefs.end();
+  }
+  else if(section == "display")
+  {
+    if(request->hasParam("theme", true))
+    {
+      themeIdx = request->getParam("theme", true)->value().toInt();
+      if(themeIdx < 0 || themeIdx >= getTotalThemes())
+        return request->send(400, "text/plain", "Invalid theme selection.");
+      prefsSave |= SAVE_SETTINGS;
+    }
+    scrollDirection = request->hasParam("scroll", true) ? -1 : 1;
+    zoomMenu = request->hasParam("zoom", true);
+    setEncoderHalfStep(request->hasParam("encoderhalfstep", true));
+    prefsSave |= SAVE_SETTINGS;
+  }
+  else if(section == "time")
+  {
+    if(request->hasParam("utcoffset", true))
+    {
+      int idx = request->getParam("utcoffset", true)->value().toInt();
+      if(idx < 0 || idx >= getTotalUTCOffsets())
+        return request->send(400, "text/plain", "Invalid time zone selection.");
       utcOffsetIdx = idx;
       prefsSave |= SAVE_SETTINGS;
     }
   }
+  else if(section != "splash")
+    return request->send(400, "text/plain", "Unknown configuration section.");
 
-  // Save theme
-  if(request->hasParam("theme", true))
-  {
-    String theme = request->getParam("theme", true)->value();
-    themeIdx = theme.toInt();
-    prefsSave |= SAVE_SETTINGS;
-  }
-
-  // Save scroll direction and menu zoom
-  scrollDirection = request->hasParam("scroll", true)? -1 : 1;
-  zoomMenu        = request->hasParam("zoom", true);
-  setEncoderHalfStep(request->hasParam("encoderhalfstep", true));
-  prefsSave |= SAVE_SETTINGS;
-
-  // Done with the preferences
-  prefs.end();
-
-  // Save preferences immediately
-  prefsRequestSave(prefsSave, true);
-
+  if(prefsSave) prefsRequestSave(prefsSave, true);
   if(setClock) clockSetEpoch(epoch);
 
-  // Show config page again
-  request->redirect("/config");
+  String target = "/config/";
+  target += section;
+  request->redirect(target);
 
-  // If we are currently in AP mode, and infrastructure mode requested,
-  // and there is at least one SSID / PASS pair, request network connection
-  if(haveSSID && (wifiModeIdx>NET_AP_ONLY) && (WiFi.status()!=WL_CONNECTED))
+  if(section == "wifi" && haveSSID && wifiModeIdx > NET_AP_ONLY && WiFi.status() != WL_CONNECTED)
     netRequestConnect();
 }
 
@@ -1414,7 +1425,7 @@ static const String webMemoryPage()
   });
 }
 
-const String webConfigPage()
+const String webConfigPage(const char *section)
 {
   prefs.begin("network", true, STORAGE_PARTITION);
   String ssid1 = prefs.getString("wifissid1", "");
@@ -1426,37 +1437,46 @@ const String webConfigPage()
   bool scanHidden = prefs.getBool("wifiscanhidden", false);
   prefs.end();
 
-  String splashResolution = String(spr.width()) + "x" + String(spr.height());
+  const char *body = pageConfigOverview;
+  if(!strcmp(section, "wifi")) body = pageConfigWifi;
+  else if(!strcmp(section, "display")) body = pageConfigDisplay;
+  else if(!strcmp(section, "time")) body = pageConfigTime;
+  else if(!strcmp(section, "splash")) body = pageConfigSplash;
+  else if(!strcmp(section, "weather")) body = pageConfigWeather;
+  else if(!strcmp(section, "news")) body = pageConfigNews;
 
-  return webPage(pageConfig, pageConfigTitle, {
+  String splashResolution = String(spr.width()) + "x" + String(spr.height());
+  return webPage(body, pageConfigTitle, {
     {"title", pageConfigTitle},
     {"ssid1", ssid1}, {"pass1", pass1}, {"ssid2", ssid2}, {"pass2", pass2},
     {"ssid3", ssid3}, {"pass3", pass3}, {"username", loginUsername}, {"password", loginPassword},
-    {"scan_hidden", scanHidden? "CHECKED" : ""},
-    {"scroll", scrollDirection<0? "CHECKED" : ""},
-    {"half_step", encoderHalfStep? "CHECKED" : ""}, {"zoom", zoomMenu? "CHECKED" : ""},
+    {"scan_hidden", scanHidden ? "CHECKED" : ""},
+    {"scroll", scrollDirection < 0 ? "CHECKED" : ""},
+    {"half_step", encoderHalfStep ? "CHECKED" : ""},
+    {"zoom", zoomMenu ? "CHECKED" : ""},
     {"resolution", splashResolution}, {"postal", weatherService.postalCode()}
   }, {
     {"navigation", [](String &out) { webNavigation(out, "/config"); }},
     {"news_feeds", [](String &out) {
-      const NewsService::Configuration config=newsService.configuration();
-      for(uint8_t i=0;i<NewsService::MAX_FEEDS;i++)
-        pageAppend(out,pageConfigNewsFeed,{
-          {"index",String(i+1)},{"slot",String(i)},{"url",String(config.feeds[i].url)},
-          {"enabled",config.feeds[i].enabled?"CHECKED":""}
+      const NewsService::Configuration config = newsService.configuration();
+      for(uint8_t i=0; i<NewsService::MAX_FEEDS; ++i)
+        pageAppend(out, pageConfigNewsFeed, {
+          {"index", String(i+1)}, {"slot", String(i)}, {"url", String(config.feeds[i].url)},
+          {"enabled", config.feeds[i].enabled ? "CHECKED" : ""}
         });
     }},
     {"utc_options", [](String &out) {
-      for(int i=0 ; i<getTotalUTCOffsets(); i++)
+      for(int i=0; i<getTotalUTCOffsets(); ++i)
         pageAppend(out, pageConfigUtcOption, {
           {"value", String(i)}, {"minutes", String(utcOffsets[i].offset * 15)},
-          {"selected", utcOffsetIdx==i? "SELECTED" : ""}, {"label", utcOffsets[i].desc}
+          {"selected", utcOffsetIdx == i ? "SELECTED" : ""}, {"label", utcOffsets[i].desc}
         });
     }},
     {"theme_options", [](String &out) {
-      for(int i=0 ; i<getTotalThemes(); i++)
+      for(int i=0; i<getTotalThemes(); ++i)
         pageAppend(out, pageConfigThemeOption, {
-          {"value", String(i)}, {"selected", themeIdx==i? "SELECTED" : ""}, {"label", theme[i].name}
+          {"value", String(i)}, {"selected", themeIdx == i ? "SELECTED" : ""},
+          {"label", theme[i].name}
         });
     }},
     {"splash", [](String &out) {

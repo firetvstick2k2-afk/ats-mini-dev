@@ -437,7 +437,7 @@ void drawRttyDecoderPage() {
 
   if(menuOpen) {
     const int menuX=20,menuY=8,menuW=280,menuH=154;
-    constexpr uint16_t panel=0x0010,cyan=0x07FF;
+    constexpr uint16_t panel=0x0000,cyan=0x07FF;
     spr.fillRect(menuX,menuY,menuW,menuH,panel);
     spr.drawRect(menuX,menuY,menuW,menuH,cyan);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
@@ -505,7 +505,7 @@ void drawRttyDecoderPage() {
       spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
       for(uint8_t i=0;i<kMenuCount;++i) {
         const int y=menuY+27+i*17;
-        if(i==menuIndex) spr.fillRect(menuX+7,y-2,menuW-14,18,0x03E0);
+        if(i==menuIndex) spr.fillRect(menuX+7,y-2,menuW-14,18,0x07FF);
         spr.setTextColor(i==menuIndex?0x0000:white);
         spr.drawString(labels[i],menuX+14,y);
         char value[24]={};

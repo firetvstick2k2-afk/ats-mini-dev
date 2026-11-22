@@ -10,13 +10,22 @@
 #include <strings.h>
 #include <new>
 namespace {
-constexpr size_t MAX_FEED_BYTES=65536;
-constexpr uint32_t TIMEOUT_MS=6500, REFRESH_MS=1800000;
+constexpr size_t MAX_FEED_BYTES=98304;
+constexpr uint32_t TIMEOUT_MS=12000, REFRESH_MS=1800000;
 constexpr int64_t MIN_EPOCH=1700000000LL;
 String tagValue(const String& block,const char* tag) {
-  String open=String("<")+tag; int a=block.indexOf(open); if(a<0)return "";
-  a=block.indexOf('>',a); if(a<0)return ""; String close=String("</")+tag+">";
-  int b=block.indexOf(close,a+1); return b<0?String(""):block.substring(a+1,b);
+  String open=String("<")+tag;
+  int a=block.indexOf(open);
+  while(a>=0) {
+    int boundary=a+open.length();
+    if(boundary>=block.length() || block[boundary]=='>' || isspace((uint8_t)block[boundary])) break;
+    a=block.indexOf(open,boundary);
+  }
+  if(a<0)return "";
+  int end=block.indexOf('>',a); if(end<0)return "";
+  String close=String("</")+tag+">";
+  int b=block.indexOf(close,end+1);
+  return b<0?String(""):block.substring(end+1,b);
 }
 void utf8(String& out,uint32_t c) {
   if(c<0x80)out+=(char)c;
@@ -90,4 +99,36 @@ void NewsService::update(bool wifi,bool active){wifiConnected_=wifi;active_=acti
 void NewsService::taskEntry(void* p){static_cast<NewsService*>(p)->taskLoop();}
 void NewsService::taskLoop(){for(;;){if(refreshRequested_&&active_&&wifiConnected_){refreshRequested_=false;lastAttemptMs_=millis();if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);snapshot_->fetching=true;snapshot_->failed=false;xSemaphoreGive(snapshotMutex_);}void* memory=heap_caps_malloc(sizeof(Snapshot),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);if(!memory)memory=malloc(sizeof(Snapshot));Snapshot* fresh=memory?new(memory) Snapshot():nullptr;bool ok=fresh&&fetchFeeds(*fresh);if(fresh){fresh->fetching=false;fresh->failed=!ok;fresh->valid=fresh->count>0;fresh->updatedAtMs=millis();if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);*snapshot_=*fresh;xSemaphoreGive(snapshotMutex_);}fresh->~Snapshot();heap_caps_free(fresh);}else if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);snapshot_->fetching=false;snapshot_->failed=true;xSemaphoreGive(snapshotMutex_);}}vTaskDelay(pdMS_TO_TICKS(250));}}
 bool NewsService::fetchFeeds(Snapshot& s){Configuration c=configuration();bool any=false,success=false;for(uint8_t i=0;i<MAX_FEEDS&&s.count<MAX_ITEMS;i++)if(c.feeds[i].enabled&&c.feeds[i].url[0]){any=true;success=fetchFeed(i,c.feeds[i],s)||success;}sortItems(s);return any&&success;}
-bool NewsService::fetchFeed(uint8_t i,const Feed& f,Snapshot& s){WiFiClientSecure client;client.setInsecure();client.setTimeout(TIMEOUT_MS);HTTPClient http;http.setConnectTimeout(TIMEOUT_MS);http.setTimeout(TIMEOUT_MS);http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);http.setRedirectLimit(3);http.setReuse(false);http.setUserAgent("ATS-Mini-RSS/1.0");if(!http.begin(client,f.url))return false;int status=http.GET();if(status!=HTTP_CODE_OK){http.end();return false;}int len=http.getSize();if(len>(int)MAX_FEED_BYTES){http.end();return false;}String xml=http.getString();http.end();if(xml.length()<16||xml.length()>MAX_FEED_BYTES)return false;String fallback=hostOf(f.url),entry;int cursor=0,next=0;while(s.count<MAX_ITEMS&&nextEntry(xml,cursor,entry,next)){String title=tagValue(entry,"title"),encoded=tagValue(entry,"content:encoded"),desc=tagValue(entry,"description");if(!encoded.length())encoded=tagValue(entry,"content");String body=encoded.length()>=desc.length()?encoded:desc;String date=tagValue(entry,"pubDate");if(!date.length())date=tagValue(entry,"published");if(!date.length())date=tagValue(entry,"updated");String source=tagValue(entry,"source");if(!source.length())source=fallback;add(s,title,source,date,body,i);cursor=next;}return true;}
+bool NewsService::fetchFeed(uint8_t i,const Feed& f,Snapshot& s){
+  Serial.printf("[NEWS] Feed %u start: %s\n",(unsigned)(i+1),f.url);
+  WiFiClientSecure client; client.setInsecure(); client.setTimeout(TIMEOUT_MS);
+  HTTPClient http; http.setConnectTimeout(TIMEOUT_MS); http.setTimeout(TIMEOUT_MS);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); http.setRedirectLimit(5);
+  http.setReuse(false); http.setUserAgent("Mozilla/5.0 (compatible; ATS-Mini-RSS/1.0)");
+  if(!http.begin(client,f.url)){Serial.printf("[NEWS] Feed %u begin failed\n",(unsigned)(i+1));return false;}
+  http.addHeader("Accept","application/rss+xml, application/atom+xml, application/xml, text/xml, */*");
+  int status=http.GET();
+  if(status!=HTTP_CODE_OK){Serial.printf("[NEWS] Feed %u HTTP error: %d (%s)\n",(unsigned)(i+1),status,http.errorToString(status).c_str());http.end();return false;}
+  int len=http.getSize();
+  if(len>(int)MAX_FEED_BYTES){Serial.printf("[NEWS] Feed %u too large: %d bytes\n",(unsigned)(i+1),len);http.end();return false;}
+  String xml=http.getString(); http.end();
+  Serial.printf("[NEWS] Feed %u HTTP 200, bytes=%u\n",(unsigned)(i+1),(unsigned)xml.length());
+  if(xml.length()<16||xml.length()>MAX_FEED_BYTES){Serial.printf("[NEWS] Feed %u invalid/oversize body\n",(unsigned)(i+1));return false;}
+  String fallback=hostOf(f.url),entry; int cursor=0,next=0; uint8_t parsed=0; uint8_t before=s.count;
+  while(s.count<MAX_ITEMS&&nextEntry(xml,cursor,entry,next)){
+    String title=tagValue(entry,"title");
+    String encoded=tagValue(entry,"content:encoded"),desc=tagValue(entry,"description");
+    if(!encoded.length())encoded=tagValue(entry,"content");
+    if(!encoded.length())encoded=tagValue(entry,"summary");
+    String body=encoded.length()>=desc.length()?encoded:desc;
+    String date=tagValue(entry,"pubDate");
+    if(!date.length())date=tagValue(entry,"published");
+    if(!date.length())date=tagValue(entry,"updated");
+    if(!date.length())date=tagValue(entry,"dc:date");
+    String source=tagValue(entry,"source"); if(!source.length())source=fallback;
+    if(clean(title).length()>=3)++parsed;
+    add(s,title,source,date,body,i); cursor=next;
+  }
+  Serial.printf("[NEWS] Feed %u parsed=%u added=%u total=%u\n",(unsigned)(i+1),(unsigned)parsed,(unsigned)(s.count-before),(unsigned)s.count);
+  return parsed>0;
+}

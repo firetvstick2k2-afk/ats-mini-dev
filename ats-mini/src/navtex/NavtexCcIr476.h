@@ -3,9 +3,8 @@
 #include <Arduino.h>
 
 // CCIR-476 character decoder used by NAVTEX/SITOR-B.
-// Input symbols are 7-bit words, MSB first, with exactly four mark bits.
-// This class handles character validity and LTRS/FIGS translation only;
-// SITOR-B time-diversity alignment is deliberately handled by a separate stage.
+// The seven received bits are packed LSB-first into a 7-bit word.
+// Every valid word contains exactly four mark bits.
 class NavtexCcIr476 {
 public:
   static constexpr uint8_t kLetters = 0x5A;
@@ -25,9 +24,8 @@ public:
     return bits == 4;
   }
 
-  // Prefer the direct (DX) copy whenever it is valid. Use the delayed
-  // (RX) copy only when DX is invalid. Both inputs must already be aligned
-  // by the SITOR-B de-interleaver.
+  // Prefer a valid direct DX copy; use the earlier RX repeat only if DX
+  // is invalid. Both inputs must already represent the same character.
   static CopySource recover(uint8_t dx, uint8_t rx, uint8_t& recovered) {
     if (isValid(dx)) {
       recovered = dx & 0x7F;
@@ -41,8 +39,6 @@ public:
     return CopySource::None;
   }
 
-  // Returns true only when a printable character was produced.
-  // Control symbols update the character set or are intentionally ignored.
   bool decode(uint8_t rawCode, char& output) {
     const uint8_t code = rawCode & 0x7F;
     if (!isValid(code)) return false;

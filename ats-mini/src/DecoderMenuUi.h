@@ -37,11 +37,12 @@ inline void draw(const char* title,
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(kCyan);
   spr.drawString(title ? title : "DECODER", x + 12, y + 5);
-  if (status && status[0]) {
-    spr.setTextDatum(TR_DATUM);
-    spr.setTextColor(kMuted);
-    spr.drawString(status, x + w - 12, y + 5);
-  }
+  char counter[16];
+  snprintf(counter, sizeof(counter), "%02u / %02u",
+           static_cast<unsigned>(selected + 1), static_cast<unsigned>(count));
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(kCyan);
+  spr.drawString(counter, x + w - 12, y + 5);
 
   const uint8_t first = firstVisible(selected, count);
   for (uint8_t row = 0; row < kVisibleRows; ++row) {
@@ -54,7 +55,7 @@ inline void draw(const char* title,
       spr.fillRect(x + 7, rowY - 3, 3, 23, kCyan);
     }
     char numbered[8];
-    snprintf(numbered, sizeof(numbered), "%u.", static_cast<unsigned>(index + 1));
+    snprintf(numbered, sizeof(numbered), "%02u", static_cast<unsigned>(index + 1));
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(active ? kCyan : kMuted);
     spr.drawString(numbered, x + 14, rowY);
@@ -76,6 +77,12 @@ inline void draw(const char* title,
     spr.fillRoundRect(trackX - 2, thumbY, 5, thumbH, 2, kCyan);
   }
 
+  if (status && status[0]) {
+    spr.setFont(FONT_DEFAULT);
+    spr.setTextDatum(MC_DATUM);
+    spr.setTextColor(kMuted);
+    spr.drawString(status, x + w / 2, y + 117);
+  }
   spr.drawFastHLine(x + 10, y + 125, w - 20, kBlue);
   spr.setFont(FONT_DEFAULT);
   spr.setTextDatum(BL_DATUM);

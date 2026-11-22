@@ -46,8 +46,8 @@ String clean(String s) {
   String out;out.reserve(s.length());bool tag=false,space=false;
   for(size_t i=0;i<s.length();i++){char c=s[i];if(c=='<'){tag=true;space=true;continue;}if(c=='>'){tag=false;continue;}if(tag)continue;if(isspace((uint8_t)c)||(uint8_t)c<32){space=true;continue;}if(space&&out.length())out+=' ';space=false;out+=c;}
   out=entities(out);
-  out.replace("\\xC3\\xA4","ae");out.replace("\\xC3\\xB6","oe");out.replace("\\xC3\\xBC","ue");
-  out.replace("\\xC3\\x84","Ae");out.replace("\\xC3\\x96","Oe");out.replace("\\xC3\\x9C","Ue");out.replace("\\xC3\\x9F","ss");
+  out.replace("\xC3\xA4","ae");out.replace("\xC3\xB6","oe");out.replace("\xC3\xBC","ue");
+  out.replace("\xC3\x84","Ae");out.replace("\xC3\x96","Oe");out.replace("\xC3\x9C","Ue");out.replace("\xC3\x9F","ss");
   out.trim();while(out.indexOf("  ")>=0)out.replace("  "," ");return out;
 }
 int64_t parseDate(String s) {

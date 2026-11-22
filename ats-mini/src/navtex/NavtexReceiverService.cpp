@@ -131,7 +131,7 @@ bool NavtexReceiverService::requestSelfTest() {
 void NavtexReceiverService::runSelfTest() {
   // Complete, known NAVTEX frame. The generated samples travel through the
   // same 4 kHz demodulator, phasing detector, FEC combiner and parser as RF audio.
-  static const char frame[] = "ZCZC CA23\\r\\nNAVAREA WARNING\\r\\nNNNN";
+  static const char frame[] = "ZCZC CA23\r\nNAVAREA WARNING\r\nNNNN";
   uint8_t codes[128]{};
   size_t codeCount = 0;
   bool figures = false;

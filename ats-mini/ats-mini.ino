@@ -1499,6 +1499,17 @@ void loop()
     lastDecoderWaterfallRefresh = waterfallNow;
   }
 
+  // HJB's RSSI/SNR history samples every 100 ms. Give this layout its own
+  // timed redraw so the rolling trace advances even when radio values are
+  // steady and no encoder event occurs.
+  static uint32_t lastHjbRefresh = 0;
+  if(currentCmd == CMD_NONE && uiLayoutIdx == 7 &&
+     (waterfallNow - lastHjbRefresh) >= 100)
+  {
+    needRedraw = true;
+    lastHjbRefresh = waterfallNow;
+  }
+
   if(needRedraw) {
     drawScreen();
     // Statischer Rahmen und blaue Seiten des Eco-Wasserfalls beim Redraw

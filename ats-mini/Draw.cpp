@@ -807,7 +807,7 @@ void drawNewsScreen()
 
   // Four readable body lines per page; remaining text is reached by turning pages.
   const char* body=item.text;
-  constexpr size_t CHARS_PER_PAGE=136;
+  constexpr size_t CHARS_PER_PAGE=128;
   size_t offset=(size_t)newsCurrentPage*CHARS_PER_PAGE;
   const size_t length=strlen(body);
   if(offset>=length) offset=0;

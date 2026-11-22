@@ -7,6 +7,7 @@
 #include "Ota.h"
 #include "BleMode.h"
 #include "Menu.h"
+#include "src/DecoderMenuUi.h"
 #include "Memories.h"
 #include "Patches.h"
 #include "FreqKeypad.h"
@@ -2276,55 +2277,34 @@ bool decoderFrequencyTick(uint32_t now)
 
 void drawDecoderFrequencyMenu()
 {
-  const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF, green = 0x07E0;
-  spr.fillSprite(bg);
-  spr.drawRoundRect(3, 3, 314, 164, 5, blue);
-  spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(cyan);
-  spr.drawString("DECODER-FREQUENZEN", 12, 8, &lgfx::fonts::Orbitron_Light_24);
-  spr.setTextDatum(TR_DATUM);
-  char counter[16];
-  if(decoderPresetView)
-    snprintf(counter, sizeof(counter), "%u / %u", decoderPresetIndex + 1, kDecoderFrequencyCategories[decoderCategoryIndex].presetCount);
-  else snprintf(counter, sizeof(counter), "%u / %u", decoderCategoryIndex + 1, kDecoderFrequencyCategoryCount);
-  spr.drawString(counter, 307, 12, FONT_SMALL);
-  spr.setFont(FONT_SMALL);
-  for(int row = -2; row <= 2; ++row)
-  {
-    const int selected = decoderPresetView ? decoderPresetIndex : decoderCategoryIndex;
-    const int count = decoderPresetView ? kDecoderFrequencyCategories[decoderCategoryIndex].presetCount : kDecoderFrequencyCategoryCount;
-    const int index = (selected + row + count) % count;
-    const int y = 43 + (row + 2) * 20;
-    if(row == 0) spr.fillRoundRect(8, y - 9, 304, 19, 3, 0x001F);
-    spr.setTextColor(row == 0 ? green : cyan);
-    if(!decoderPresetView)
-    {
-      spr.setTextDatum(MC_DATUM);
-      spr.drawString(decoderCategoryLabels[index], 160, y, FONT_SMALL);
-    }
-    else
-    {
-      const uint8_t presetIndex = kDecoderFrequencyCategories[decoderCategoryIndex].firstPreset + index;
-      const DecoderFrequencyPreset &preset = kDecoderFrequencyPresets[presetIndex];
-      char frequency[28];
-      snprintf(frequency, sizeof(frequency), "%lu.%03lu %s",
-        static_cast<unsigned long>(preset.frequencyKHz / 1000),
-        static_cast<unsigned long>(preset.frequencyKHz % 1000),
-        preset.modulation == USB ? "USB" : preset.modulation == LSB ? "LSB" : "AM");
-      spr.setTextDatum(TL_DATUM);
-      spr.drawString(preset.label, 13, y - 7, FONT_SMALL);
-      spr.setTextDatum(TR_DATUM);
-      spr.drawString(frequency, 306, y - 7, FONT_SMALL);
-    }
+  if(!decoderPresetView) {
+    DecoderMenuUi::draw("DECODER FREQUENZEN", decoderCategoryLabels, nullptr,
+                        kDecoderFrequencyCategoryCount, decoderCategoryIndex,
+                        "DREHEN: WÄHLEN", "KLICK: ÖFFNEN");
+    return;
   }
-  spr.setTextColor(cyan);
-  drawXXLText("DREHEN: WÄHLEN",10,151,cyan,FONT_SMALL);
-  drawXXLTextRight("HALTEN: ZURÜCK",310,151,cyan,FONT_SMALL);
-  spr.setTextDatum(MC_DATUM);
-  if(decoderPresetView)
-  {
-    spr.setTextColor(decoderLastTunedPreset == decoderPresetIndex ? green : cyan);
-    spr.drawString(decoderLastTunedPreset == decoderPresetIndex ? "ABGESTIMMT" : "ABSTIMMUNG IN 2 SEKUNDEN", 160, 137, FONT_SMALL);
+
+  const auto &category = kDecoderFrequencyCategories[decoderCategoryIndex];
+  char storage[kDecoderFrequencyPresetCount][40] = {};
+  char valueStorage[kDecoderFrequencyPresetCount][20] = {};
+  const char* labels[kDecoderFrequencyPresetCount] = {};
+  const char* values[kDecoderFrequencyPresetCount] = {};
+  for(uint8_t i = 0; i < category.presetCount; ++i) {
+    const uint8_t presetIndex = category.firstPreset + i;
+    const DecoderFrequencyPreset &preset = kDecoderFrequencyPresets[presetIndex];
+    const char* name = preset.label;
+    if(!strncmp(name, "CW ", 3)) name += 3;
+    else if(!strncmp(name, "FT8 ", 4) || !strncmp(name, "FT4 ", 4)) name += 4;
+    else if(!strncmp(name, "RTTY ", 5)) name += 5;
+    snprintf(storage[i], sizeof(storage[i]), "%s", name);
+    snprintf(valueStorage[i], sizeof(valueStorage[i]), "%lu.%03lu %s",
+             static_cast<unsigned long>(preset.frequencyKHz / 1000),
+             static_cast<unsigned long>(preset.frequencyKHz % 1000),
+             preset.modulation == USB ? "USB" : preset.modulation == LSB ? "LSB" : "AM");
+    labels[i] = storage[i];
+    values[i] = valueStorage[i];
   }
-  else { drawXXLTextCentered("KLICK: ÖFFNEN",160,137,cyan,FONT_SMALL); }
+  const char* status = decoderLastTunedPreset == decoderPresetIndex ? "ABGESTIMMT" : "ABSTIMMUNG IN 2 SEK.";
+  DecoderMenuUi::draw("DECODER FREQUENZEN", labels, values, category.presetCount,
+                      decoderPresetIndex, "DREHEN: WÄHLEN", "KLICK: ÖFFNEN", status);
 }

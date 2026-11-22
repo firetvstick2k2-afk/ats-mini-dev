@@ -278,7 +278,7 @@ void rttyUiRotate(int16_t delta) {
       if(next>=count) next=0;
       presetSelection=static_cast<uint8_t>(next);
       if(presetSelection<presetScroll) presetScroll=presetSelection;
-      if(presetSelection>=presetScroll+6) presetScroll=presetSelection-5;
+      if(presetSelection>=presetScroll+5) presetScroll=presetSelection-4;
       scheduleRttyPresetPreview(millis());
       return;
     }
@@ -378,71 +378,84 @@ bool rttyUiTick(uint32_t now) {
 }
 
 void drawRttyDecoderPage() {
-  constexpr uint16_t navy=0x0000,blueA=0x0010,blueB=0x0020,frame=0x07FF,green=0x07E0,red=0xF800,cyan=0x07FF,white=0xFFFF;
-  spr.fillSprite(navy);
-  spr.drawRect(2,2,316,166,cyan);
-  spr.fillRect(8,5,304,31,blueA);
-  spr.drawRect(8,5,304,31,cyan);
+  constexpr uint16_t bg=0x0000,cyan=0x07FF,green=0x07E0,white=0xFFFF,grey=0x7BEF,red=0xF800;
+  spr.fillSprite(bg);
+
+  // Clean FT8-family presentation: no decorative data boxes.
+  char frequencyText[24];
+  snprintf(frequencyText,sizeof(frequencyText),"%lu.%03lu",
+           static_cast<unsigned long>(currentFrequency/1000),
+           static_cast<unsigned long>(currentFrequency%1000));
+  spr.setTextColor(white);
+  spr.setTextDatum(TL_DATUM);
+  const int frequencyWidth=spr.drawString(frequencyText,8,5,&lgfx::fonts::Orbitron_Light_24);
   spr.setTextDatum(ML_DATUM);
-  spr.setTextColor(green,blueA);
-  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-  char freq[40];
-  snprintf(freq,sizeof(freq),"%lu kHz  %s",static_cast<unsigned long>(currentFrequency),currentMode==USB?"USB":currentMode==LSB?"LSB":"AM");
-  spr.drawString(freq,16,20);
+  spr.setTextColor(cyan);
+  spr.drawString("kHz",8+frequencyWidth+7,19,FONT_SMALL);
+
   const bool active=service.signal();
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(green,blueA);
-  spr.setFont(&lgfx::fonts::FreeSans9pt7b);
   char status[32];
-  snprintf(status,sizeof(status),"%s %.2fBd",active?"RX":"NO RX",service.baud());
-  spr.drawString(status,286,20);
+  snprintf(status,sizeof(status),"%s  %.2f Bd",active?"RX":"NO RX",service.baud());
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(active?green:grey);
+  spr.drawString(status,311,15,FONT_SMALL);
+
+  char toneInfo[48];
+  if(service.markHz()>0 && service.spaceHz()>0)
+    snprintf(toneInfo,sizeof(toneInfo),"MARK %.0f  SPACE %.0f Hz",service.markHz(),service.spaceHz());
+  else snprintf(toneInfo,sizeof(toneInfo),"TONE PAIR: SEARCHING");
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(cyan);
+  spr.drawString(toneInfo,10,37,FONT_SMALL);
+
+  char bfoInfo[32];
+  if(bfoAuto) snprintf(bfoInfo,sizeof(bfoInfo),"BFO AUTO");
+  else snprintf(bfoInfo,sizeof(bfoInfo),"BFO %+d Hz",static_cast<int>(currentBFO));
+  spr.setTextDatum(TR_DATUM);
+  spr.drawString(bfoInfo,310,37,FONT_SMALL);
 
   const char* decoded=service.text();
   const size_t len=strlen(decoded);
   constexpr size_t charsPerLine=34;
-  const int panelY[4]={40,69,98,127};
+  const int rowY[4]={61,85,109,133};
+  const size_t visibleChars=charsPerLine*4;
+  const size_t first=len>visibleChars?len-visibleChars:0;
   for(int row=0;row<4;++row) {
-    const uint16_t panel=(row&1)?blueB:blueA;
-    spr.fillRect(8,panelY[row],304,25,panel);
-    spr.drawRect(8,panelY[row],304,25,cyan);
-    size_t start=0,visible=0;
-    const size_t rowOffset=static_cast<size_t>(row)*charsPerLine;
-    if(len>rowOffset) {
-      visible=len-rowOffset;
-      if(visible>charsPerLine) visible=charsPerLine;
-      if(len>=static_cast<size_t>((row+1)*charsPerLine)) start=len-static_cast<size_t>((row+1)*charsPerLine);
-    }
-    if(visible) {
+    const size_t offset=first+static_cast<size_t>(row)*charsPerLine;
+    if(offset<len) {
+      size_t count=len-offset;
+      if(count>charsPerLine) count=charsPerLine;
       char line[charsPerLine+1];
-      memcpy(line,decoded+start,visible); line[visible]=0;
-      spr.setTextDatum(ML_DATUM);
-      spr.setTextColor(green,panel);
+      memcpy(line,decoded+offset,count);
+      line[count]=0;
+      spr.setTextDatum(TL_DATUM);
+      spr.setTextColor(green);
       spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-      spr.drawString(line,14,panelY[row]+12);
-    } else if(row==0 && !active) {
-      spr.setTextDatum(ML_DATUM); spr.setTextColor(0xFFFF,panel);
-      spr.setFont(&lgfx::fonts::FreeSans9pt7b);
-      spr.drawString("WAITING FOR RTTY SIGNAL...",14,panelY[row]+12);
+      spr.drawString(line,12,rowY[row]);
+    } else if(row==0&&!active) {
+      spr.setTextDatum(TL_DATUM);
+      spr.setTextColor(grey);
+      spr.setFont(FONT_SMALL);
+      spr.drawString("WAITING FOR RTTY SIGNAL...",12,rowY[row]);
     }
   }
-  const uint16_t led=active?green:red;
-  if((millis()/350)&1) spr.fillCircle(300,10,3,led); else spr.drawCircle(300,10,3,led);
+
   char footer[80];
-  if(bfoAuto) snprintf(footer,sizeof(footer),"BFO AUTO  CLICK: ACTIONS  LONG: EXIT");
-  else snprintf(footer,sizeof(footer),"ROTATE: BFO  CLICK: ACTIONS  LONG: EXIT  %+d Hz",static_cast<int>(currentBFO));
+  if(bfoAuto) snprintf(footer,sizeof(footer),"CLICK: ACTIONS  LONG PRESS: EXIT");
+  else snprintf(footer,sizeof(footer),"ROTATE: BFO  CLICK: ACTIONS  LONG: EXIT");
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(cyan,navy);
+  spr.setTextColor(cyan);
   spr.setFont(FONT_SMALL);
-  spr.drawString(footer,160,163);
+  spr.drawString(footer,160,162);
 
   if(menuOpen) {
     const int menuX=20,menuY=8,menuW=280,menuH=154;
-    constexpr uint16_t panel=0x0000,cyan=0x07FF;
-    spr.fillRect(menuX,menuY,menuW,menuH,panel);
+    spr.fillRect(menuX,menuY,menuW,menuH,bg);
     spr.drawRect(menuX,menuY,menuW,menuH,cyan);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);
+
     if(presetMenuOpen) {
       spr.drawString("RTTY PRESETS",menuX+12,menuY+7);
       const uint8_t count=rttyPresetCount();
@@ -460,8 +473,8 @@ void drawRttyDecoderPage() {
           static_cast<unsigned>(preset->frequencyKHz%1000),
           preset->modulation==USB?"USB":preset->modulation==LSB?"LSB":"AM");
         const int y=menuY+29+row*19;
-        if(index==presetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x07FF);
-        spr.setTextColor(index==presetSelection?0x0000:white);
+        if(index==presetSelection) spr.drawRect(menuX+7,y-3,menuW-14,19,cyan);
+        spr.setTextColor(index==presetSelection?cyan:white);
         spr.setFont(FONT_SMALL);
         spr.setTextDatum(TL_DATUM);
         spr.drawString(label,menuX+13,y);
@@ -480,8 +493,17 @@ void drawRttyDecoderPage() {
       spr.drawString("DREHEN: WÄHLEN",menuX+12,menuY+143);
       spr.setTextDatum(MR_DATUM);
       spr.drawString("HALTEN: ZURÜCK",menuX+menuW-12,menuY+143);
-      spr.setTextDatum(TL_DATUM);
     } else {
+      spr.drawString("RTTY ACTIONS",menuX+12,menuY+7);
+      char toneStatus[48];
+      if(service.markHz()>0 && service.spaceHz()>0)
+        snprintf(toneStatus,sizeof(toneStatus),"M %.0f S %.0f Hz",service.markHz(),service.spaceHz());
+      else snprintf(toneStatus,sizeof(toneStatus),"TONE SEARCH");
+      spr.setFont(FONT_SMALL);
+      spr.setTextDatum(TR_DATUM);
+      spr.setTextColor(cyan);
+      spr.drawString(toneStatus,menuX+menuW-12,menuY+10);
+      spr.setTextDatum(TL_DATUM);
       const char* labels[kMenuCount]={
         "RTTY PRESETS",
         bfoAuto?"BFO MODE       AUTO":"BFO MODE       MANUAL",
@@ -492,35 +514,25 @@ void drawRttyDecoderPage() {
         "BACK",
         "EXIT RTTY"
       };
-      spr.drawString("RTTY ACTIONS",menuX+12,menuY+7);
-      char toneStatus[48];
-      if(service.markHz()>0 && service.spaceHz()>0)
-        snprintf(toneStatus,sizeof(toneStatus),"M %.0f  S %.0f Hz",service.markHz(),service.spaceHz());
-      else snprintf(toneStatus,sizeof(toneStatus),"TONE PAIR: SEARCHING");
       spr.setFont(FONT_SMALL);
-      spr.setTextDatum(TR_DATUM);
-      spr.setTextColor(cyan);
-      spr.drawString(toneStatus,menuX+menuW-12,menuY+10);
-      spr.setTextDatum(TL_DATUM);
-      spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
       for(uint8_t i=0;i<kMenuCount;++i) {
-        const int y=menuY+27+i*17;
-        if(i==menuIndex) spr.fillRect(menuX+7,y-2,menuW-14,18,0x07FF);
-        spr.setTextColor(i==menuIndex?0x0000:white);
-        spr.drawString(labels[i],menuX+14,y);
+        const int y=menuY+29+i*14;
+        if(i==menuIndex) spr.drawRect(menuX+7,y-3,menuW-14,16,cyan);
+        spr.setTextColor(i==menuIndex?cyan:white);
+        spr.setTextDatum(TL_DATUM);
+        spr.drawString(labels[i],menuX+13,y);
         char value[24]={};
         if(i==2) snprintf(value,sizeof(value),"%.2f Bd",baudChoices[baudIndex]);
         else if(i==3) snprintf(value,sizeof(value),"%s",polarityNames[polarityIndex]);
         if(value[0]) {
           spr.setTextDatum(TR_DATUM);
-          spr.setTextColor(i==menuIndex?0x0000:white);
-          spr.drawString(value,menuX+menuW-14,y);
-          spr.setTextDatum(TL_DATUM);
+          spr.setTextColor(i==menuIndex?cyan:white);
+          spr.drawString(value,menuX+menuW-13,y);
         }
       }
+      spr.setTextDatum(MC_DATUM);
       spr.setTextColor(cyan);
-      spr.setFont(FONT_SMALL);
-      spr.drawString(menuEditing?"ROTATE: CHANGE  CLICK: DONE":"ROTATE: SELECT  CLICK: OPEN",menuX+12,menuY+137);
+      spr.drawString(menuEditing?"ROTATE: CHANGE  CLICK: DONE":"ROTATE: SELECT  CLICK: OPEN",160,menuY+143);
     }
   }
 }

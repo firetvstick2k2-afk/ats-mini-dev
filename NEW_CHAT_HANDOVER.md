@@ -630,3 +630,12 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Preset-Scrollgrenze korrigiert: Bei fünf sichtbaren Zeilen wird ab Auswahl außerhalb des Fensters passend gescrollt (vorher wurde erst ab sechs Positionen verschoben, wodurch die Auswahl bei Position 6 unsichtbar werden konnte).
 - Geändert: `ats-mini/src/cw/CwUi.cpp`; Commit `64ed5d234fa795fb7f81af77b7df418453abcb1f` auf `development`.
 - RTTY wurde vom Nutzer noch nicht geprüft und deshalb nicht geändert. Kein Build/Compile/Flash durch den Assistenten; Nutzer startet Builds selbst. `main` bleibt unangetastet.
+
+
+## RTTY-FT8-Layout und FT8-Preset-Scrollkorrektur — 2026-11-22
+- RTTY-Hauptanzeige an die schlichte FT8/CW-Darstellung angeglichen: große Frequenzanzeige, kompakte RX-/Baud- und Tonpaar-/BFO-Informationen, borderloser Dekodiertext; keine dekorativen Datenkästchen.
+- RTTY Actions und Presets: schwarzer Hintergrund, dünner cyanfarbener Auswahlrahmen ohne Füllung; ausgewählter Text cyan, normale Schrift weiß. Bestehende RTTY-Aktionen, Baud-/Polaritätsauswahl, BFO-Steuerung sowie Preset-Preview-/Commit-Ablauf bleiben erhalten.
+- RTTY-Preset-Scrollgrenze auf fünf sichtbare Zeilen korrigiert (Scroll ab `presetScroll + 5`, dann `selection - 4`).
+- FT8/FT4-Presetmenü ebenfalls auf ungefüllten cyanfarbenen Auswahlrahmen umgestellt; Scrollgrenze auf fünf sichtbare Zeilen korrigiert.
+- Commits auf `development`: RTTY `dd1371a5ed33ad3d28e027be940ddaf0baddd91d`; FT8 `96ddf9a1984eeb459bf331c353c8136aef252624`.
+- Geänderte Dateien: `ats-mini/src/rtty/RttyUi.cpp`, `ats-mini/src/ftx/FtxUi.cpp`. Kein Build/Compile/Flash durch den Assistenten; Nutzer startet Builds selbst. `main` unangetastet.

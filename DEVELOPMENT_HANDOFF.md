@@ -1386,3 +1386,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - CW behält CURRENT und seine neun CW-Presets; FT8/FT4 und RTTY behalten ihre bestehende Preview-/Übernahme-Logik. Status im CW-Menü lautet bei CURRENT „ABGESTIMMT“, bei anderer noch nicht übernommener Auswahl „AUSWAHL“.
 - Änderungen: `FtxUi.cpp` Commit `57a6b1f3`; `CwUi.cpp` Commits `02eb5967`, `a5997787`; `RttyUi.cpp` Commit `96f4c1d0`; `DecoderFrequencyList.h` Commit `8f93dd83`.
 - Nur Source-Review. Kein Compile, kein GitHub Actions Build, kein Flash und kein Hardwaretest. Nutzer startet OSPI-DE manuell; `main` bleibt unangetastet.
+
+
+## Decoder-Preset-Menüs – Layoutdetails präzisiert (2026-11-22)
+- Überschriften bleiben decoderabhängig: `FT8 PRESETS` / `FT4 PRESETS`, `CW PRESETS`, `RTTY PRESETS`.
+- Vereinheitlicht wird ausschließlich der Aufbau: identischer Rahmen und Innenabstand, fünf kompakte Frequenzzeilen, cyan/türkise Auswahlmarkierung, Seitenzähler oben rechts sowie Statusanzeige unten mittig mit `ABGESTIMMT` während einer aktiven/übernommenen Abstimmung. Bedienhinweise stehen links und rechts unten.
+- FT8/CW/RTTY Presetlisten und vorhandene Tuning-/Preview-Abläufe bleiben decoder-spezifisch erhalten.
+- Korrektur gegenüber dem vorherigen Eintrag: keine gemeinsame Überschrift `DECODER-FREQUENZ`; der Titel benennt jeweils den Decoder.
+- Geänderte Dateien: `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/cw/CwUi.cpp`, `ats-mini/src/rtty/RttyUi.cpp`; RTTY-Presetliste in `ats-mini/src/radio/DecoderFrequencyList.h` ergänzt.
+- Source-only; kein Compile, GitHub Actions Build, Flash oder Hardwaretest. Weiterhin nur `development`; `main` unangetastet. OSPI-DE-Build nicht gestartet.

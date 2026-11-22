@@ -815,6 +815,13 @@ void loop()
 
   static bool lastNewsDrawFetching = false;
   static uint8_t lastNewsDrawCount = 0;
+  static uint32_t lastNewsTickerRedraw = 0;
+  if(currentCmd == CMD_NEWS && (uint32_t)(millis()-lastNewsTickerRedraw) >= 180)
+  {
+    lastNewsTickerRedraw = millis();
+    needRedraw = true;
+  }
+
   if(currentCmd == CMD_NEWS)
   {
     const uint8_t count = newsService.itemCount();
@@ -862,8 +869,7 @@ void loop()
     {
       NewsService::Item item;
       newsService.getItem(newsCurrentIndex % count, item);
-      uint8_t pages = (uint8_t)((strlen(item.text) + 239) / 240);
-      if(!pages) pages = 1;
+      uint8_t pages = newsPageCountForCurrentItem();
       int next = (int)newsCurrentPage + encCount;
       if(next < 0) { newsCurrentIndex = newsCurrentIndex ? newsCurrentIndex - 1 : count - 1; newsCurrentPage = 0; }
       else if(next >= pages) { newsCurrentIndex = (newsCurrentIndex + 1) % count; newsCurrentPage = 0; }

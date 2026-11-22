@@ -692,7 +692,7 @@ static void drawMoonCalendarScreen()
   }
 
   // Mondphase als echte beleuchtete Flaeche mit gekruemmtem Terminator.
-  const int cx=58, cy=84, radius=34;
+  const int cx=54, cy=77, radius=34;
   const float phase=moon.phase;
   const float terminator=cosf(6.28318530718f*phase);
   spr.fillCircle(cx,cy,radius,0x2104);

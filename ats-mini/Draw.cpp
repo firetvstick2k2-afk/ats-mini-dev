@@ -691,17 +691,28 @@ static void drawMoonCalendarScreen()
     return;
   }
 
-  // Kompakter Mond: mehr Platz fuer die Phasenbezeichnung rechts.
+  // Mondphase als echte beleuchtete Flaeche mit gekruemmtem Terminator.
   const int cx=58, cy=84, radius=24;
-  spr.fillCircle(cx,cy,radius,MOON_GOLD);
   const float phase=moon.phase;
-  if(phase < 0.03f || phase > 0.97f)
-    spr.fillCircle(cx,cy,radius,0x2104);
-  else if(!(phase > 0.47f && phase < 0.53f))
+  const float terminator=cosf(2.0f*static_cast<float>(kPi)*phase);
+  spr.fillCircle(cx,cy,radius,0x2104);
+  for(int dy=-radius;dy<=radius;++dy)
   {
-    const int offset=static_cast<int>(4.0f*radius*
-      (phase < 0.5f ? -phase : (1.0f-phase)));
-    spr.fillCircle(cx+offset,cy,radius,0x2104);
+    const float yNorm=static_cast<float>(dy)/radius;
+    const int halfWidth=static_cast<int>(sqrtf(1.0f-yNorm*yNorm)*radius);
+    const int edge=cx+static_cast<int>(lroundf(terminator*halfWidth));
+    if(phase<0.5f)
+    {
+      const int xStart=max(cx-halfWidth,edge);
+      const int xEnd=cx+halfWidth;
+      if(xEnd>=xStart) spr.drawFastHLine(xStart,cy+dy,xEnd-xStart+1,MOON_GOLD);
+    }
+    else
+    {
+      const int xStart=cx-halfWidth;
+      const int xEnd=min(cx+halfWidth,edge);
+      if(xEnd>=xStart) spr.drawFastHLine(xStart,cy+dy,xEnd-xStart+1,MOON_GOLD);
+    }
   }
   spr.drawCircle(cx,cy,radius,MOON_GOLD);
 

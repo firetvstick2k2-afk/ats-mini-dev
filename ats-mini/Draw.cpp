@@ -696,12 +696,13 @@ static void drawMoonCalendarScreen()
   const float phase=moon.phase;
   const float terminator=cosf(6.28318530718f*phase);
   spr.fillCircle(cx,cy,radius,0x2104);
+  if(phase>0.01f && phase<0.99f)
   for(int dy=-radius;dy<=radius;++dy)
   {
     const float yNorm=static_cast<float>(dy)/radius;
     const int halfWidth=static_cast<int>(sqrtf(1.0f-yNorm*yNorm)*radius);
     const int edge=cx+static_cast<int>(lroundf(terminator*halfWidth));
-    if(phase<0.5f)
+    if(phase<=0.5f)
     {
       const int xStart=max(cx-halfWidth,edge);
       const int xEnd=cx+halfWidth;

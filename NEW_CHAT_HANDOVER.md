@@ -773,3 +773,15 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 - Commits: Draw `2493d7ca080ceae39e2745ba750172e2fcb4ad1a`; WeatherService.h `3f4475ef0a3fec6d17a8c960db8352c5a131a255`; WeatherService.cpp `8489f40092db1dbaddfb15e5aa7c8d8750d549e6`.
 - Quelltextänderungen nach dem Commit erneut abgerufen und geprüft. Kein Build und kein Gerätetest durchgeführt; Nutzer muss die Anzeige auf dem ATS Mini prüfen.
 
+
+
+## Verbindliche Sprach-Gleichhaltung der Menüs (ab 2026-11-22)
+
+- Deutsch, Englisch und Italienisch müssen bei jeder Änderung funktional und strukturell gleichauf bleiben.
+- Das gilt vorrangig für Hauptmenü, sämtliche Untermenüs, alle Einstellungsmenüs und jede weitere Unterebene.
+- Alle Menüeinträge und Funktionsbezeichnungen müssen verständlich in der jeweiligen Sprache übersetzt sein, damit Nutzer Funktionen finden und bedienen können.
+- Neue Menüpunkte, Untermenüs und Funktionen werden immer gleichzeitig in allen drei Sprachversionen ergänzt.
+- Vor Abschluss jeder Menü-/UI-Änderung sind Struktur, Reihenfolge, Einträge und Funktionsverfügbarkeit in allen drei Sprachdateien abzugleichen. Keine Sprache darf hinterherhinken.
+- Kleine Statusmeldungen, technische Hinweise und nebensächliche Texte innerhalb einzelner Funktionen sind nachrangig; der Schwerpunkt liegt auf der Auffindbarkeit und Verständlichkeit der Menüs.
+- Diese Prüfung ist verbindlicher Teil der Abschlusskontrolle und muss bei passenden Änderungen auch in zukünftigen Handoffs stehen.
+

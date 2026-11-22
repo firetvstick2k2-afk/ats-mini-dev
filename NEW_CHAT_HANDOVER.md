@@ -1,5 +1,18 @@
 # ATS Mini Dev — Übergabe für neuen Chat
 
+## Wichtige Vorgabe: Lesbarkeit und visuelle Gestaltung für den Nutzer (2026-11-22)
+
+- Der Nutzer hat eine eingeschränkte Seh-/Lesefähigkeit und trägt eine Brille (+1,5 Dioptrien beidseitig). Er beschreibt keine grundsätzlichen Probleme mit der Farberkennung; entscheidend sind **gute Erkennbarkeit, klare Schrift und möglichst geringe Augenanstrengung**.
+- Diese Vorgabe gilt für **alle sichtbaren Elemente und Oberflächen** der Firmware: Menüs, Statusanzeigen, Dialoge, Decoder- und Nachrichtenansichten, Wetter-/Mondkalenderseiten, Keypads, Hinweise, Grafiken und zukünftige Layouts. Bei jeder visuellen Änderung die Lesbarkeit aktiv mitprüfen.
+- Seine bevorzugte Referenz ist der dunkle Chat-Darstellungsstil aus dem am 2026-11-22 gesendeten Screenshot: tiefschwarzer Hintergrund, gut erkennbare weiße bzw. leicht abgedunkelte Schrift, klare kräftige Buchstaben und großzügige Zeilen-/Elementabstände. Das Hauptmenü wurde aus demselben Grund bereits bewusst in Schwarz-Weiß gestaltet.
+- Helle, grelle oder leuchtende Darstellungen strengen ihn stärker an. Neonfarben, unnötige Leuchteffekte, dünne Schrift, zu kleine Beschriftungen und zu dicht gepackte Inhalte vermeiden, sofern der Nutzer nicht ausdrücklich etwas anderes möchte.
+- **Lesbarkeit hat Vorrang vor Informationsdichte und kompakter Darstellung.** Lieber größere/kräftigere Schrift, mehr Abstand und zusätzliche Seiten als kleine Schrift oder zusammengedrängte Inhalte. Bei RSS-Nachrichten sind auch vier oder mehr Seiten mit nur drei Textzeilen pro Seite ausdrücklich willkommen.
+- Farben sind nicht pauschal verboten: Der Nutzer sagt, dass er normalerweise keine Probleme mit Farben hat. Nicht aus der Sehschwäche auf eine Farbsehschwäche schließen. Farben nur so einsetzen, dass Text und Symbole klar unterscheidbar bleiben und die Darstellung nicht unnötig blendet.
+- Wo möglich, vorhandene Schriftarten auf ihre tatsächliche Strichstärke und Lesbarkeit bei 320×170 Pixeln prüfen. Kontrast, Schriftgröße, Gewicht, Zeilenabstand, Abstände und Hintergrund gemeinsam betrachten; Farbe allein löst keine unscharfe oder anstrengende Darstellung.
+- Visuelle Änderungen möglichst zunächst gezielt und isoliert umsetzen. Die endgültige Beurteilung erfolgt durch den Nutzer auf dem echten ATS-Mini-Display mit seiner Brille. Bei Bedarf anhand seiner Fotos und Rückmeldungen iterieren; keine subjektive Lesbarkeit behaupten, bevor er sie bestätigt hat.
+- Die RSS-Nachrichtenansicht wurde am 2026-11-22 als erster konkreter Schritt auf monochrom, tiefschwarz und kräftigere weiße Schrift mit drei Textzeilen pro Seite umgestellt. Diese Änderung ist noch vom Nutzer zu bauen und auf Hardware zu beurteilen.
+
+
 ## 0. Latest work and immediate status (22.11.2026)
 
 - Follow-up: localized central decoder frequency screens are now unified in English, German and Italian; OSPI-DE is covered. Shared menu now has selected/total counters and two-digit row numbering. AUTO Tone search resolution is 10 Hz with stable-window confirmation. Latest source-only commits: `52cad6ea0e5e5bdeb4727773528674fc0c071147`, `1866eb8d3312c52273c59f3c88cd500c32aac4a5`, `e7e3d88cbe369c1733d5be49b33fa6ea31456f37`, `1bc90849d15b2f4d67c9d082e2644d8f7f8b5e01`. No build or hardware verification has been performed.

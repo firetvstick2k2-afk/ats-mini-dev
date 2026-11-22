@@ -56,6 +56,8 @@ jobs:
           cli-compile-flags: |
             - --profile
             - esp32s3-ospi
+            - --build-property
+            - compiler.cpp.extra_flags=-DCONFIG_ASYNC_TCP_STACK_SIZE=32768
             - --export-binaries
           enable-deltas-report: false
           enable-warnings-report: true

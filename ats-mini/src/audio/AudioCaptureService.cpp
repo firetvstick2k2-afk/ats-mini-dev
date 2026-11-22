@@ -8,16 +8,26 @@ bool AudioCaptureService::begin() {
 #if defined(LILYGO_SI473X)
   return false; // GPIO11 is the LILYGO SPI MOSI pin, not the ATS Mini audio input.
 #else
-  if (initialized_) return true;
+  if (initialized_) {
+    Serial.println("[AUDIO] begin: capture task already initialized");
+    return true;
+  }
+  Serial.printf("[AUDIO] begin GPIO=%u rate=%u heap=%u stack=%u\\n",
+                static_cast<unsigned>(kPin), static_cast<unsigned>(kSampleRate),
+                static_cast<unsigned>(ESP.getFreeHeap()),
+                static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
   // ATS Mini V4B routes receiver audio to GPIO11 (ADC2_CH0). Keep the
   // ADC range explicit so decoder thresholds are stable across startup paths.
   analogReadResolution(12);
   analogSetPinAttenuation(kPin, ADC_11db);
   pinMode(kPin, INPUT);
-  if (xTaskCreatePinnedToCore(taskEntry, "audio-capture", 4096, this, 3, nullptr, 0) != pdPASS) {
-    return false;
-  }
+  Serial.println("[AUDIO] creating capture task stack=4096 core=0");
+  const BaseType_t taskResult = xTaskCreatePinnedToCore(taskEntry, "audio-capture", 4096, this, 3, nullptr, 0);
+  Serial.printf("[AUDIO] capture task result=%ld heap=%u\\n",
+                static_cast<long>(taskResult), static_cast<unsigned>(ESP.getFreeHeap()));
+  if (taskResult != pdPASS) return false;
   initialized_ = true;
+  Serial.println("[AUDIO] begin done");
   return true;
 #endif
 }

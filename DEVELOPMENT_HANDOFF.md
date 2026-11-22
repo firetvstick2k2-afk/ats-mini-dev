@@ -15,6 +15,7 @@
 - Reworked AUTO Tone to use RMS/coherence and strongest/second-strongest Goertzel bins, an adaptive noise floor, and three consecutive stable windows before retuning.
 - Configured GPIO11 ADC capture explicitly for 12-bit reads and 11 dB attenuation (ATS Mini V4B; Wi-Fi must remain stopped while ADC2 is sampled).
 - Added CW audio peak and clipping diagnostics to the service and page display.
+- CW page now follows RESONIK's receiver-level floor: raise volume to 50 only when the user's current volume is lower, then restore the exact previous volume on exit or startup failure. Higher user volume is left unchanged; the new peak/clipping indicator helps identify overload.
 - Code commits on `development` for this task:
   - `1d62cc5a998d49998a43da7edd4374c76596c766` — shared three-row decoder menu renderer.
   - `8c5ea2a999f4f3c72c218d81916a0eefbefd9965` — menu helper formatting include.

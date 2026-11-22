@@ -597,3 +597,10 @@ The owner explicitly chose a fully independent implementation and preservation o
 - CW Actions includes FREQUENCIES submenu: CURRENT frequency plus nine existing CW band presets. Selecting a preset applies matching band, USB and bandwidth then resets decoder; CURRENT stays on the present frequency.
 - RTTY display recolored to FT8 dark/black + cyan + neon-green theme. Existing auto tone-pair detection, polarity AUTO and BFO AUTO remain enabled by default. Baud auto-detection is not present; selectable rates remain 45.45, 50 and 75 Bd. No on-air RTTY signal was available to test.
 - No compile/build/device test; user starts OSPI-DE manually.
+
+
+## RTTY Pinneberg preset menu correction (2026-11-22)
+- Pinneberg labels are shortened to callsigns (DDK 2 / DDH 7 / DDK 9 / DDH 9 / DDH 8); compact small-font rows keep label, frequency and mode inside the menu.
+- Removed inline WAIT/LISTEN badges. Bottom status line shows the receiver's tuned frequency as `TUNED: x.xxx MHz`; dark/cyan/neon-green palette retained.
+- Commit: `d59ac35db55347106f1eb75f4c347b2afcf4e7e4` (`ats-mini/src/rtty/RttyUi.cpp`).
+- No compile, Actions build or hardware test. Continue on `development` only; `main` untouched.

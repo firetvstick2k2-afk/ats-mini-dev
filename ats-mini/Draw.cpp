@@ -131,6 +131,18 @@ void drawMessage(const char *msg)
   spr.pushSprite(0, 0);
 }
 
+// Draw a patch-loading notice on a freshly cleared sprite. The regular
+// drawMessage() intentionally preserves the current screen; patch loading
+// must not push stale pixels from a previous layout or display page.
+void drawCleanLoadingMessage(const char *msg)
+{
+  if(sleepOn()) return;
+
+  spr.fillSprite(TH.bg);
+  drawZoomedMenu(msg, true);
+  spr.pushSprite(0, 0);
+}
+
 //
 // Draw band and mode indicators (Farbe auf Weiß 0xFFFF angepasst)
 //

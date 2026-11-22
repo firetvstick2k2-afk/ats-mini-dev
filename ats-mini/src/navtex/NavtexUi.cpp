@@ -167,7 +167,7 @@ bool navtexUiTick(uint32_t now) {
 }
 
 void drawNavtexPage() {
-  spr.fillSprite(TFT_BLACK);
+  spr.fillSprite(0x0000);
   spr.setTextDatum(TC_DATUM);
   spr.setTextColor(0x07FF);
   spr.setFont(FONT_SMALL);

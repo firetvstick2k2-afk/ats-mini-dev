@@ -1007,7 +1007,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
    - Im Anschluss separater Audio-FFT-Prototyp: weiße, schmale Peaks auf dunklem Hintergrund, schnelle Reaktion und weicher Abfall. Eigenes Testlayout, vorhandene Layouts unverändert lassen. Auch demoduliertes FM-Audio (Sprache/Musik) untersuchen. Erst den tatsächlichen Audio-Datenpfad prüfen und vorhandene Samples wiederverwenden, keinen zweiten ADC-Capture starten.
 3. **Wetter portieren** – aus Mini_OS, Branch `dev/first-build-preparation`.
 4. **Newsticker portieren** – aus Mini_OS, demselben Quellbranch.
-5. **Mondphase portieren** – aus Mini_OS, demselben Quellbranch.
+5. **Mondphase portiert** – Offline-Berechnung aus Mini_OS; NTP nur bei ungültiger Systemzeit bedarfsgesteuert.
 6. **NAVTEX** – eigener SITOR-B/CCIR-476-Empfangsdecoder mit Synchronisation, FEC, Nachrichtenrahmen, 518/490/4209.5-kHz-Presets, Live-Text und LittleFS-Archiv. Vollständige und unvollständige Nachrichten unterscheiden; Duplikate erkennen.
 7. **Übrige Decoder** – danach WEFAX, DSC, SSTV, PSK31/63, Olivia/Contestia und weitere geeignete Empfangsmodi.
 

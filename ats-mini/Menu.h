@@ -154,6 +154,7 @@ void drawFullScreenMenu(uint16_t cmd);
 void drawVolumePopup();
 void drawBrightnessPopup();
 void drawSettingsPopup(uint16_t cmd);
+void drawRadioMenuPopup(uint16_t cmd);
 void drawDecoderFrequencyMenu();
 void decoderFrequencyOpen();
 bool decoderFrequencyRotate(int16_t enc);

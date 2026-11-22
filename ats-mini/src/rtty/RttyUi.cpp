@@ -489,7 +489,7 @@ void drawRttyDecoderPage() {
       else snprintf(toneStatus, sizeof(toneStatus), "TONE SEARCH");
       DecoderMenuUi::draw("RTTY ACTIONS", labels, values, kMenuCount, menuIndex,
                           menuEditing ? "TURN: CHANGE" : "TURN: SELECT",
-                          menuEditing ? "CLICK: DONE" : "CLICK: OPEN", toneStatus);
+                          menuEditing ? "CLICK: DONE" : "CLICK: OPEN", toneStatus, true);
     }
   }
 }

@@ -27,7 +27,8 @@ inline void draw(const char* title,
                  uint8_t selected,
                  const char* footerLeft = "TURN: SELECT",
                  const char* footerRight = "CLICK: OPEN",
-                 const char* status = nullptr) {
+                 const char* status = nullptr,
+                 bool outlineSelection = false) {
   constexpr int x = 20, y = 8, w = 280, h = 154;
   spr.fillRect(x, y, w, h, kBg);
   spr.drawRect(x, y, w, h, kBlue);
@@ -51,8 +52,12 @@ inline void draw(const char* title,
     const int rowY = y + 29 + row * 27;
     const bool active = index == selected;
     if (active) {
-      spr.fillRoundRect(x + 7, rowY - 3, w - 22, 23, 3, kBlue);
-      spr.fillRect(x + 7, rowY - 3, 3, 23, kCyan);
+      if (outlineSelection) {
+        spr.drawRoundRect(x + 7, rowY - 3, w - 22, 23, 3, kCyan);
+      } else {
+        spr.fillRoundRect(x + 7, rowY - 3, w - 22, 23, 3, kBlue);
+        spr.fillRect(x + 7, rowY - 3, 3, 23, kCyan);
+      }
     }
     char numbered[8];
     snprintf(numbered, sizeof(numbered), "%02u", static_cast<unsigned>(index + 1));

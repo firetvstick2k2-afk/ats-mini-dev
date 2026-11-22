@@ -1097,7 +1097,7 @@ void drawFtxDecoderPage()
       };
       if(pageMode == FtxMode::FT4)
         DecoderMenuUi::draw("FT4 ACTIONS", ft4Labels, ft4Values, 6, ftxMenuSelection,
-                            "TURN: SELECT", "CLICK: OPEN");
+                            "TURN: SELECT", "CLICK: OPEN", nullptr, true);
       else
         DecoderMenuUi::draw("FT8 ACTIONS", ft8Labels, ft8Values, ftxActionCount(), ftxMenuSelection,
                             "TURN: SELECT", "CLICK: OPEN");

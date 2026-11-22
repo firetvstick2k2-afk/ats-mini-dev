@@ -1513,3 +1513,13 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 - Bedienung: Encoder-Klick oder langer Tastendruck schließt den Mondkalender.
 - Geänderte Dateien: `MoonCalendar.h/.cpp`, `Menu.h`, Sprachdateien, `ats-mini.ino`, `Draw.cpp`, diese Übergabedokumente.
 - Nur statische Quellprüfung durchgeführt. Kein Build, kein GitHub Actions-Lauf und kein Gerätetest gestartet.
+
+## Wetterseite – Messwertfelder und Lesbarkeit (2026-11-22)
+
+- Die vier unteren Messwertboxen auf Seite 1 wurden um 8 px nach oben verschoben, damit ihre Werte nicht mehr mit der Bedienhilfe/Fußzeile überlappen.
+- Die vierte Box zeigt statt Luftdruck jetzt **SCHNEE** mit Prozentwert; Druck wird auf dieser Seite nicht mehr angezeigt.
+- Der Schnee-Prozentwert wird aus den Bright-Sky-Stundenprognosen abgeleitet: höchste Niederschlagswahrscheinlichkeit des Tages innerhalb der Stunden, deren Wetter-Icon als Schnee klassifiziert ist. Das ist eine Näherung für die Schneewahrscheinlichkeit, kein separat vom Anbieter geliefertes Schneefall-Wahrscheinlichkeitsfeld. Wenn keine Schnee-Stunden erkannt werden, wird 0 % angezeigt.
+- Geändert: `ats-mini/Draw.cpp`, `ats-mini/WeatherService.h`, `ats-mini/WeatherService.cpp`.
+- Commits: Draw `2493d7ca080ceae39e2745ba750172e2fcb4ad1a`; WeatherService.h `3f4475ef0a3fec6d17a8c960db8352c5a131a255`; WeatherService.cpp `8489f40092db1dbaddfb15e5aa7c8d8750d549e6`.
+- Quelltextänderungen nach dem Commit erneut abgerufen und geprüft. Kein Build und kein Gerätetest durchgeführt; Nutzer muss die Anzeige auf dem ATS Mini prüfen.
+

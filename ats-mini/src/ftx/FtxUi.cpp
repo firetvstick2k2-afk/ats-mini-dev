@@ -1064,7 +1064,7 @@ void drawFtxDecoderPage()
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);
     if(ftxPresetMenuOpen) {
-      spr.drawString("DECODER-FREQUENZ",menuX+12,menuY+7);
+      spr.drawString(ftxPresetDecoder==DecoderKind::FT4 ? "FT4 PRESETS" : "FT8 PRESETS",menuX+12,menuY+7);
       const uint8_t count=ftxPresetCount();
       for(uint8_t row=0;row<5;++row) {
         const uint8_t index=ftxPresetScroll+row;

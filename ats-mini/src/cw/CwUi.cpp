@@ -161,7 +161,7 @@ void drawCwDecoderPage() {
   spr.drawString("CLICK: ACTIONS   LONG PRESS: EXIT", 160, 162);
 
   if (menuOpen) {
-    constexpr uint16_t menuPanel=0x0010, highlight=0x07FF;
+    constexpr uint16_t menuPanel=0x0000, highlight=0x07FF;
     if(frequencyMenuOpen) {
       const int menuX=20,menuY=8,menuW=280,menuH=154;
       spr.fillRect(menuX,menuY,menuW,menuH,menuPanel);
@@ -213,7 +213,7 @@ void drawCwDecoderPage() {
       const char* labels[kMenuCount]={"FREQUENCIES","CLEAR TEXT","RESET DECODER","BACK","EXIT CW"};
       for(uint8_t i=0;i<kMenuCount;++i) {
         const int y=58+i*18;
-        const uint16_t rowBg=i==menuIndex?0x03E0:menuPanel;
+        const uint16_t rowBg=i==menuIndex?highlight:menuPanel;
         spr.fillRect(36,y-7,248,16,rowBg);
         spr.setTextDatum(ML_DATUM);
         spr.setTextColor(i==menuIndex?0x0000:white,rowBg);

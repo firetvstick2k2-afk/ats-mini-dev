@@ -33,3 +33,13 @@ Items below are intentionally deferred until the active decoder work and any int
 - Work only on `development`; do not modify `main` unless explicitly requested.
 - Do not start firmware builds, GitHub Actions or hardware tests unless the user explicitly asks.
 - Preserve existing decoder behavior, layouts, LittleFS data and the LILYGO GPIO11/SPI exclusion.
+
+## Hardware-unmodified decoder port candidates (2026-11-22)
+
+- **PSK31** — candidate for software-only receive decoding using the existing internal audio capture path; feasibility and CPU/memory impact still require validation. No microphone or hardware modifications permitted.
+- **WEFAX / weather fax** — add to the port-candidate list, conditional on validating receive-only decoding on stock ATS Mini V4 with its internal audio path and no microphone or hardware modification. The current shared capture is 4 kHz (Nyquist 2 kHz), while conventional weather-fax audio tones can extend above 2 kHz. Investigate a compatible software-only capture-rate/BFO strategy without breaking existing shared-audio decoders. CPU, memory, display rendering and on-air decoding remain unverified; do not claim working support yet.
+- **SSTV** — excluded from this user's port list due to the hardware-modification requirement in their intended setup.
+- **Web Control** — already implemented; do not list as a new porting priority.
+- **All-band spectrum analyzer** — already present per user; do not list as a new porting priority.
+
+Do not implement or build these candidates without explicit instruction. Preserve `main` and all existing decoder behavior.

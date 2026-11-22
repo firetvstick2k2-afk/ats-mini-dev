@@ -1480,3 +1480,12 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 ### Prüfstatus
 - Quelltext-/Integrationsprüfung: durchgeführt; Menüpositionen, Sprachvarianten, Wetter-Routen, Service-Aufrufe und Display-/Encoder-Einstiegspunkte wurden gegengeprüft.
 - Kein Build, kein GitHub-Actions-Lauf und kein Gerätetest ausgeführt. Die Portierung ist committed; Compiler- und Hardwareprüfung stehen noch aus.
+
+
+## Wetterbericht – bedarfsgesteuerte WLAN-Sitzung (2026-11-22)
+- Beim Öffnen des Wetterberichts wird zunächst ein Status-Popup angezeigt: „Waiting for WiFi…“. Erst nach erfolgreicher STA-Verbindung beginnt der Wetterdatenabruf; währenddessen zeigt die Anzeige „Loading weather data…“.
+- WLAN wird nur für eine konfigurierte Postleitzahl aktiviert. Die Verbindung nutzt die bereits gespeicherten WLAN-Zugangsdaten und wird nicht mehr automatisch beim Booten für den Wetterdienst gestartet.
+- Der ursprüngliche WLAN-Modus wird beim Öffnen erfasst. War WLAN ausgeschaltet (WIFI_MODE_NULL), wird für den Wetterabruf vorübergehend STA aktiviert und nach Verlassen wieder vollständig ausgeschaltet. War der Access Point aktiv, wird STA ergänzend aktiviert und anschließend der reine AP-Modus wiederhergestellt. Bereits aktive STA-/AP+STA-Verbindungen bleiben aktiv.
+- Ein laufender HTTPS-Abruf darf vor dem WLAN-Abbau zu Ende laufen; dadurch wird die Verbindung nicht mitten in einer Anfrage getrennt.
+- Der Wetter-Worker startet nur während der geöffneten Wetterseite und beginnt nach dem Verlassen keine weiteren periodischen Abrufe.
+- Quelländerungen: Common.h, Network.cpp, WeatherService.h/.cpp, ats-mini.ino, Draw.cpp. Source-Review erforderlich; kein Build/Hardwaretest gestartet.

@@ -17,7 +17,7 @@ class NavtexBfskDemodulator {
 public:
   static constexpr uint32_t kSampleRate = 4000;
   static constexpr float kBaud = 100.0f;
-  static constexpr uint8_t kWindowSamples = 80; // 20 ms
+  static constexpr uint8_t kWindowSamples = 40; // 10 ms (one complete NAVTEX bit)
   static constexpr float kDefaultMarkHz = 1615.0f;
   static constexpr float kDefaultSpaceHz = 1785.0f;
 
@@ -58,7 +58,8 @@ public:
     dc_ = 2048.0f;
     ringPos_ = 0;
     samplesSeen_ = 0;
-    clockPhase_ = 20.0f; // first decision at the centre of the first bit
+    clockPhase_ = 0.0f;
+    clockStarted_ = false;
     lastSign_ = 0;
     haveSign_ = false;
     timingError_ = 0.0f;
@@ -100,15 +101,26 @@ public:
     metrics_.spaceEnergy = spaceEnergy;
     metrics_.confidence = fabsf(discriminator);
 
-    // A tone transition should occur at a bit boundary. Nudge the bit clock
-    // toward observed transitions, but limit each correction to avoid jumps.
+    bit = discriminator >= 0.0f; // MARK=1, SPACE=0
+    if (!clockStarted_) {
+      clockStarted_ = true;
+      clockPhase_ = 0.0f;
+      lastSign_ = sign;
+      haveSign_ = true;
+      ++metrics_.bitsProduced;
+      return true;
+    }
+
+    // A tone transition belongs halfway between adjacent bit-centre samples.
+    // Correct the 40-sample clock gently toward that half-bit point.
     if (haveSign_ && sign != lastSign_) {
-      float error = clockPhase_;
+      float error = clockPhase_ - 20.0f;
       if (error > 20.0f) error -= 40.0f;
+      if (error < -20.0f) error += 40.0f;
       if (error > 8.0f) error = 8.0f;
       if (error < -8.0f) error = -8.0f;
       timingError_ = error;
-      clockPhase_ -= error * 0.12f;
+      clockPhase_ -= error * 0.08f;
     }
     lastSign_ = sign;
     haveSign_ = true;
@@ -116,7 +128,6 @@ public:
     clockPhase_ += 1.0f;
     if (clockPhase_ >= 40.0f) {
       clockPhase_ -= 40.0f;
-      bit = discriminator >= 0.0f; // MARK=1, SPACE=0
       ++metrics_.bitsProduced;
       return true;
     }
@@ -165,5 +176,6 @@ private:
   uint32_t samplesSeen_ = 0;
   int8_t lastSign_ = 0;
   bool haveSign_ = false;
+  bool clockStarted_ = false;
   Metrics metrics_{};
 };

@@ -613,3 +613,10 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Korrektur gegenüber dem vorherigen Eintrag: keine gemeinsame Überschrift `DECODER-FREQUENZ`; der Titel benennt jeweils den Decoder.
 - Geänderte Dateien: `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/cw/CwUi.cpp`, `ats-mini/src/rtty/RttyUi.cpp`; RTTY-Presetliste in `ats-mini/src/radio/DecoderFrequencyList.h` ergänzt.
 - Source-only; kein Compile, GitHub Actions Build, Flash oder Hardwaretest. Weiterhin nur `development`; `main` unangetastet. OSPI-DE-Build nicht gestartet.
+
+
+## Einheitliches Decoder-Action-Menü-Farbschema — 2026-11-22
+- FT8/FT4, CW und RTTY Action-Menüs sowie Preset-Untermenüs verwenden jetzt ein gemeinsames Schwarz-/Türkis-/Weiß-Schema: schwarzer Menügrund, türkiser Rahmen und Titel, weiße normale Schrift, türkise Auswahlfläche mit schwarzer Schrift und neongrüne Statusanzeige für bestätigte Abstimmung.
+- Die bisherigen blauen Menüflächen und grünen Auswahlflächen wurden entfernt. Decoder-Hauptanzeigen und ihre jeweiligen Informationsfelder bleiben unverändert; geändert wurden nur die Menüs/Untermenüs.
+- Betroffene Dateien: `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/cw/CwUi.cpp`, `ats-mini/src/rtty/RttyUi.cpp`.
+- Auf `development` committed. Kein Compile, GitHub Actions Build, Flash oder Hardwaretest. OSPI-DE-Build nicht gestartet; `main` unangetastet.

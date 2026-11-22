@@ -672,3 +672,9 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Static checks confirm 23 entries in DE/EN/IT and 23 Italian XXL labels; index defines and handlers match. No compile/build/device test performed.
 - Commits: German f3eea02b4b2f501094374a69d6a0943f5e14ddcc; English 40ef8950a587b55308eb13b0a71f917066123e55; Italian ff723652f836740fba0e88f46868ac906c5b1747.
 - No build unless explicitly requested.
+
+## Verbindliche Hauptmenü-Reihenfolge für zukünftige Änderungen
+- Die Reihenfolge der bestehenden Hauptmenü-Funktionen von Position 1 bis einschließlich Position 20 ist verbindlich. Position 1 bleibt immer Lautstärke; die bestehenden Einträge dürfen nicht umsortiert, vertauscht oder entfernt werden.
+- Der feste Abschluss bleibt: FM DX → Decoder → Einstellungen → Zurück. Zurück bleibt der letzte Eintrag und führt unmittelbar ins aktive Radio-Layout.
+- Neue Hauptmenü-Funktionen ausschließlich direkt VOR dem bisherigen Eintrag auf Position 20 einfügen (Einfügestelle Position 19). Keine neuen Funktionen zwischen Position 1 und 18 einfügen. Nachfolgende Positionsnummern dürfen sich dadurch verschieben, die relative Reihenfolge der bestehenden Einträge bleibt aber zwingend erhalten.
+- Für DE/EN/IT immer identisch umsetzen und Index-Konstanten sowie XXL-Label-Arrays synchron anpassen.

@@ -854,11 +854,7 @@ static void webInit()
   });
   server.on("/memory", HTTP_POST, webSetMemories);
 
-  server.on("/config", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    request->send(200, "text/html", webConfigPage("overview"));
-  });
-  server.on("/config/wifi", HTTP_GET, [] (AsyncWebServerRequest *request) {
+server.on("/config/wifi", HTTP_GET, [] (AsyncWebServerRequest *request) {
     if(!webIsAuthenticated(request)) return request->requestAuthentication();
     request->send(200, "text/html", webConfigPage("wifi"));
   });
@@ -881,6 +877,11 @@ static void webInit()
   server.on("/config/news", HTTP_GET, [] (AsyncWebServerRequest *request) {
     if(!webIsAuthenticated(request)) return request->requestAuthentication();
     request->send(200, "text/html", webConfigPage("news"));
+  });
+
+  server.on("/config", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    request->send(200, "text/html", webConfigPage("overview"));
   });
 
   server.on("/news/save", HTTP_POST, [] (AsyncWebServerRequest *request) {

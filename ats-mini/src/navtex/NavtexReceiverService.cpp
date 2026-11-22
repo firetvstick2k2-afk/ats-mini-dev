@@ -70,7 +70,7 @@ void NavtexReceiverService::onAudioSamples(void* context, const int16_t* samples
                                            size_t count, int64_t utcStartMicros) {
   (void)utcStartMicros;
   auto* self = static_cast<NavtexReceiverService*>(context);
-  if (!self || !self->active_ || !self->queue_ || !samples ||
+  if (!self || !self->active_ || self->selfTestQueued_ || !self->queue_ || !samples ||
       count == 0 || count > AudioCaptureService::kBlockSamples) return;
 
   AudioChunk chunk{};
@@ -100,8 +100,10 @@ void NavtexReceiverService::workerTask() {
     if (!active_) continue;
     xSemaphoreTake(engineMutex_, portMAX_DELAY);
     if (active_) {
-      if (chunk.selfTest) runSelfTest();
-      else processChunk(chunk);
+      if (chunk.selfTest) {
+        runSelfTest();
+        selfTestQueued_ = false;
+      } else processChunk(chunk);
     }
     xSemaphoreGive(engineMutex_);
   }
@@ -123,9 +125,13 @@ void NavtexReceiverService::processChunk(const AudioChunk& chunk) {
 
 bool NavtexReceiverService::requestSelfTest() {
   if (!active_ || !queue_) return false;
+  if (selfTestQueued_) return false;
+  selfTestQueued_ = true;
   AudioChunk request{};
   request.selfTest = true;
-  return xQueueSend(queue_, &request, 0) == pdTRUE;
+  if (xQueueSend(queue_, &request, 0) == pdTRUE) return true;
+  selfTestQueued_ = false;
+  return false;
 }
 
 void NavtexReceiverService::runSelfTest() {

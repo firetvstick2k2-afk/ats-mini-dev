@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.h"
+#include <stdio.h>
 
 // Shared compact decoder menu styled after the ATS Mini main menu.
 // Three rows are visible at once; selection and scrolling are kept by each UI.

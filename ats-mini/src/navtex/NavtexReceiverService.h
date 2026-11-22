@@ -23,11 +23,13 @@ public:
   uint32_t codewordsDecoded() const { return codewordsDecoded_; }
   uint32_t messagesCompleted() const { return messagesCompleted_; }
   uint8_t copyMessages(NavtexMessageParser::Message* out, uint8_t capacity) const;
+  bool requestSelfTest();
 
 private:
   struct AudioChunk {
     int16_t samples[AudioCaptureService::kBlockSamples]{};
     uint8_t count = 0;
+    bool selfTest = false;
   };
 
   static void onAudioSamples(void* context, const int16_t* samples,
@@ -36,6 +38,8 @@ private:
   void workerTask();
   void processChunk(const AudioChunk& chunk);
   void processCodeword(uint8_t code);
+  void runSelfTest();
+  void processSample(int16_t sample);
 
   AudioCaptureService* capture_ = nullptr;
   QueueHandle_t queue_ = nullptr;

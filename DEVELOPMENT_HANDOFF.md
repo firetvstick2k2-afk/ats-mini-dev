@@ -1,5 +1,28 @@
 # ATS Mini Development Handoff
 
+## Latest task: decoder menu unification and CW audio/auto-tone improvements (2026-11-22)
+- User authorized direct commits to `development` until this task is complete. `main` remains untouched. The user starts the OSPI-DE build manually; do not dispatch a build.
+- Added shared renderer `ats-mini/src/DecoderMenuUi.h`: three visible rows, main-menu-inspired cyan/blue selection, numbering, scrollbar and encoder footer.
+- Applied it to CW Actions/CW frequencies, RTTY Actions/RTTY presets, FT8/FT4 Actions/presets, and the central Decoder Frequencies category/preset screen in `Menu_english.cpp.src`. Existing action handlers and preview/tune delays remain in place.
+- CW current frequency is refreshed from `rx.getFrequency()` when the CW page opens, preventing a stale display.
+- The CW decoder core already contained the RESONIK-style adaptive Goertzel/reference-filter algorithm. Avoid duplicating it. The actual differences were in the service's unstable fixed-threshold AUTO Tone sweep and the audio capture setup.
+- Reworked AUTO Tone to use RMS/coherence and strongest/second-strongest Goertzel bins, an adaptive noise floor, and three consecutive stable windows before retuning.
+- Configured GPIO11 ADC capture explicitly for 12-bit reads and 11 dB attenuation (ATS Mini V4B; Wi-Fi must remain stopped while ADC2 is sampled).
+- Added CW audio peak and clipping diagnostics to the service and page display.
+- Code commits on `development` for this task:
+  - `1d62cc5a998d49998a43da7edd4374c76596c766` — shared three-row decoder menu renderer.
+  - `8c5ea2a999f4f3c72c218d81916a0eefbefd9965` — menu helper formatting include.
+  - `97848d95c74144764367669edf27f2534a434433` and `1f12b3cec2d317f9eb5c1bd25b8092acdc18819b` — CW menus.
+  - `ce0103294a86f174f52cde1f2746d25b037fbb6a` — RTTY menus.
+  - `5ebbe676d2493e4bd9d67506381c4dcb9bd2cb75` — FT8/FT4 menus.
+  - `4ca35e8941ef4ad165a2a32073e4e986158dbef5`, `92a4406dba9a44d3df529534198eb79e99729d58`, `06cb21a688adfe25200a3015f1aa8a68e4aa009a`, `61e567f179e8d18901a7ee7a397d0e7a97794494` — CW diagnostics/AUTO Tone.
+  - `a311af6a8d6b436079943d5da210a9b7073bc5b7` — CW live frequency and audio status.
+  - `3794ced1b0ccf06b2e210f1a19be7b4c07485a92` — GPIO11 ADC setup.
+  - `729f14d860f5d053ef6d3368ee716f82c721510d` — central decoder frequency menu.
+- Validation status: source changes committed; no build, flash, or hardware test has been run. User will run OSPI-DE build and report compiler output. Check all decoder menus, RTTY/FT8 preset preview/restore, CW tone stability, level/peak/clip display, and actual decoding with a stable CW signal after flashing.
+- Note: these commits are source-level only. Do not mark CW reception as fixed until the user confirms a device test.
+
+
 Last updated: 2026-11-21 (RTTY preset preview submenu)
 Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
 Active work branch: `development` (the sole development branch; never modify `main` except for a completed, tested feature explicitly approved for promotion)

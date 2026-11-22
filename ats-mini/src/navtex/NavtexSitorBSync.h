@@ -4,11 +4,11 @@
 
 // NAVTEX/SITOR-B bit-to-codeword synchronizer.
 //
-// Input is a hard-sliced 100-baud bit stream (one call per recovered bit).
-// This class searches the alternating CCIR-476 phasing words to establish
-// the 7-bit character boundary, stream polarity and first DX/RX parity.
-// It does not recover the 100-baud clock from audio samples; the upstream
-// FSK demodulator must provide correctly timed bit decisions.
+// Input is a hard-sliced 100-baud bit stream. CCIR-476 words are packed
+// LSB-first. This stage searches the alternating ALPHA (DX) / REP (RX)
+// phasing sequence, establishes the 7-bit boundary and detects polarity.
+// It does not recover the 100-baud clock; the audio demodulator must supply
+// correctly timed bit decisions.
 class NavtexSitorBSync {
 public:
   static constexpr uint8_t kPhasingWords = 12;
@@ -32,20 +32,23 @@ public:
     status_ = Status{};
   }
 
-  // Feed one timing-recovered bit. Returns true when a complete 7-bit
-  // codeword is available. Codewords are assembled MSB first.
+  // Feed one timing-recovered bit. Returns true for each complete word.
+  // The first codeword after the detected 12-word phasing window is slot 0.
   bool pushBit(bool bit, uint8_t& codeword) {
     codeword = 0;
     if (!status_.locked) {
       bits_[writeIndex_] = bit ? 1U : 0U;
       writeIndex_ = static_cast<uint8_t>((writeIndex_ + 1U) % kPatternBits);
       if (received_ < kPatternBits) ++received_;
+      // Keep testing the rolling window: acquisition may begin after the
+      // receiver starts listening, not necessarily at stream bit zero.
       if (received_ == kPatternBits) acquire();
       return false;
     }
 
     const bool decodedBit = bit ^ status_.inverted;
-    codeValue_ = static_cast<uint8_t>((codeValue_ << 1U) | (decodedBit ? 1U : 0U));
+    codeValue_ = static_cast<uint8_t>(
+      codeValue_ | (static_cast<uint8_t>(decodedBit ? 1U : 0U) << codeBits_));
     if (++codeBits_ < 7) return false;
 
     codeword = codeValue_ & 0x7F;
@@ -57,8 +60,6 @@ public:
 
   const Status& status() const { return status_; }
 
-  // Slot zero is the first complete codeword after the detected phasing
-  // sequence. The caller uses this parity when feeding the SITOR-B FEC.
   bool isDxSlot(uint32_t slotIndex) const {
     return ((slotIndex & 1U) == 0U) == status_.dxOnEvenSlots;
   }
@@ -68,8 +69,8 @@ private:
     const uint8_t word = static_cast<uint8_t>(position / 7U);
     const uint8_t bit = static_cast<uint8_t>(position % 7U);
     const bool alphaWord = ((word & 1U) == 0U) == startsWithAlpha;
-    const uint8_t code = alphaWord ? 0x0F : 0x66; // ALPHA / REP
-    return static_cast<uint8_t>((code >> (6U - bit)) & 1U);
+    const uint8_t code = alphaWord ? 0x0F : 0x66;
+    return static_cast<uint8_t>((code >> bit) & 1U);
   }
 
   void acquire() {
@@ -77,13 +78,13 @@ private:
     bool bestInvert = false;
     bool bestStartsAlpha = true;
 
-    // The ring now contains exactly the most recent phasing-length window.
-    // Test both possible DX/RX word orders and both signal polarities.
+    // writeIndex_ points at the oldest bit in the full rolling window.
     for (uint8_t order = 0; order < 2; ++order) {
       for (uint8_t invert = 0; invert < 2; ++invert) {
         uint8_t errors = 0;
         for (uint8_t i = 0; i < kPatternBits; ++i) {
-          const uint8_t index = static_cast<uint8_t>((writeIndex_ + i) % kPatternBits);
+          const uint8_t index = static_cast<uint8_t>(
+            (writeIndex_ + i) % kPatternBits);
           const uint8_t expected = static_cast<uint8_t>(
             patternBit(i, order == 0) ^ (invert != 0));
           if (bits_[index] != expected) ++errors;
@@ -101,11 +102,9 @@ private:
     status_.locked = true;
     status_.inverted = bestInvert;
     status_.phasingErrors = bestErrors;
-
-    // In collective SITOR-B, ALPHA marks the DX channel and REP the RX
-    // channel. The detected first phasing word therefore establishes parity.
+    // Twelve phasing words is an even count, so data slot zero has the
+    // same DX/RX parity as the first phasing word.
     status_.dxOnEvenSlots = bestStartsAlpha;
-
     codeBits_ = 0;
     codeValue_ = 0;
     codeSlot_ = 0;

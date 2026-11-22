@@ -34,9 +34,15 @@ bool CwDecoderService::enter(AudioCaptureService& capture, bool wifiOff) {
   xSemaphoreGive(mutex_);
 
   audioLevel_ = 0;
+  audioPeak_ = 0;
+  audioClipped_ = false;
+  clippedCount_ = 0;
   audioPresent_ = false;
   toneWindowCount_ = 0;
   autoToneHz_ = 700.0f;
+  toneCandidateHz_ = autoToneHz_;
+  toneCandidateCount_ = 0;
+  toneNoiseFloor_ = 0.0f;
   signal_ = false;
   lastToneMs_ = 0;
   lastUiMs_ = millis();
@@ -109,11 +115,18 @@ void CwDecoderService::consumeSamples(const int16_t* samples, size_t count) {
   for (size_t i = 0; i < count; ++i) {
     toneWindow_[toneWindowCount_++] = samples[i];
     if (toneWindowCount_ >= kToneWindowSamples) {
-      float bestHz = autoToneHz_;
-      float bestPower = 0.0f;
       float mean = 0.0f;
       for (size_t n = 0; n < kToneWindowSamples; ++n) mean += toneWindow_[n];
-      mean /= kToneWindowSamples;
+      mean /= static_cast<float>(kToneWindowSamples);
+
+      float energy = 0.0f;
+      for (size_t n = 0; n < kToneWindowSamples; ++n) {
+        const float centered = static_cast<float>(toneWindow_[n]) - mean;
+        energy += centered * centered;
+      }
+      const float rms = sqrtf(energy / static_cast<float>(kToneWindowSamples));
+      float bestPower = 0.0f, secondPower = 0.0f;
+      float bestHz = autoToneHz_;
       for (int hz = 400; hz <= 1000; hz += 25) {
         const float coeff = 2.0f * cosf(2.0f * 3.14159265358979323846f * hz / kSampleRate);
         float q1 = 0.0f, q2 = 0.0f;
@@ -121,25 +134,61 @@ void CwDecoderService::consumeSamples(const int16_t* samples, size_t count) {
           const float q0 = coeff * q1 - q2 + (static_cast<float>(toneWindow_[n]) - mean);
           q2 = q1; q1 = q0;
         }
-        const float power = q1*q1 + q2*q2 - coeff*q1*q2;
-        if (power > bestPower) { bestPower = power; bestHz = static_cast<float>(hz); }
+        const float power = fmaxf(q1*q1 + q2*q2 - coeff*q1*q2, 0.0f);
+        if (power > bestPower) {
+          secondPower = bestPower;
+          bestPower = power;
+          bestHz = static_cast<float>(hz);
+        } else if (power > secondPower) {
+          secondPower = power;
+        }
       }
-      // Only retune when a clear audio tone is present; retain the last estimate in silence.
-      if (bestPower > 180000.0f && fabsf(bestHz - autoToneHz_) >= 20.0f) {
-        autoToneHz_ = bestHz;
-        decoder_.setTone(autoToneHz_);
+
+      // Learn the local noise floor only when no narrow-band tone is dominant.
+      const float coherence = energy > 1.0f
+        ? bestPower / (energy * static_cast<float>(kToneWindowSamples))
+        : 0.0f;
+      const bool narrowTone = rms >= 8.0f &&
+        coherence > 0.08f && bestPower > secondPower * 1.25f;
+      if (!narrowTone) {
+        if (toneNoiseFloor_ == 0.0f) toneNoiseFloor_ = rms;
+        else toneNoiseFloor_ += (rms - toneNoiseFloor_) * (rms < toneNoiseFloor_ ? 0.08f : 0.01f);
+        toneCandidateCount_ = 0;
+      } else if (rms > fmaxf(8.0f, toneNoiseFloor_ * 1.8f)) {
+        if (fabsf(bestHz - toneCandidateHz_) <= 25.0f) {
+          if (toneCandidateCount_ < 5) ++toneCandidateCount_;
+        } else {
+          toneCandidateHz_ = bestHz;
+          toneCandidateCount_ = 1;
+        }
+        // Three consecutive windows reject brief clicks and adjacent-bin jumps.
+        if (toneCandidateCount_ >= 3 && fabsf(bestHz - autoToneHz_) >= 20.0f) {
+          autoToneHz_ = bestHz;
+          decoder_.setTone(autoToneHz_);
+          toneCandidateCount_ = 0;
+        }
+      } else {
+        toneCandidateCount_ = 0;
       }
       toneWindowCount_ = 0;
     }
   }
+  float blockPeak = 0.0f;
   for (size_t i = 0; i < count; ++i) {
     const float value = static_cast<float>(samples[i]);
     dcEstimate_ += (value - dcEstimate_) * 0.001f;
-    devSum_ += fabsf(value - dcEstimate_);
+    const float deviation = fabsf(value - dcEstimate_);
+    devSum_ += deviation;
+    if (deviation > blockPeak) blockPeak = deviation;
+    if (samples[i] <= 4 || samples[i] >= 4091) ++clippedCount_;
     if (++devCount_ >= kSampleRate / 2) {
       audioLevel_ = static_cast<uint16_t>(devSum_ / devCount_);
+      audioPeak_ = static_cast<uint16_t>(blockPeak > 65535.0f ? 65535.0f : blockPeak);
+      audioClipped_ = clippedCount_ >= 4;
       devSum_ = 0.0f;
       devCount_ = 0;
+      clippedCount_ = 0;
+      blockPeak = 0.0f;
     }
   }
   xSemaphoreGive(mutex_);

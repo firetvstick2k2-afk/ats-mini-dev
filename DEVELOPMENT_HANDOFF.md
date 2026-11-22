@@ -1356,3 +1356,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The seek runs synchronously from the Actions click handler; the UI does not animate a live scanning banner while the SI4735 seek routine is running. Confirm seek completion, station detection, abort behavior, audio unmute and AUTO bandwidth behavior on hardware.
 - Commits: 11160e7113cb80bb83ff6b14033c8f20c689621b, 489ceaa85886a4638a7fccd2b8dc48a3d6c3159f, b4ae6d45bc04f165c7759b13a2b2c7280df94714.
 - Source reviewed only. No compile, GitHub Actions build, or hardware test performed. User starts the manual OSPI-DE workflow.
+
+
+## CW decoder AUTO / FT8-style UI update (2026-11-22)
+- CW UI palette changed from blue panels to black/dark-navy panels with cyan borders and neon-green text, matching the FT8 visual direction.
+- Audio presence is now displayed independently from CW keying detection. The level bar uses the ADC audio level and can turn green when audio is present even if the decoder has not recognized a CW mark. Header separates AUDIO/NO AUDIO from CW/SEARCH.
+- Added automatic audio tone estimation: shared 4 kHz ADC samples are analyzed in 256-sample windows using Goertzel bins from 400 to 1000 Hz in 25 Hz steps. When detected energy exceeds the current threshold, decoder tone follows the strongest bin. Manual tone selection was removed from the CW UI; tone is displayed as AUTO TONE.
+- The radio's RF frequency/BFO is not automatically shifted. The DSP audio-tone tracker is the safer first-stage solution; moving BFO/frequency without a reliable signal lock could tune away from a station. Consider a controlled optional AFC/BFO feature only after real-device recordings validate tone lock and decoding.
+- Important: auto-tone estimator is heuristic and uncalibrated. The CW mark/space detector, speed estimator, and signal classification still need validation and likely further tuning with real CW audio. The audio level green threshold (12 ADC mean-absolute-deviation units) and Goertzel energy threshold (180000) are initial values, not calibrated.
+- Source changes only; no compile, GitHub Actions build, or hardware verification performed. Do not start a build; user runs OSPI-DE manually.

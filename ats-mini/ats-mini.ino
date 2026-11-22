@@ -816,10 +816,16 @@ void loop()
   static bool lastNewsDrawFetching = false;
   static uint8_t lastNewsDrawCount = 0;
   static uint32_t lastNewsTickerRedraw = 0;
-  if(currentCmd == CMD_NEWS && (uint32_t)(millis()-lastNewsTickerRedraw) >= 180)
+  if(currentCmd == CMD_NEWS && newsService.itemCount())
   {
-    lastNewsTickerRedraw = millis();
-    needRedraw = true;
+    NewsService::Item tickerItem;
+    if(newsService.getItem(newsCurrentIndex % newsService.itemCount(),tickerItem) &&
+       strlen(tickerItem.title) > 35 &&
+       (uint32_t)(millis()-lastNewsTickerRedraw) >= 180)
+    {
+      lastNewsTickerRedraw = millis();
+      needRedraw = true;
+    }
   }
 
   if(currentCmd == CMD_NEWS)

@@ -127,9 +127,10 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_VFO         16
 #define MENU_SPECTRUM    17
 #define MENU_ALL_SPECTRUM 18
-#define MENU_DECODER_MENU 19
-#define MENU_SETTINGS    20
-#define MENU_FM_DX       21
+#define MENU_FM_DX       19
+#define MENU_DECODER_MENU 20
+#define MENU_SETTINGS    21
+#define MENU_BACK        22
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -155,13 +156,13 @@ static int16_t decoderLastTunedPreset = -1;
 int8_t spectrumMenuIdx = 0;
 static const char *spectrumMenu[] = { "VHF SPECTRUM", "ALL Band Spectrum" };
 
-static const char *menu[] =
+static const char *menu[]
 {
   "Volume", "Keypad", "Band", "Mode", "BFO",
   "Steps", "Seek", "Scan", "Memory", "Squelch",
   "Bandwidth", "Frequency", "AGC/ATTN", "AVC",
   "SoftMute", "DUAL RX", "VFO A/B", "VHF Spectrum",
-  "ALL Band Spectrum", "Decoder", "Settings", "FM DX",
+  "ALL Band Spectrum", "FM DX", "Decoder", "Settings", "Back",
 };
 
 #define MENU_BRIGHTNESS   0
@@ -948,8 +949,9 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_DUAL_RX: dualRxStart(); break;
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
-    case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
     case MENU_FM_DX: fmDxUiOpen(); break;
+    case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
+    case MENU_BACK: currentCmd = CMD_NONE; break;
   }
 }
 

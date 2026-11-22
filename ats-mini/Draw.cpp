@@ -754,15 +754,24 @@ static size_t newsAdvanceLines(const char* text, size_t offset, uint8_t lines)
   const size_t length=strlen(text);
   if(offset>length) offset=length;
   size_t pos=offset;
+  constexpr int MAX_LINE_WIDTH=300;
+  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   for(uint8_t row=0;row<lines && pos<length;row++)
   {
-    const char* line=text+pos;
     size_t n=0,lastSpace=0;
-    while(line[n] && n<28){if(line[n]==' ')lastSpace=n;++n;}
-    if(line[n] && lastSpace>7)n=lastSpace;
-    if(!n) break;
+    char candidate[96];
+    while(text[pos+n] && n<sizeof(candidate)-1)
+    {
+      candidate[n]=text[pos+n];
+      candidate[n+1]='\\0';
+      if(spr.textWidth(candidate)>MAX_LINE_WIDTH) break;
+      if(text[pos+n]==' ') lastSpace=n;
+      ++n;
+    }
+    if(text[pos+n] && lastSpace>0) n=lastSpace;
+    if(!n && text[pos+n]) ++n;
     pos+=n;
-    while(pos<length && text[pos]==' ')++pos;
+    while(pos<length && text[pos]==' ') ++pos;
   }
   return pos;
 }
@@ -775,26 +784,26 @@ uint8_t newsPageCountForCurrentItem()
   if(!newsService.getItem(newsCurrentIndex%count,item)) return 1;
   const size_t length=strlen(item.text);
   size_t offset=0;
-  uint8_t pages=0;
+  uint16_t pages=0;
   do {
     ++pages;
     const size_t next=newsAdvanceLines(item.text,offset,3);
     if(next<=offset || next>=length) break;
     offset=next;
   } while(pages<255);
-  return pages?pages:1;
+  return pages>255?255:(uint8_t)(pages?pages:1);
 }
 
 void drawNewsScreen()
 {
-  const uint8_t newsCount = newsService.itemCount();
-  const bool fetching = newsService.isFetching();
-  const bool failed = newsService.hasFailed();
-  const int w = spr.width();
+  const uint8_t newsCount=newsService.itemCount();
+  const bool fetching=newsService.isFetching();
+  const bool failed=newsService.hasFailed();
+  const int w=spr.width();
   constexpr uint16_t WHITE=0xFFFF, SOFT_WHITE=0xD6BA, MUTED=0x9CF3, BLACK=0x0000;
-  const auto* newsFont = &lgfx::fonts::FreeSansBold9pt7b;
+  constexpr int TEXT_WIDTH=300;
+  const auto* newsFont=&lgfx::fonts::FreeSansBold9pt7b;
 
-  // Pure black background and a clear, bold monochrome reading layout.
   spr.fillScreen(BLACK);
   spr.setTextDatum(TL_DATUM);
   spr.setFont(newsFont);
@@ -806,9 +815,9 @@ void drawNewsScreen()
     spr.setFont(FONT_SMALL);
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(WHITE,BLACK);
-    spr.drawString(fetching ? "RSS-Feeds werden geladen..." : "Keine Nachrichten vorhanden",w/2,72);
+    spr.drawString(fetching?"RSS-Feeds werden geladen...":"Keine Nachrichten vorhanden",w/2,72);
     spr.setTextColor(MUTED,BLACK);
-    spr.drawString(failed ? "Abruf fehlgeschlagen / Feed pruefen" : "RSS-Adressen in der Weboberflaeche eintragen",w/2,98);
+    spr.drawString(failed?"Abruf fehlgeschlagen / Feed pruefen":"RSS-Adressen in der Weboberflaeche eintragen",w/2,98);
     spr.setTextDatum(TL_DATUM);
     spr.drawString("Lang druecken: Zurueck",10,145);
     return;
@@ -821,44 +830,68 @@ void drawNewsScreen()
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(SOFT_WHITE,BLACK);
   spr.setFont(FONT_SMALL);
-  char meta[20]; snprintf(meta,sizeof(meta),"%u/%u",index+1,newsCount);
+  char meta[20];
+  snprintf(meta,sizeof(meta),"%u/%u",index+1,newsCount);
   spr.drawString(meta,w-10,5);
 
-  // Headline ticker uses the same bold white face as the article body.
+  // Pixel-width-aware marquee: never cuts a title at an arbitrary byte count.
   spr.setTextDatum(TL_DATUM);
   spr.setFont(newsFont);
   spr.setTextColor(WHITE,BLACK);
-  constexpr size_t TITLE_WINDOW=28;
-  constexpr uint32_t TICKER_STEP_MS=280;
+  constexpr uint32_t TICKER_STEP_MS=300;
   static uint8_t tickerIndex=255;
   static uint32_t tickerStartMs=0;
   if(tickerIndex!=index){tickerIndex=index;tickerStartMs=millis();}
   const size_t titleLength=strlen(item.title);
-  if(titleLength<=TITLE_WINDOW)
+  size_t visibleChars=0;
+  char titleWindow[96];
+  titleWindow[0]='\\0';
+  while(visibleChars<titleLength && visibleChars<sizeof(titleWindow)-1)
+  {
+    titleWindow[visibleChars]=item.title[visibleChars];
+    titleWindow[visibleChars+1]='\\0';
+    if(spr.textWidth(titleWindow)>TEXT_WIDTH)
+    {
+      titleWindow[visibleChars]='\\0';
+      break;
+    }
+    ++visibleChars;
+  }
+  if(titleLength<=visibleChars)
   {
     spr.drawString(item.title,10,27);
   }
   else
   {
-    constexpr size_t GAP=6;
+    constexpr size_t GAP=5;
     const size_t cycle=titleLength+GAP;
     const size_t offset=((millis()-tickerStartMs)/TICKER_STEP_MS)%cycle;
-    char titleLine[TITLE_WINDOW+1];
-    for(size_t n=0;n<TITLE_WINDOW;n++)
+    size_t out=0;
+    for(size_t n=0;n<cycle && out<sizeof(titleWindow)-1;n++)
     {
       const size_t pos=(offset+n)%cycle;
-      titleLine[n]=(pos<titleLength)?item.title[pos]:' ';
+      titleWindow[out++]=(pos<titleLength)?item.title[pos]:' ';
+      titleWindow[out]='\\0';
+      if(spr.textWidth(titleWindow)>TEXT_WIDTH)
+      {
+        titleWindow[--out]='\\0';
+        break;
+      }
     }
-    titleLine[TITLE_WINDOW]='\\0';
-    spr.drawString(titleLine,10,27);
+    spr.drawString(titleWindow,10,27);
   }
+
+  // Thin separator below the moving headline.
+  spr.drawFastHLine(10,46,w-20,SOFT_WHITE);
 
   spr.setFont(FONT_SMALL);
   spr.setTextColor(SOFT_WHITE,BLACK);
-  spr.drawString(item.source,10,48);
+  spr.setTextDatum(TL_DATUM);
+  spr.drawString(item.source,10,51);
   spr.setTextDatum(TR_DATUM);
-  char dateLine[16]; snprintf(dateLine,sizeof(dateLine),"%.14s",item.date);
-  spr.drawString(dateLine,w-10,48);
+  char dateLine[16];
+  snprintf(dateLine,sizeof(dateLine),"%.14s",item.date);
+  spr.drawString(dateLine,w-10,51);
 
   size_t bodyOffset=0;
   for(uint8_t page=0;page<newsCurrentPage;page++)
@@ -869,20 +902,31 @@ void drawNewsScreen()
   spr.setTextColor(WHITE,BLACK);
   for(uint8_t row=0;row<3 && *body;row++)
   {
-    char line[32]; size_t n=0,lastSpace=0;
-    while(body[n] && n<28){line[n]=body[n];if(body[n]==' ')lastSpace=n;++n;}
-    if(body[n] && lastSpace>7)n=lastSpace;
+    char line[96];
+    size_t n=0,lastSpace=0;
+    while(body[n] && n<sizeof(line)-1)
+    {
+      line[n]=body[n];
+      line[n+1]='\\0';
+      if(spr.textWidth(line)>TEXT_WIDTH) break;
+      if(body[n]==' ') lastSpace=n;
+      ++n;
+    }
+    if(body[n] && lastSpace>0) n=lastSpace;
+    if(!n && body[n]) ++n;
     line[n]='\\0';
     spr.drawString(line,10,69+row*27);
-    body+=n; while(*body==' ')++body;
+    body+=n;
+    while(*body==' ') ++body;
   }
 
   spr.setFont(FONT_DEFAULT);
   spr.setTextColor(MUTED,BLACK);
   spr.setTextDatum(TL_DATUM);
-  spr.drawString("Dreh: Textseiten  Klick: Naechste Meldung",10,151);
+  spr.drawString("Dreh: Seiten  Klick: Meldung",10,151);
   spr.setTextDatum(TR_DATUM);
-  char pageText[24]; snprintf(pageText,sizeof(pageText),"SEITE %u/%u",newsCurrentPage+1,newsPageCountForCurrentItem());
+  char pageText[24];
+  snprintf(pageText,sizeof(pageText),"SEITE %u/%u",newsCurrentPage+1,newsPageCountForCurrentItem());
   spr.drawString(pageText,w-10,151);
 }
 

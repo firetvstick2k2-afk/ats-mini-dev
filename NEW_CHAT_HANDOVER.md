@@ -2,6 +2,8 @@
 
 ## 0. Latest work and immediate status (22.11.2026)
 
+- Follow-up: localized central decoder frequency screens are now unified in English, German and Italian; OSPI-DE is covered. Shared menu now has selected/total counters and two-digit row numbering. AUTO Tone search resolution is 10 Hz with stable-window confirmation. Latest source-only commits: `52cad6ea0e5e5bdeb4727773528674fc0c071147`, `1866eb8d3312c52273c59f3c88cd500c32aac4a5`, `e7e3d88cbe369c1733d5be49b33fa6ea31456f37`, `1bc90849d15b2f4d67c9d082e2644d8f7f8b5e01`. No build or hardware verification has been performed.
+
 ### Decoder menu unification + CW decoder work
 - User authorized direct commits to `development` until this task is complete. Never modify `main`. User starts the OSPI-DE build manually; do not dispatch GitHub Actions.
 - Shared renderer: `ats-mini/src/DecoderMenuUi.h` (three visible rows, main-menu-inspired selection, numbering, scrollbar, encoder footer).

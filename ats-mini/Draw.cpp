@@ -763,7 +763,7 @@ static size_t newsAdvanceLines(const char* text, size_t offset, uint8_t lines)
     while(text[pos+n] && n<sizeof(candidate)-1)
     {
       candidate[n]=text[pos+n];
-      candidate[n+1]='\\0';
+      candidate[n+1]='\0';
       if(spr.textWidth(candidate)>MAX_LINE_WIDTH) break;
       if(text[pos+n]==' ') lastSpace=n;
       ++n;
@@ -851,14 +851,14 @@ void drawNewsScreen()
   const size_t titleLength=strlen(item.title);
   size_t visibleChars=0;
   char titleWindow[96];
-  titleWindow[0]='\\0';
+  titleWindow[0]='\0';
   while(visibleChars<titleLength && visibleChars<sizeof(titleWindow)-1)
   {
     titleWindow[visibleChars]=item.title[visibleChars];
-    titleWindow[visibleChars+1]='\\0';
+    titleWindow[visibleChars+1]='\0';
     if(spr.textWidth(titleWindow)>TEXT_WIDTH)
     {
-      titleWindow[visibleChars]='\\0';
+      titleWindow[visibleChars]='\0';
       break;
     }
     ++visibleChars;
@@ -877,10 +877,10 @@ void drawNewsScreen()
     {
       const size_t pos=(offset+n)%cycle;
       titleWindow[out++]=(pos<titleLength)?item.title[pos]:' ';
-      titleWindow[out]='\\0';
+      titleWindow[out]='\0';
       if(spr.textWidth(titleWindow)>TEXT_WIDTH)
       {
-        titleWindow[--out]='\\0';
+        titleWindow[--out]='\0';
         break;
       }
     }
@@ -913,14 +913,14 @@ void drawNewsScreen()
     while(body[n] && n<sizeof(line)-1)
     {
       line[n]=body[n];
-      line[n+1]='\\0';
+      line[n+1]='\0';
       if(spr.textWidth(line)>TEXT_WIDTH) break;
       if(body[n]==' ') lastSpace=n;
       ++n;
     }
     if(body[n] && lastSpace>0) n=lastSpace;
     if(!n && body[n]) ++n;
-    line[n]='\\0';
+    line[n]='\0';
     spr.drawString(line,10,69+row*27);
     body+=n;
     while(*body==' ') ++body;

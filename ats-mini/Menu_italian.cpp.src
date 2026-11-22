@@ -524,7 +524,7 @@ void doVolume(int16_t enc)
 
 static void clickVolume(bool shortPress)
 {
-  if(shortPress) muteOn(MUTE_MAIN, !muteOn(MUTE_MAIN)); else currentCmd = CMD_NONE;
+  currentCmd = CMD_MENU;
 }
 
 static void clickSquelch(bool shortPress)
@@ -1000,7 +1000,7 @@ static const char *settingLabel(int idx)
   return settings[idx];
 }
 
-static void doSettings(int16_t enc) { settingsIdx = wrap_range(settingsIdx, enc, 0, LAST_ITEM(settings)); if(settingsIdx == MENU_ZOOM) settingsIdx = (enc >= 0) ? MENU_ZOOM + 1 : MENU_ZOOM - 1; }
+static void doSettings(int16_t enc) { settingsIdx = wrap_range(settingsIdx, enc, 0, ITEM_COUNT(settings) - 1); }
 
 static void clickSettings(int cmd, bool shortPress)
 {

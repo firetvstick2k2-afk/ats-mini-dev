@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "Menu.h"
 #include "WeatherService.h"
+#include "MoonCalendar.h"
 #include "BleMode.h"
 #include "Draw.h"
 #include "src/ftx/FtxUi.h"
@@ -657,6 +658,82 @@ static void drawWeatherIcon(int cx, int cy, uint8_t code, int scale)
   }
 }
 
+static void drawMoonCalendarScreen()
+{
+  const MoonCalendar::Snapshot moon = MoonCalendar::calculate(time(nullptr));
+  const int w = spr.width();
+  constexpr uint16_t BLUE=0x001F, CYAN=0x07FF, GREEN=0x07E0;
+  constexpr uint16_t WHITE_TEXT=0xFFFF, MUTED_TEXT=0x8410, MOON_GOLD=0xFFE0;
+  spr.fillScreen(TH.bg);
+  spr.drawRoundRect(3,3,w-6,164,6,BLUE);
+  spr.setTextDatum(TL_DATUM);
+  spr.setFont(FONT_LARGE);
+  spr.setTextColor(CYAN,TH.bg);
+  spr.drawString("MONDKALENDER",12,8);
+  spr.drawFastHLine(10,28,w-20,BLUE);
+
+  if(!moon.valid)
+  {
+    spr.setTextDatum(MC_DATUM);
+    spr.setFont(FONT_SMALL);
+    spr.setTextColor(WHITE_TEXT,TH.bg);
+    const char* message = moonUiState == MOON_UI_WAITING_WIFI
+      ? "Waiting for WiFi..." : "Synchronizing clock...";
+    const char* detail = moonUiState == MOON_UI_WAITING_WIFI
+      ? "Verbinde mit gespeichertem Netzwerk"
+      : "NTP-Zeitabgleich wird durchgefuehrt";
+    spr.drawCenterString(message,w/2,70);
+    spr.setFont(FONT_DEFAULT);
+    spr.setTextColor(MUTED_TEXT,TH.bg);
+    spr.drawCenterString(detail,w/2,96);
+    spr.drawString("Klick: Zurueck",12,145);
+    return;
+  }
+
+  const int cx=66, cy=87, radius=34;
+  spr.fillCircle(cx,cy,radius,MOON_GOLD);
+  const float phase=moon.phase;
+  if(phase < 0.03f || phase > 0.97f)
+    spr.fillCircle(cx,cy,radius,0x2104);
+  else if(!(phase > 0.47f && phase < 0.53f))
+  {
+    const int offset=static_cast<int>(4.0f*radius*
+      (phase < 0.5f ? -phase : (1.0f-phase)));
+    spr.fillCircle(cx+offset,cy,radius,0x2104);
+  }
+  spr.drawCircle(cx,cy,radius,MOON_GOLD);
+
+  spr.setTextColor(GREEN,TH.bg);
+  spr.setFont(FONT_LARGE);
+  spr.drawString(moon.phaseName,119,42);
+  char value[40];
+  snprintf(value,sizeof(value),"%u%% beleuchtet",moon.illuminationPercent);
+  spr.setTextColor(WHITE_TEXT,TH.bg);
+  spr.setFont(FONT_SMALL);
+  spr.drawString(value,119,66);
+  snprintf(value,sizeof(value),"Mondalter: %.1f Tage",moon.ageDays);
+  spr.setFont(FONT_DEFAULT);
+  spr.setTextColor(MUTED_TEXT,TH.bg);
+  spr.drawString(value,119,90);
+
+  auto drawEvent = [&](const char* label, time_t epoch, int y) {
+    struct tm local{};
+    char dateText[28]="--";
+    if(epoch > 0 && localtime_r(&epoch,&local))
+      strftime(dateText,sizeof(dateText),"%d.%m. %H:%M",&local);
+    spr.setFont(FONT_DEFAULT);
+    spr.setTextColor(CYAN,TH.bg);
+    spr.drawString(label,12,y);
+    spr.setTextColor(WHITE_TEXT,TH.bg);
+    spr.drawRightString(dateText,w-12,y);
+  };
+  drawEvent("NAECHSTER VOLLMOND",moon.nextFullMoon,119);
+  drawEvent("NAECHSTER NEUMOND",moon.nextNewMoon,139);
+  spr.setFont(FONT_DEFAULT);
+  spr.setTextColor(MUTED_TEXT,TH.bg);
+  spr.drawString("Zeiten: Lokalzeit  |  Klick: Zurueck",12,155);
+}
+
 static void drawWeatherScreen()
 {
   const WeatherService::Snapshot weather = weatherService.snapshot();
@@ -791,6 +868,13 @@ void drawScreen()
   if(currentCmd == CMD_WEATHER)
   {
     drawWeatherScreen();
+    spr.pushSprite(0, 0);
+    return;
+  }
+
+  if(currentCmd == CMD_MOON_CALENDAR)
+  {
+    drawMoonCalendarScreen();
     spr.pushSprite(0, 0);
     return;
   }

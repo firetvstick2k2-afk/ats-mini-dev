@@ -60,6 +60,7 @@ void drawLayoutTinyRadio();
 void drawLayoutHJB();
 
 void drawNewsScreen();
+uint8_t newsPageCountForCurrentItem();
 void drawAbout();
 void drawAboutHelp(uint8_t arrow);
 

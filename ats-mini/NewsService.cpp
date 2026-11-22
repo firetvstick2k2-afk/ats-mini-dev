@@ -36,6 +36,7 @@ void utf8(String& out,uint32_t c) {
 String entities(String s) {
   s.replace("&amp;","&");s.replace("&lt;","<");s.replace("&gt;",">");s.replace("&quot;","\"");s.replace("&apos;","'");s.replace("&#39;","'");
   s.replace("&nbsp;"," ");s.replace("&ndash;","-");s.replace("&mdash;","-");s.replace("&hellip;","...");s.replace("&euro;","EUR");
+s.replace("&auml;","ae");s.replace("&ouml;","oe");s.replace("&uuml;","ue");s.replace("&Auml;","Ae");s.replace("&Ouml;","Oe");s.replace("&Uuml;","Ue");s.replace("&szlig;","ss");
   for(uint8_t i=0;i<24;i++){int p=s.indexOf("&#");if(p<0)break;int e=s.indexOf(';',p);if(e<0)break;String t=s.substring(p+2,e);bool x=t.length()>1&&(t[0]=='x'||t[0]=='X');char* tail=nullptr;long c=strtol(x?t.c_str()+1:t.c_str(),&tail,x?16:10);if(tail&&!*tail&&c>=32&&c<=0x10FFFF){String r;utf8(r,(uint32_t)c);s.replace(s.substring(p,e+1),r);}else s.remove(p,e-p+1);}
   return s;
 }
@@ -44,7 +45,10 @@ String clean(String s) {
   s.replace("<![CDATA[","");s.replace("]]>","");
   String out;out.reserve(s.length());bool tag=false,space=false;
   for(size_t i=0;i<s.length();i++){char c=s[i];if(c=='<'){tag=true;space=true;continue;}if(c=='>'){tag=false;continue;}if(tag)continue;if(isspace((uint8_t)c)||(uint8_t)c<32){space=true;continue;}if(space&&out.length())out+=' ';space=false;out+=c;}
-  out=entities(out);out.trim();while(out.indexOf("  ")>=0)out.replace("  "," ");return out;
+  out=entities(out);
+  out.replace("\\xC3\\xA4","ae");out.replace("\\xC3\\xB6","oe");out.replace("\\xC3\\xBC","ue");
+  out.replace("\\xC3\\x84","Ae");out.replace("\\xC3\\x96","Oe");out.replace("\\xC3\\x9C","Ue");out.replace("\\xC3\\x9F","ss");
+  out.trim();while(out.indexOf("  ")>=0)out.replace("  "," ");return out;
 }
 int64_t parseDate(String s) {
   s.trim();struct tm t={};char* e=strptime(s.c_str(),"%a, %d %b %Y %H:%M:%S",&t);

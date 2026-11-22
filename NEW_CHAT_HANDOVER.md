@@ -665,3 +665,5 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Static checks: zero missing function definitions versus EN/DE; 22 entries in Italian menu, menuXXL, settings and settingsXXL arrays. Source-only; no build or device test.
 - Commits: `bee6ee0b1309692662f1a6f4d8eff99716db53c5`, `41de33f4b5eccb329ecfe5c6e6e51a45c6111353`.
 - Still pending across DE/EN/IT: FM DX at menu position 20, Settings at position 22, Back after item 22 with immediate return to the active layout. No build without explicit user request.
+
+- Additional parity pass aligned Italian volume click and settings navigation. Final static comparison has no missing functions; remaining body differences are intentional/localized `clickHandler`, Italian `drawXXLText`, and Italian `drawFullScreenMenu`. All three main menus contain 22 entries. Latest Italian source commit: `32fc256b514d810884b778325e414453a980dadd`.

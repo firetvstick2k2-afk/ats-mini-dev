@@ -1,6 +1,12 @@
 # ATS Mini Development Handoff
 
 ## Latest task: decoder menu unification and CW audio/auto-tone improvements (2026-11-22)
+
+### Follow-up refinement (2026-11-22)
+- Applied the central three-row decoder frequency renderer to all language templates: English, German and Italian. The German OSPI-DE build therefore uses the unified category/preset UI too.
+- Shared renderer now shows the same selected/total counter and two-digit row numbering as the main menu; preview/tone status is placed above the footer divider.
+- AUTO Tone search resolution increased from 25 Hz to 10 Hz; tone-bin dominance threshold was relaxed slightly so real carriers between search bins are not rejected. This is still awaiting device verification.
+- Follow-up code commits: `52cad6ea0e5e5bdeb4727773528674fc0c071147` (AUTO Tone frequency resolution), `1866eb8d3312c52273c59f3c88cd500c32aac4a5` (German menu), `e7e3d88cbe369c1733d5be49b33fa6ea31456f37` (Italian menu), `1bc90849d15b2f4d67c9d082e2644d8f7f8b5e01` (menu counters/numbering).
 - User authorized direct commits to `development` until this task is complete. `main` remains untouched. The user starts the OSPI-DE build manually; do not dispatch a build.
 - Added shared renderer `ats-mini/src/DecoderMenuUi.h`: three visible rows, main-menu-inspired cyan/blue selection, numbering, scrollbar and encoder footer.
 - Applied it to CW Actions/CW frequencies, RTTY Actions/RTTY presets, FT8/FT4 Actions/presets, and the central Decoder Frequencies category/preset screen in `Menu_english.cpp.src`. Existing action handlers and preview/tune delays remain in place.

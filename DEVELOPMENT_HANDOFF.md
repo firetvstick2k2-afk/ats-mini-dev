@@ -1402,3 +1402,10 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - The exact GitHub Actions run ID/link and outcome have not yet been confirmed in this handoff. Do not equate the user-facing build number (#31) with the GitHub Actions run ID.
 - Before requesting the next build after further source changes, inspect the latest workflow/run history where available and tell the user the exact next build number to start. Record the requested number, actual run ID/link, built commit and result when known.
 
+## Decoder Action-Menüs: Auswahl nur umranden — 2026-11-22
+- Auf Wunsch des Nutzers zeigen die Action-Menüs von FT8/FT4, CW und RTTY die ausgewählte Zeile jetzt ohne blaue Flächenfüllung: schwarzer Hintergrund bleibt sichtbar, die Auswahl wird ausschließlich mit einem dünnen cyanfarbenen abgerundeten Rahmen markiert.
+- Umsetzung über den gemeinsamen Renderer `ats-mini/src/DecoderMenuUi.h` mit optionalem `outlineSelection`-Modus. Aktiviert für FT8- und FT4-Actions, CW Actions und RTTY Actions.
+- Decoder-Frequenz-/Preset-Untermenüs behalten bewusst ihre bisherige Auswahlgestaltung; die Änderung ist auf die Action-Menüs begrenzt.
+- Commits auf `development`: Renderer `f45aaa694d1687aa955b8b9eb36259e62ccaede8`; FT8/FT4 `f89d4c18fa8c2f56f6acbbec9e6c4cd55386e121`; CW `cd01aea8c06f4a66eb9f1934031e625b02426042`; RTTY `f79fc5e72e1f0137dd0c8360e07936e15c37ac20`.
+- Source change committed; compile, GitHub Actions build, flash and hardware appearance are not yet verified. Build #31 was reported started before these four commits and therefore does not include this selection-outline update.
+- Before recommending the next build, inspect the latest Actions history and determine the next user-facing build number. Do not start the workflow automatically.

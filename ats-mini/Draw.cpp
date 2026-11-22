@@ -1101,6 +1101,15 @@ void drawScreen()
     return;
   }
 
+  // All radio-function submenus use the same modern full-screen renderer.
+  // Keep the existing encoder/click handlers; this changes presentation only.
+  if((currentCmd >= CMD_BAND && currentCmd <= CMD_SQUELCH) || currentCmd == CMD_BFO)
+  {
+    drawRadioMenuPopup(currentCmd);
+    spr.pushSprite(0, 0);
+    return;
+  }
+
   // All settings submenus use the same full-screen popup renderer instead of
   // falling back to the legacy compact sidebar widgets.
   if(currentCmd > CMD_SETTINGS && currentCmd <= CMD_ABOUT)

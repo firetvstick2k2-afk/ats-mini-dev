@@ -7,6 +7,7 @@
 #include "Ota.h"
 #include "BleMode.h"
 #include "Menu.h"
+#include "WeatherService.h"
 #include "src/DecoderMenuUi.h"
 #include "Memories.h"
 #include "Patches.h"
@@ -127,10 +128,11 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_VFO         16
 #define MENU_SPECTRUM    17
 #define MENU_ALL_SPECTRUM 18
-#define MENU_FM_DX       19
-#define MENU_DECODER_MENU 20
-#define MENU_SETTINGS    21
-#define MENU_BACK        22
+#define MENU_WEATHER     19
+#define MENU_FM_DX       20
+#define MENU_DECODER_MENU 21
+#define MENU_SETTINGS    22
+#define MENU_BACK        23
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -162,7 +164,7 @@ static const char *menu[]
   "STEPS", "SUCHE", "SCANNEN", "SPEICHER", "RAUSCHSPERRE",
   "BANDBREITE", "FREQUENZ-LINE", "AGC/DÄMPFUNG", "AUTO-LAUTSTÄRKE",
   "SOFT-MUTE", "DUAL RX", "VFO A/B", "VHF SPEKTRUM",
-  "ALL BAND SPEKTRUM", "FM DX", "DECODER", "EINSTELLUNGEN", "ZURÜCK",
+  "ALL BAND SPEKTRUM", "WETTERBERICHT", "FM DX", "DECODER", "EINSTELLUNGEN", "ZURÜCK",
 };
 
 #define MENU_BRIGHTNESS   0
@@ -971,6 +973,7 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_DUAL_RX: dualRxStart(); break;
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
+    case MENU_WEATHER: weatherPage = 0; currentCmd = CMD_WEATHER; weatherService.requestRefresh(); break;
     case MENU_FM_DX: fmDxUiOpen(); break;
     case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
     case MENU_BACK: currentCmd = CMD_NONE; break;

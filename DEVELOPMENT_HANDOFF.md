@@ -1,5 +1,18 @@
 # ATS Mini Development Handoff
 
+## Wichtige Vorgabe: Lesbarkeit und visuelle Gestaltung für den Nutzer (2026-11-22)
+
+- Der Nutzer hat eine eingeschränkte Seh-/Lesefähigkeit und trägt eine Brille (+1,5 Dioptrien beidseitig). Er beschreibt keine grundsätzlichen Probleme mit der Farberkennung; entscheidend sind **gute Erkennbarkeit, klare Schrift und möglichst geringe Augenanstrengung**.
+- Diese Vorgabe gilt für **alle sichtbaren Elemente und Oberflächen** der Firmware: Menüs, Statusanzeigen, Dialoge, Decoder- und Nachrichtenansichten, Wetter-/Mondkalenderseiten, Keypads, Hinweise, Grafiken und zukünftige Layouts. Bei jeder visuellen Änderung die Lesbarkeit aktiv mitprüfen.
+- Seine bevorzugte Referenz ist der dunkle Chat-Darstellungsstil aus dem am 2026-11-22 gesendeten Screenshot: tiefschwarzer Hintergrund, gut erkennbare weiße bzw. leicht abgedunkelte Schrift, klare kräftige Buchstaben und großzügige Zeilen-/Elementabstände. Das Hauptmenü wurde aus demselben Grund bereits bewusst in Schwarz-Weiß gestaltet.
+- Helle, grelle oder leuchtende Darstellungen strengen ihn stärker an. Neonfarben, unnötige Leuchteffekte, dünne Schrift, zu kleine Beschriftungen und zu dicht gepackte Inhalte vermeiden, sofern der Nutzer nicht ausdrücklich etwas anderes möchte.
+- **Lesbarkeit hat Vorrang vor Informationsdichte und kompakter Darstellung.** Lieber größere/kräftigere Schrift, mehr Abstand und zusätzliche Seiten als kleine Schrift oder zusammengedrängte Inhalte. Bei RSS-Nachrichten sind auch vier oder mehr Seiten mit nur drei Textzeilen pro Seite ausdrücklich willkommen.
+- Farben sind nicht pauschal verboten: Der Nutzer sagt, dass er normalerweise keine Probleme mit Farben hat. Nicht aus der Sehschwäche auf eine Farbsehschwäche schließen. Farben nur so einsetzen, dass Text und Symbole klar unterscheidbar bleiben und die Darstellung nicht unnötig blendet.
+- Wo möglich, vorhandene Schriftarten auf ihre tatsächliche Strichstärke und Lesbarkeit bei 320×170 Pixeln prüfen. Kontrast, Schriftgröße, Gewicht, Zeilenabstand, Abstände und Hintergrund gemeinsam betrachten; Farbe allein löst keine unscharfe oder anstrengende Darstellung.
+- Visuelle Änderungen möglichst zunächst gezielt und isoliert umsetzen. Die endgültige Beurteilung erfolgt durch den Nutzer auf dem echten ATS-Mini-Display mit seiner Brille. Bei Bedarf anhand seiner Fotos und Rückmeldungen iterieren; keine subjektive Lesbarkeit behaupten, bevor er sie bestätigt hat.
+- Die RSS-Nachrichtenansicht wurde am 2026-11-22 als erster konkreter Schritt auf monochrom, tiefschwarz und kräftigere weiße Schrift mit drei Textzeilen pro Seite umgestellt. Diese Änderung ist noch vom Nutzer zu bauen und auf Hardware zu beurteilen.
+
+
 Last updated: 2026-11-22
 
 ## Current project status

@@ -1,4 +1,5 @@
 #include "RttyUi.h"
+#include "../DecoderMenuUi.h"
 #include "RttyService.h"
 #include "Common.h"
 #include "Menu.h"
@@ -278,7 +279,7 @@ void rttyUiRotate(int16_t delta) {
       if(next>=count) next=0;
       presetSelection=static_cast<uint8_t>(next);
       if(presetSelection<presetScroll) presetScroll=presetSelection;
-      if(presetSelection>=presetScroll+5) presetScroll=presetSelection-4;
+      presetScroll=DecoderMenuUi::firstVisible(presetSelection,static_cast<uint8_t>(count));
       scheduleRttyPresetPreview(millis());
       return;
     }
@@ -449,90 +450,46 @@ void drawRttyDecoderPage() {
   spr.drawString(footer,160,162);
 
   if(menuOpen) {
-    const int menuX=20,menuY=8,menuW=280,menuH=154;
-    spr.fillRect(menuX,menuY,menuW,menuH,bg);
-    spr.drawRect(menuX,menuY,menuW,menuH,cyan);
-    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-    spr.setTextDatum(TL_DATUM);
-    spr.setTextColor(cyan);
-
     if(presetMenuOpen) {
-      spr.drawString("RTTY PRESETS",menuX+12,menuY+7);
-      const uint8_t count=rttyPresetCount();
-      for(uint8_t row=0;row<5;++row) {
-        const uint8_t index=presetScroll+row;
-        if(index>=count) break;
-        const DecoderFrequencyPreset* preset=rttyPresetAt(index);
+      const uint8_t count = rttyPresetCount();
+      char storage[kDecoderFrequencyPresetCount][40] = {};
+      const char* labels[kDecoderFrequencyPresetCount] = {};
+      for(uint8_t i = 0; i < count; ++i) {
+        const DecoderFrequencyPreset* preset = rttyPresetAt(i);
         if(!preset) continue;
-        const char* name=preset->label;
-        if(!strncmp(name,"RTTY ",5)) name+=5;
-        else if(!strncmp(name,"PINNEBERG ",10)) name+=10;
-        char label[40];
-        snprintf(label,sizeof(label),"%-8s %2u.%03u %s",name,
-          static_cast<unsigned>(preset->frequencyKHz/1000),
-          static_cast<unsigned>(preset->frequencyKHz%1000),
-          preset->modulation==USB?"USB":preset->modulation==LSB?"LSB":"AM");
-        const int y=menuY+29+row*19;
-        if(index==presetSelection) spr.drawRect(menuX+7,y-3,menuW-14,19,cyan);
-        spr.setTextColor(index==presetSelection?cyan:white);
-        spr.setFont(FONT_SMALL);
-        spr.setTextDatum(TL_DATUM);
-        spr.drawString(label,menuX+13,y);
+        const char* name = preset->label;
+        if(!strncmp(name, "RTTY ", 5)) name += 5;
+        else if(!strncmp(name, "PINNEBERG ", 10)) name += 10;
+        snprintf(storage[i], sizeof(storage[i]), "%s  %u.%03u %s", name,
+                 static_cast<unsigned>(preset->frequencyKHz / 1000),
+                 static_cast<unsigned>(preset->frequencyKHz % 1000),
+                 preset->modulation == USB ? "USB" : preset->modulation == LSB ? "LSB" : "AM");
+        labels[i] = storage[i];
       }
-      char page[12];
-      snprintf(page,sizeof(page),"%02u/%02u",static_cast<unsigned>(presetSelection+1),static_cast<unsigned>(count));
-      spr.setTextDatum(TR_DATUM);
-      spr.setTextColor(white);
-      spr.setFont(FONT_SMALL);
-      spr.drawString(page,menuX+menuW-10,menuY+7);
-      spr.setTextDatum(MC_DATUM);
-      spr.setTextColor(presetPreviewActive?green:0xBDF7);
-      spr.drawString(presetPreviewActive?"ABGESTIMMT":(presetPreviewPending?"ABSTIMMEN...":"BEREIT"),160,menuY+124);
-      spr.setTextDatum(ML_DATUM);
-      spr.setTextColor(white);
-      spr.drawString("DREHEN: WÄHLEN",menuX+12,menuY+143);
-      spr.setTextDatum(MR_DATUM);
-      spr.drawString("HALTEN: ZURÜCK",menuX+menuW-12,menuY+143);
+      const char* previewStatus = presetPreviewActive ? "TUNED" : presetPreviewPending ? "TUNING..." : "READY";
+      DecoderMenuUi::draw("RTTY FREQUENCIES", labels, nullptr, count, presetSelection,
+                          "TURN: SELECT", "CLICK: APPLY", previewStatus);
     } else {
-      spr.drawString("RTTY ACTIONS",menuX+12,menuY+7);
-      char toneStatus[48];
-      if(service.markHz()>0 && service.spaceHz()>0)
-        snprintf(toneStatus,sizeof(toneStatus),"M %.0f S %.0f Hz",service.markHz(),service.spaceHz());
-      else snprintf(toneStatus,sizeof(toneStatus),"TONE SEARCH");
-      spr.setFont(FONT_SMALL);
-      spr.setTextDatum(TR_DATUM);
-      spr.setTextColor(cyan);
-      spr.drawString(toneStatus,menuX+menuW-12,menuY+10);
-      spr.setTextDatum(TL_DATUM);
-      const char* labels[kMenuCount]={
-        "RTTY PRESETS",
-        bfoAuto?"BFO MODE       AUTO":"BFO MODE       MANUAL",
-        "BAUD RATE",
-        "POLARITY",
-        "CLEAR TEXT",
-        "RESET DECODER",
-        "BACK",
-        "EXIT RTTY"
+      const char* labels[kMenuCount] = {
+        "RTTY FREQUENCIES", "BFO MODE", "BAUD RATE", "POLARITY",
+        "CLEAR TEXT", "RESET DECODER", "BACK", "EXIT RTTY"
       };
-      spr.setFont(FONT_SMALL);
-      for(uint8_t i=0;i<kMenuCount;++i) {
-        const int y=menuY+29+i*14;
-        if(i==menuIndex) spr.drawRect(menuX+7,y-3,menuW-14,16,cyan);
-        spr.setTextColor(i==menuIndex?cyan:white);
-        spr.setTextDatum(TL_DATUM);
-        spr.drawString(labels[i],menuX+13,y);
-        char value[24]={};
-        if(i==2) snprintf(value,sizeof(value),"%.2f Bd",baudChoices[baudIndex]);
-        else if(i==3) snprintf(value,sizeof(value),"%s",polarityNames[polarityIndex]);
-        if(value[0]) {
-          spr.setTextDatum(TR_DATUM);
-          spr.setTextColor(i==menuIndex?cyan:white);
-          spr.drawString(value,menuX+menuW-13,y);
-        }
-      }
-      spr.setTextDatum(MC_DATUM);
-      spr.setTextColor(cyan);
-      spr.drawString(menuEditing?"ROTATE: CHANGE  CLICK: DONE":"ROTATE: SELECT  CLICK: OPEN",160,menuY+143);
+      const char* values[kMenuCount] = {
+        nullptr, bfoAuto ? "AUTO" : "MANUAL", nullptr, nullptr,
+        nullptr, nullptr, nullptr, nullptr
+      };
+      char baudValue[16], polarityValue[16];
+      snprintf(baudValue, sizeof(baudValue), "%.2f Bd", baudChoices[baudIndex]);
+      snprintf(polarityValue, sizeof(polarityValue), "%s", polarityNames[polarityIndex]);
+      values[2] = baudValue;
+      values[3] = polarityValue;
+      char toneStatus[32];
+      if(service.markHz() > 0 && service.spaceHz() > 0)
+        snprintf(toneStatus, sizeof(toneStatus), "M %.0f S %.0f Hz", service.markHz(), service.spaceHz());
+      else snprintf(toneStatus, sizeof(toneStatus), "TONE SEARCH");
+      DecoderMenuUi::draw("RTTY ACTIONS", labels, values, kMenuCount, menuIndex,
+                          menuEditing ? "TURN: CHANGE" : "TURN: SELECT",
+                          menuEditing ? "CLICK: DONE" : "CLICK: OPEN", toneStatus);
     }
   }
 }

@@ -691,7 +691,8 @@ static void drawMoonCalendarScreen()
     return;
   }
 
-  const int cx=66, cy=87, radius=34;
+  // Kompakter Mond: mehr Platz fuer die Phasenbezeichnung rechts.
+  const int cx=58, cy=84, radius=24;
   spr.fillCircle(cx,cy,radius,MOON_GOLD);
   const float phase=moon.phase;
   if(phase < 0.03f || phase > 0.97f)
@@ -705,31 +706,31 @@ static void drawMoonCalendarScreen()
   spr.drawCircle(cx,cy,radius,MOON_GOLD);
 
   spr.setTextColor(GREEN,TH.bg);
-  spr.setFont(FONT_LARGE);
-  spr.drawString(moon.phaseName,119,42);
+  spr.setFont(FONT_SMALL);
+  spr.drawString(moon.phaseName,101,42);
   char value[40];
   snprintf(value,sizeof(value),"%u%% beleuchtet",moon.illuminationPercent);
   spr.setTextColor(WHITE_TEXT,TH.bg);
   spr.setFont(FONT_SMALL);
-  spr.drawString(value,119,66);
+  spr.drawString(value,101,65);
   snprintf(value,sizeof(value),"Mondalter: %.1f Tage",moon.ageDays);
   spr.setFont(FONT_DEFAULT);
   spr.setTextColor(MUTED_TEXT,TH.bg);
-  spr.drawString(value,119,90);
+  spr.drawString(value,101,87);
 
   auto drawEvent = [&](const char* label, time_t epoch, int y) {
     struct tm local{};
     char dateText[28]="--";
     if(epoch > 0 && localtime_r(&epoch,&local))
       strftime(dateText,sizeof(dateText),"%d.%m. %H:%M",&local);
-    spr.setFont(FONT_DEFAULT);
+    spr.setFont(FONT_SMALL);
     spr.setTextColor(CYAN,TH.bg);
     spr.drawString(label,12,y);
     spr.setTextColor(WHITE_TEXT,TH.bg);
     spr.drawRightString(dateText,w-12,y);
   };
-  drawEvent("NAECHSTER VOLLMOND",moon.nextFullMoon,119);
-  drawEvent("NAECHSTER NEUMOND",moon.nextNewMoon,139);
+  drawEvent("NAECHSTER VOLLMOND",moon.nextFullMoon,116);
+  drawEvent("NAECHSTER NEUMOND",moon.nextNewMoon,137);
   spr.setFont(FONT_DEFAULT);
   spr.setTextColor(MUTED_TEXT,TH.bg);
   spr.drawString("Zeiten: Lokalzeit  |  Klick: Zurueck",12,155);

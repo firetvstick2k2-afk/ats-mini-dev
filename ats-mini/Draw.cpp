@@ -958,13 +958,13 @@ static void drawWeatherScreen()
     spr.setTextColor(MUTED_TEXT,PANEL);
     spr.drawString(feels,126,105);
 
-    const int x0=9, y=127, gap=4, boxW=(w-18-3*gap)/4, boxH=30;
-    const char* labels[]={"FEUCHTE","WIND","REGEN","DRUCK"};
+    const int x0=9, y=119, gap=4, boxW=(w-18-3*gap)/4, boxH=30;
+    const char* labels[]={"FEUCHTE","WIND","REGEN","SCHNEE"};
     char values[4][20];
     snprintf(values[0],sizeof(values[0]),"%u%%",weather.humidity);
     snprintf(values[1],sizeof(values[1]),"%u km/h",weather.windKmh);
     snprintf(values[2],sizeof(values[2]),"%u%%",weather.precipitation);
-    snprintf(values[3],sizeof(values[3]),"%u hPa",weather.pressureHpa);
+    snprintf(values[3],sizeof(values[3]),"%u%%",weather.snowChance);
     for(int i=0;i<4;++i)
     {
       const int x=x0+i*(boxW+gap);

@@ -319,11 +319,15 @@ void NavtexReceiverService::runSelfTest() {
       ++phasingErrors;
   }
   selfTestPhasingErrors_ = phasingErrors;
+  char phasingBits[NavtexSitorBSync::kPatternBits + 1] = {};
+  for (uint8_t i = 0; i < selfTestPhasingBitCount_; ++i)
+    phasingBits[i] = selfTestPhasingBits_[i] ? '1' : '0';
   selfTestRunning_ = false;
   selfTestStatus_ = messagesCompleted_ > 0 ? SelfTestStatus::Passed : SelfTestStatus::Failed;
-  Serial.printf("[NAVTEX-TEST] PHASING bits=%u errors=%u locked=%d\n",
+  Serial.printf("[NAVTEX-TEST] PHASING bits=%u errors=%u locked=%d data=%s\n",
                 static_cast<unsigned>(selfTestPhasingBitCount_),
-                static_cast<unsigned>(phasingErrors), sync_.status().locked ? 1 : 0);
+                static_cast<unsigned>(phasingErrors), sync_.status().locked ? 1 : 0,
+                phasingBits);
   Serial.printf("[NAVTEX-TEST] RESULT %s\n",
                 selfTestStatus_ == SelfTestStatus::Passed ? "PASS" : "FAIL");
 }

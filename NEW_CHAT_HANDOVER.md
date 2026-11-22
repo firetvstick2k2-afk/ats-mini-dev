@@ -1,5 +1,20 @@
 # ATS Mini Dev — Übergabe für neuen Chat
 
+## 0. Latest work and immediate status (22.11.2026)
+
+### Decoder menu unification + CW decoder work
+- User authorized direct commits to `development` until this task is complete. Never modify `main`. User starts the OSPI-DE build manually; do not dispatch GitHub Actions.
+- Shared renderer: `ats-mini/src/DecoderMenuUi.h` (three visible rows, main-menu-inspired selection, numbering, scrollbar, encoder footer).
+- Applied to CW Actions/frequencies, RTTY Actions/presets, FT8/FT4 Actions/presets, and the central Decoder Frequencies category/preset screen.
+- Existing preset preview/restore/tune flows and decoder action handlers were preserved.
+- CW opening now refreshes the displayed frequency from the receiver.
+- RESONIK-style adaptive Goertzel and reference filters were already present in `CwDecoder.h`; the main weak point was AUTO Tone detection in `CwDecoderService.cpp`. It now uses normalized tone coherence, a learned noise floor, and three stable windows before retuning.
+- GPIO11 capture is explicitly configured for 12-bit ADC reads and 11 dB attenuation. CW UI now shows average level, peak and clipping indication.
+- Relevant latest code commit: `729f14d860f5d053ef6d3368ee716f82c721510d` (central decoder frequency menu). Earlier commits and full detail are in `DEVELOPMENT_HANDOFF.md`.
+- **Build/test status:** source-only. No build was started, no firmware was flashed, and CW reception has not yet been verified on hardware. The user will start the OSPI-DE build after the implementation is complete.
+- Next: perform final source consistency review, update handoff if further changes are made, then tell user the exact latest commit and ask them to run OSPI-DE. Do not claim build success.
+
+
 Stand: 21.11.2026  
 Repository: `firetvstick2k2-afk/ats-mini-dev` (privat)  
 Arbeitsbranch: `development`  

@@ -169,7 +169,7 @@ void drawCwDecoderPage() {
       spr.setTextDatum(TL_DATUM);
       spr.setTextColor(cyan);
       spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-      spr.drawString("DECODER-FREQUENZ",menuX+12,menuY+7);
+      spr.drawString("CW PRESETS",menuX+12,menuY+7);
       const uint8_t count=cwPresetCount()+1;
       for(uint8_t row=0;row<5;++row) {
         const uint8_t index=frequencyScroll+row;

@@ -210,7 +210,8 @@ void drawNavtexPage() {
   spr.setTextColor(receiverService.synchronized() ? 0x07E0 : 0xFFE0);
   spr.drawString(status, 160, 58);
 
-  NavtexMessageParser::Message messages[NavtexMessageParser::kMaxMessages]{};
+  // Keep the multi-kilobyte message snapshot out of the Arduino loopTask stack.
+  static NavtexMessageParser::Message messages[NavtexMessageParser::kMaxMessages]{};
   const uint8_t count = receiverService.copyMessages(messages, NavtexMessageParser::kMaxMessages);
   if (count) {
     const auto& latest = messages[count - 1];

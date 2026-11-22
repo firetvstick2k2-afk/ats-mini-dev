@@ -1409,3 +1409,4 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Commits auf `development`: Renderer `f45aaa694d1687aa955b8b9eb36259e62ccaede8`; FT8/FT4 `f89d4c18fa8c2f56f6acbbec9e6c4cd55386e121`; CW `cd01aea8c06f4a66eb9f1934031e625b02426042`; RTTY `f79fc5e72e1f0137dd0c8360e07936e15c37ac20`.
 - Source change committed; compile, GitHub Actions build, flash and hardware appearance are not yet verified. Build #31 was reported started before these four commits and therefore does not include this selection-outline update.
 - Before recommending the next build, inspect the latest Actions history and determine the next user-facing build number. Do not start the workflow automatically.
+- Nachkontrolle: FT8 Actions verwendet ebenfalls explizit den Outline-only-Modus; der ergänzende Call-Site-Commit ist `5a60f89bec07bd02b440841eac96300fa736bab1`.

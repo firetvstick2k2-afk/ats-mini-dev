@@ -1416,3 +1416,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - This revision includes the outline-only selection appearance for CW Actions, FT8/FT4 Actions and RTTY Actions (black background, thin cyan outline; no blue fill).
 - Build #32 is user-reported as started; GitHub Actions run ID/link and outcome are not yet verified. Do not treat the build number as the Actions run ID.
 - Do not start a workflow on the user's behalf. When available, associate the actual Actions run and result with Build #32.
+
+
+## Italian localization parity — 2026-11-22
+- Compared `ats-mini/Menu_italian.cpp.src` against the current German and English menu sources on `development`.
+- The Italian file was behind: its main-menu index/order did not match the current DE/EN action order, and the decoder action submenu plus CW, RTTY and JS8 UI integrations were missing. It also lacked current XXL text-measurement helpers and the volume/brightness/settings popup renderers.
+- Updated the Italian source to use the same 22-item main-menu action/index structure as DE/EN while retaining Italian labels and the existing Italian XXL styling. Added the localized Decoder submenu (frequency catalog, CW, RTTY, FT8/FT4, JS8 RX), CW/RTTY preset launch routing, decoder screen exit handling, and the missing popup/helper functions with Italian UI strings.
+- Static source comparison now reports no missing function definitions versus either English or German. Italian main-menu/menuXXL/settings/settingsXXL arrays each contain 22 entries; decoder open/exit handlers and popup functions are present.
+- Source-only commits: `bee6ee0b1309692662f1a6f4d8eff99716db53c5`, `41de33f4b5eccb329ecfe5c6e6e51a45c6111353`. No build or hardware verification has been performed.
+- Follow-up still pending: user-requested main-menu placement change across all three languages — FM DX at position 20, Settings at position 22, and a Back entry after item 22 that returns immediately to the active layout. Do not start a build unless the user explicitly asks.

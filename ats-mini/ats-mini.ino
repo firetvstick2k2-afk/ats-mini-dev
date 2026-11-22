@@ -865,8 +865,8 @@ void loop()
       uint8_t pages = (uint8_t)((strlen(item.text) + 239) / 240);
       if(!pages) pages = 1;
       int next = (int)newsCurrentPage + encCount;
-      if(next < 0) { newsCurrentIndex = newsCurrentIndex ? newsCurrentIndex - 1 : state.count - 1; newsCurrentPage = 0; }
-      else if(next >= pages) { newsCurrentIndex = (newsCurrentIndex + 1) % state.count; newsCurrentPage = 0; }
+      if(next < 0) { newsCurrentIndex = newsCurrentIndex ? newsCurrentIndex - 1 : count - 1; newsCurrentPage = 0; }
+      else if(next >= pages) { newsCurrentIndex = (newsCurrentIndex + 1) % count; newsCurrentPage = 0; }
       else newsCurrentPage = (uint8_t)next;
     }
     needRedraw = true; elapsedSleep = elapsedCommand = currentTime; encCount = encCountAccel = 0;

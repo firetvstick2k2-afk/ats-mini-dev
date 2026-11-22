@@ -9,6 +9,10 @@ bool AudioCaptureService::begin() {
   return false; // GPIO11 is the LILYGO SPI MOSI pin, not the ATS Mini audio input.
 #else
   if (initialized_) return true;
+  // ATS Mini V4B routes receiver audio to GPIO11 (ADC2_CH0). Keep the
+  // ADC range explicit so decoder thresholds are stable across startup paths.
+  analogReadResolution(12);
+  analogSetPinAttenuation(kPin, ADC_11db);
   pinMode(kPin, INPUT);
   if (xTaskCreatePinnedToCore(taskEntry, "audio-capture", 4096, this, 3, nullptr, 0) != pdPASS) {
     return false;
@@ -86,6 +90,7 @@ void AudioCaptureService::sampleTask() {
 
     ++index;
     next = base + static_cast<int64_t>(index * 1000000ULL / kSampleRate);
+    // GPIO11 is ADC2 on the ATS Mini V4B; callers must stop Wi-Fi first.
     int value = analogRead(kPin);
     if (value < 0) value = 2048;
     samples[count++] = static_cast<int16_t>(value);

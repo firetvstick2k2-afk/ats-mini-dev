@@ -731,16 +731,19 @@ void loop()
   static uint32_t lastWeatherDrawUpdate = UINT32_MAX;
   static bool lastWeatherDrawFetching = false;
   static bool lastWeatherDrawValid = false;
+  static uint8_t lastWeatherUiState = 0xFF;
   if(currentCmd == CMD_WEATHER)
   {
     const WeatherService::Snapshot weatherState = weatherService.snapshot();
     if(weatherState.updatedAtMs != lastWeatherDrawUpdate ||
        weatherState.fetching != lastWeatherDrawFetching ||
-       weatherState.valid != lastWeatherDrawValid)
+       weatherState.valid != lastWeatherDrawValid ||
+       weatherUiState != lastWeatherUiState)
     {
       lastWeatherDrawUpdate = weatherState.updatedAtMs;
       lastWeatherDrawFetching = weatherState.fetching;
       lastWeatherDrawValid = weatherState.valid;
+      lastWeatherUiState = weatherUiState;
       needRedraw = true;
     }
   }

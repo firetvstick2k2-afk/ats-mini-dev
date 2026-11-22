@@ -393,6 +393,7 @@ bool WeatherService::fetchWeather(const char* postalCode, Snapshot& result) {
   int16_t highs[FORECAST_DAYS];
   int16_t lows[FORECAST_DAYS];
   uint8_t rain[FORECAST_DAYS] = {};
+  uint8_t snow[FORECAST_DAYS] = {};
   uint8_t codes[FORECAST_DAYS] = {};
   bool found[FORECAST_DAYS] = {};
   for (uint8_t i = 0; i < FORECAST_DAYS; ++i) {
@@ -419,6 +420,7 @@ bool WeatherService::fetchWeather(const char* postalCode, Snapshot& result) {
     const uint8_t probability = boundedPercent(record["precipitation_probability"]);
     if (probability > rain[dayIndex]) rain[dayIndex] = probability;
     const char* icon = record["icon"] | "";
+    if (strstr(icon, "snow") && probability > snow[dayIndex]) snow[dayIndex] = probability;
     uint8_t code = 0;
     if (strstr(icon, "thunderstorm")) code = 95;
     else if (strstr(icon, "snow")) code = 71;
@@ -446,6 +448,7 @@ bool WeatherService::fetchWeather(const char* postalCode, Snapshot& result) {
     else strlcpy(result.weekdays[i], names[weekday], sizeof(result.weekdays[i]));
   }
   result.precipitation = rain[0];
+  result.snowChance = snow[0];
   weatherLog("[WEATHER] Bright Sky forecast parsed hourly_records=%u days=%u",
     static_cast<unsigned>(records.size()), static_cast<unsigned>(FORECAST_DAYS));
   return true;

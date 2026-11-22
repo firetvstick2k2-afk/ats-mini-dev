@@ -24,6 +24,7 @@
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
 #include "WeatherService.h"
+#include "MoonCalendar.h"
 #include <WiFi.h>
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
@@ -112,6 +113,7 @@ uint8_t  currentMode = FM;
 WeatherService weatherService;
 uint8_t weatherPage = 0;
 volatile uint8_t weatherUiState = WEATHER_UI_IDLE;
+volatile uint8_t moonUiState = MOON_UI_IDLE;
 int16_t  currentBFO  = 0;
 
 uint8_t  rssi = 0;
@@ -726,6 +728,68 @@ void loop()
   {
     netWeatherEnd();
     weatherWifiCleanupPending = false;
+  }
+
+  // Moon phases are calculated locally. Wi-Fi is only needed when the
+  // system clock has never been synchronized; reuse the weather session and
+  // restore the previous Wi-Fi mode immediately after a successful NTP sync.
+  static bool moonWifiSessionActive = false;
+  static bool moonWifiCleanupPending = false;
+  static uint32_t lastMoonNtpAttempt = 0;
+  static uint8_t lastMoonUiState = 0xFF;
+  static time_t lastMoonDrawMinute = 0;
+
+  if(currentCmd == CMD_MOON_CALENDAR && !moonWifiSessionActive && !moonWifiCleanupPending)
+  {
+    if(time(nullptr) < 1700000000)
+    {
+      moonUiState = MOON_UI_WAITING_WIFI;
+      moonWifiSessionActive = true;
+      netWeatherBegin();
+    }
+    else
+      moonUiState = MOON_UI_READY;
+  }
+  if(currentCmd != CMD_MOON_CALENDAR && moonWifiSessionActive)
+  {
+    moonWifiSessionActive = false;
+    moonWifiCleanupPending = true;
+    moonUiState = MOON_UI_IDLE;
+  }
+  if(moonWifiSessionActive)
+  {
+    if(netWeatherPoll())
+    {
+      moonUiState = MOON_UI_SYNCING_TIME;
+      if(!lastMoonNtpAttempt || millis() - lastMoonNtpAttempt >= 5000)
+      {
+        lastMoonNtpAttempt = millis();
+        if(ntpSyncTime() || time(nullptr) >= 1700000000)
+        {
+          moonUiState = MOON_UI_READY;
+          moonWifiSessionActive = false;
+          moonWifiCleanupPending = true;
+        }
+      }
+    }
+    else
+      moonUiState = MOON_UI_WAITING_WIFI;
+  }
+  if(moonWifiCleanupPending)
+  {
+    netWeatherEnd();
+    moonWifiCleanupPending = false;
+  }
+  if(currentCmd == CMD_MOON_CALENDAR)
+  {
+    const time_t now = time(nullptr);
+    const time_t minute = now / 60;
+    if(minute != lastMoonDrawMinute || moonUiState != lastMoonUiState)
+    {
+      lastMoonDrawMinute = minute;
+      lastMoonUiState = moonUiState;
+      needRedraw = true;
+    }
   }
 
   static uint32_t lastWeatherDrawUpdate = UINT32_MAX;

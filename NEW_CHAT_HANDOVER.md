@@ -582,3 +582,12 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Seek currently runs synchronously; a live animated scanning banner is not implemented. Hardware verification is still required for found-station behavior, band-edge/no-station behavior, abort, audio unmute and AUTO bandwidth interaction.
 - Commits: 11160e7113cb80bb83ff6b14033c8f20c689621b, 489ceaa85886a4638a7fccd2b8dc48a3d6c3159f, b4ae6d45bc04f165c7759b13a2b2c7280df94714.
 - Source reviewed only; no compile, Actions run or device test. User starts the build manually.
+
+
+## CW decoder AUTO / FT8-style UI (2026-11-22)
+- Reworked CW display colors to black/dark navy, cyan borders, neon-green text; removed blue styling.
+- Audio presence and decoded CW keying are separate indicators. Audio level bar is based on ADC input and can go green without a valid CW decode.
+- Auto tone tracking analyzes shared 4 kHz capture in 256-sample windows, scanning 400–1000 Hz at 25 Hz steps and retuning the DSP detector to the strongest bin above a heuristic energy threshold. Manual tone selection removed from UI.
+- RF frequency/BFO is not shifted automatically; first validate DSP tone tracking before attempting AFC/BFO changes.
+- Auto tone and level thresholds are provisional and require real-device testing. Existing Morse timing/mark-space decoder still requires calibration/improvement.
+- Source-only changes; no compile/build/hardware test. User starts OSPI-DE build manually.

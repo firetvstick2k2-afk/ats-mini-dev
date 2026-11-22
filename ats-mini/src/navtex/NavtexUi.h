@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 bool navtexUiOpen();
 void navtexUiExit();
 void navtexUiRotate(int delta);

@@ -19,6 +19,8 @@ uint8_t frequencySelection = 0;
 uint8_t frequencyScroll = 0;
 uint8_t menuIndex = 0;
 uint8_t restoreNetworkMode = NET_OFF;
+uint8_t volumeBeforeCw = 0;
+bool volumeBoostActive = false;
 uint32_t lastRefresh = 0;
 constexpr uint8_t kMenuCount = 5;
 uint8_t cwPresetCount() { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) if(kDecoderFrequencyPresets[i].decoder==DecoderKind::CW) ++n; return n; }
@@ -29,10 +31,14 @@ bool applyCwPreset(const DecoderFrequencyPreset& preset) { int best=-1; uint16_t
 bool cwUiOpen() {
   restoreNetworkMode = wifiModeIdx;
   netStop();
+  volumeBeforeCw = volume;
+  volumeBoostActive = volume < 50;
+  if(volumeBoostActive) { volume = 50; rx.setVolume(volume); }
   currentFrequency = rx.getFrequency();
   bands[bandIdx].currentFreq = currentFrequency;
   if (getWiFiStatus() != 0 || !service.enter(sharedAudioCapture(), true)) {
     service.exit();
+    if(volumeBoostActive) { volume = volumeBeforeCw; rx.setVolume(volume); volumeBoostActive = false; }
     netInit(restoreNetworkMode);
     statusShow("CW decoder start failed", "Check Wi-Fi and audio input");
     return false;
@@ -54,6 +60,7 @@ void cwUiExit() {
   menuEditing = false;
   frequencyMenuOpen = false;
   service.exit();
+  if(volumeBoostActive) { volume = volumeBeforeCw; rx.setVolume(volume); volumeBoostActive = false; }
   netInit(restoreNetworkMode);
   currentCmd = CMD_NONE;
 }

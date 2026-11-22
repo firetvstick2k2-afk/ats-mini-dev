@@ -23,6 +23,8 @@
 #include "FreqKeypad.h"
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
+#include "WeatherService.h"
+#include <WiFi.h>
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
 #include "src/cw/CwUi.h"
@@ -107,6 +109,8 @@ uint32_t background_timer = millis();   // Background screen refresh timer.
 //
 uint16_t currentCmd  = CMD_NONE;
 uint8_t  currentMode = FM;
+WeatherService weatherService;
+uint8_t weatherPage = 0;
 int16_t  currentBFO  = 0;
 
 uint8_t  rssi = 0;
@@ -682,12 +686,24 @@ void loop()
   static const Band *lastBandplanDisplayBand = nullptr;
   bool needRedraw = false;
 
+  // Weather networking runs in its own worker; this only publishes STA state
+  // and starts the worker when a valid location has been configured.
+  weatherService.update(WiFi.status() == WL_CONNECTED);
+
   uint32_t encCounts = consumeEncoderCounts();
   int16_t encCount = (int16_t)(encCounts & 0xFFFF);
   int16_t encCountAccel = (int16_t)(encCounts >> 16);
 
   ButtonTracker::State pb1st = pb1.update(digitalRead(ENCODER_PUSH_BUTTON) == LOW);
   if(!pb1st.isPressed) decoderMenuLongPressHandled = false;
+
+  if(currentCmd == CMD_WEATHER && encCount)
+  {
+    weatherPage = static_cast<uint8_t>((weatherPage + encCount % 2 + 2) % 2);
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime;
+    encCount = encCountAccel = 0;
+  }
 
   // Handle FM DX screen exit immediately after sampling the physical button.
   if(currentCmd == CMD_FM_DX && pb1st.isLongPressed && !decoderMenuLongPressHandled)
@@ -957,6 +973,13 @@ void loop()
         currentCmd = CMD_NONE;
       needRedraw = true;
     }
+    else if(pb1st.isLongPressed && currentCmd == CMD_WEATHER && !decoderMenuLongPressHandled)
+    {
+      decoderMenuLongPressHandled = true;
+      currentCmd = CMD_NONE;
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+    }
     else if(pb1st.isLongPressed && currentCmd == CMD_FTX_DECODER && !decoderMenuLongPressHandled)
     {
       decoderMenuLongPressHandled = true;
@@ -989,6 +1012,13 @@ void loop()
     }
     // The native Spectrum keypad handles its own encoder clicks below.
     // Do not let the generic click handler clear CMD_SPECTRUM_INPUT first.
+    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_WEATHER)
+    {
+      weatherPage ^= 1;
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+      pb1st.wasClicked = pb1st.wasShortPressed = false;
+    }
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_FM_DX)
     {
       fmDxUiClick();
@@ -1149,7 +1179,7 @@ void loop()
 
   if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
   {
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_JS8_MONITOR && currentCmd != CMD_FM_DX)
+    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_JS8_MONITOR && currentCmd != CMD_FM_DX && currentCmd != CMD_WEATHER)
     {
       currentCmd = CMD_NONE;
       needRedraw = true;

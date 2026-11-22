@@ -4,6 +4,7 @@
 #include "../../Common.h"
 #include "../../Menu.h"
 #include <string.h>
+#include <stdio.h>
 
 namespace {
 bool pageActive = false;
@@ -40,8 +41,7 @@ bool tunePreset(const NavtexPreset& preset) {
   Band& target = bands[bestBand];
   target.bandMode = AM;
   target.currentFreq = preset.frequencyKHz;
-  target.bandwidthIdx = defaultBwIdx[AM];
-  target.currentStepIdx = defaultStepIdx[AM];
+  // Retain the target band's valid AM bandwidth and tuning step.
   currentBFO = 0;
   selectBand(static_cast<uint8_t>(bestBand), false);
   clearStationInfo();
@@ -119,8 +119,17 @@ void navtexUiClick() {
     return;
   }
   if (presetsOpen) {
-    if (previewActive) {
+    if (previewPending && !previewActive) {
       previewPending = false;
+      previewActive = true;
+      if (!tunePreset(kNavtexPresets[presetSelection])) {
+        restorePreview();
+        statusShow("NAVTEX preset unavailable", "Receiver band does not cover frequency");
+        return;
+      }
+    }
+    if (previewActive) {
+      // Keep the selected frequency and discard the rollback snapshot.
       originalValid = false;
       targetBandIndex = -1;
       targetBandSnapshotValid = false;

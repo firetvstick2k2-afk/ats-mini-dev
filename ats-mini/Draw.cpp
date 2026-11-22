@@ -775,6 +775,31 @@ static size_t newsAdvanceLines(const char* text, size_t offset, uint8_t lines)
   }
   return pos;
 }
+
+static uint8_t newsPageCountForCurrentItem()
+{
+  const uint8_t count = newsService.itemCount();
+  if(!count) return 1;
+
+  const uint8_t index = newsCurrentIndex % count;
+  NewsService::Item item;
+  if(!newsService.getItem(index, item)) return 1;
+
+  const size_t length = strlen(item.text);
+  if(!length) return 1;
+
+  uint8_t pages = 0;
+  size_t offset = 0;
+  while(offset < length && pages < 255)
+  {
+    const size_t next = newsAdvanceLines(item.text, offset, 3);
+    if(next <= offset) break;
+    offset = next;
+    ++pages;
+  }
+  return pages ? pages : 1;
+}
+
 void drawNewsScreen()
 {
   const uint8_t newsCount=newsService.itemCount();

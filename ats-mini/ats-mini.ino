@@ -111,6 +111,7 @@ uint16_t currentCmd  = CMD_NONE;
 uint8_t  currentMode = FM;
 WeatherService weatherService;
 uint8_t weatherPage = 0;
+volatile uint8_t weatherUiState = WEATHER_UI_IDLE;
 int16_t  currentBFO  = 0;
 
 uint8_t  rssi = 0;
@@ -686,9 +687,47 @@ void loop()
   static const Band *lastBandplanDisplayBand = nullptr;
   bool needRedraw = false;
 
-  // Weather networking runs in its own worker; this only publishes STA state
-  // and starts the worker when a valid location has been configured.
-  weatherService.update(WiFi.status() == WL_CONNECTED);
+  // Start WiFi only while the weather screen is open. Preserve the original
+  // mode and defer shutdown until an in-flight HTTPS request has completed.
+  static bool weatherSessionActive = false;
+  static bool weatherWifiCleanupPending = false;
+
+  if(currentCmd == CMD_WEATHER && !weatherSessionActive)
+  {
+    weatherSessionActive = true;
+    weatherUiState = weatherService.hasConfiguredLocation() ? WEATHER_UI_WAITING_WIFI : WEATHER_UI_NO_LOCATION;
+    if(weatherService.hasConfiguredLocation())
+      netWeatherBegin();
+  }
+  if(currentCmd != CMD_WEATHER && weatherSessionActive)
+  {
+    weatherSessionActive = false;
+    weatherWifiCleanupPending = true;
+    weatherUiState = WEATHER_UI_IDLE;
+  }
+
+  bool weatherConnected = WiFi.status() == WL_CONNECTED;
+  if(weatherSessionActive && weatherService.hasConfiguredLocation())
+  {
+    weatherConnected = netWeatherPoll();
+    if(!weatherConnected)
+      weatherUiState = WEATHER_UI_WAITING_WIFI;
+  }
+
+  weatherService.update(weatherConnected, weatherSessionActive);
+
+  if(weatherSessionActive && weatherService.hasConfiguredLocation() && weatherConnected)
+  {
+    const WeatherService::Snapshot sessionWeather = weatherService.snapshot();
+    weatherUiState = (sessionWeather.fetching || !sessionWeather.valid) ? WEATHER_UI_LOADING : WEATHER_UI_READY;
+  }
+
+  if(weatherWifiCleanupPending && !weatherService.snapshot().fetching)
+  {
+    netWeatherEnd();
+    weatherWifiCleanupPending = false;
+  }
+
   static uint32_t lastWeatherDrawUpdate = UINT32_MAX;
   static bool lastWeatherDrawFetching = false;
   static bool lastWeatherDrawValid = false;

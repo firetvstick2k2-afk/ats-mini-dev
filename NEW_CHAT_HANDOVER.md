@@ -657,3 +657,11 @@ The owner explicitly chose a fully independent implementation and preservation o
 - FT8/FT4-Presetmenü ebenfalls auf ungefüllten cyanfarbenen Auswahlrahmen umgestellt; Scrollgrenze auf fünf sichtbare Zeilen korrigiert.
 - Commits auf `development`: RTTY `dd1371a5ed33ad3d28e027be940ddaf0baddd91d`; FT8 `96ddf9a1984eeb459bf331c353c8136aef252624`.
 - Geänderte Dateien: `ats-mini/src/rtty/RttyUi.cpp`, `ats-mini/src/ftx/FtxUi.cpp`. Kein Build/Compile/Flash durch den Assistenten; Nutzer startet Builds selbst. `main` unangetastet.
+
+
+## 2026-11-22 — Italian language parity
+- Italian menu source was compared against current German and English. It had a stale main-menu index order and lacked current CW/RTTY/JS8 decoder action routing and several shared popup helpers.
+- Brought the Italian main-menu index/action order into parity with DE/EN, retained Italian wording/XXL style, added the Decoder submenu (CW, RTTY, FT8/FT4, JS8 RX), decoder preset launch paths, decoder exit handling, and missing volume/brightness/settings popup renderers.
+- Static checks: zero missing function definitions versus EN/DE; 22 entries in Italian menu, menuXXL, settings and settingsXXL arrays. Source-only; no build or device test.
+- Commits: `bee6ee0b1309692662f1a6f4d8eff99716db53c5`, `41de33f4b5eccb329ecfe5c6e6e51a45c6111353`.
+- Still pending across DE/EN/IT: FM DX at menu position 20, Settings at position 22, Back after item 22 with immediate return to the active layout. No build without explicit user request.

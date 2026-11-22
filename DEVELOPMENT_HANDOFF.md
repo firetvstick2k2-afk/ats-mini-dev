@@ -1547,3 +1547,40 @@ Diese Regel ist verbindlich für jede zukünftige Änderung, Erweiterung und Int
 - Kleine Statusmeldungen, technische Hinweise und nebensächliche Texte innerhalb einzelner Funktionen sind ausdrücklich nachrangig. Sie müssen nicht bei jeder Änderung aufwendig vereinheitlicht werden. Der Schwerpunkt liegt auf der Auffindbarkeit und Verständlichkeit der Menüs.
 - Diese Prüfung ist Teil der verbindlichen Abschlusskontrolle und muss bei jeder passenden Änderung durchgeführt und im Handoff berücksichtigt werden.
 
+## Aktualisierte Entwicklungs- und Zukunftsfeature-Referenz — 2026-11-22
+
+### Verbindliche Projektbasis (ersetzt die frühere Mini_OS-Portierungsregel)
+- **Maßgebliche und aktuelle Entwicklungsbasis ist ausschließlich dieses Repository:** `firetvstick2k2-afk/ats-mini-dev`, Branch **`development`**.
+- Die frühere Festlegung, `firetvstick2k2-afk/Mini_OS` / `dev/first-build-preparation` sei die verbindliche Portierungsquelle, ist **veraltet und aufgehoben**.
+- Neue Funktionen, Decoder, UI-Änderungen und Fehlerkorrekturen werden künftig anhand des aktuellen ATS Mini Dev-Codes entwickelt und integriert. Mini_OS darf höchstens als historische Herkunfts-/Vergleichsreferenz dienen, nicht als maßgebliche Quelle oder Voraussetzung.
+- Vor jeder Änderung die aktuelle Datei und ihren SHA aus `development` abrufen; nach dem Commit erneut abrufen und verifizieren. `main` bleibt unangetastet. Keine Builds starten; der Nutzer startet GitHub Actions selbst.
+
+### GitHub-Referenzen für mögliche Zukunftsfunktionen
+Diese Projekte sind Ideengeber zur gezielten Prüfung von Funktionen. Sie sind **keine Portierungsbasis**; vor einer Umsetzung stets Kompatibilität mit ATS Mini Dev, Hardware, Speicher, Audioarchitektur und Lizenz prüfen.
+
+1. **ATS-Mini Pro** — https://github.com/sirruf/ats-mini-pro
+   - LVGL-Oberfläche, Spectrum-/Waterfall-Bandscope und Tuning-Cursor
+   - Integrierte Weboberfläche, HTTP-Control-API, BLE-/Seriell-Steuerung und MCP-Anbindung
+   - Auto-Scan mit Übernahme gefundener Stationen in den Speicher
+2. **ATS Mini Monster** — https://github.com/Ho52198/ats-mini-monster
+   - Echtzeit-Spectrum-Analyzer mit Peak-Erkennung
+   - Erweiterte Weboberfläche und direkte Frequenzeingabe
+   - Direkt zugängliches Info-Panel für Volume, Squelch, Step, Bandwidth, AGC, Band, Mode und Frequency
+3. **ATS Mini Custom** — https://github.com/gorucommit/ats-mini_custom
+   - Signal-Scale-Ansicht und Bandplan-Markierungen
+   - Web-Control-Branch mit Live-Status, Scan-Daten und Fernbedienung
+   - Separater experimenteller Waterfall-Branch; Zustand und Wartbarkeit vor Nutzung prüfen
+4. **G8PTN ATS_MINI** — https://github.com/G8PTN/ATS_MINI
+   - VFO/BFO-Abstimmung, Kalibrierung, AVC/AGC, Helligkeit, Batteriespannung und serielle Steuerung
+5. **ATS Mini Upstream** — https://github.com/esp32-si4732/ats-mini
+   - Referenz für Upstream-Verhalten und Kompatibilitätsabgleich, nicht automatisch Ziel für Feature-Portierungen
+
+### Decoder- und Empfangsfunktionen zur späteren Prüfung
+- **PSK31** — digitaler Textfunk; Kandidat für einen weiteren Decoder.
+- **SSTV** — Empfang und Darstellung von Funkbildern; RAM- und Displayanforderungen prüfen.
+- **WEFAX** — Wetterfax; Audio-Passband, Sample-Rate und Bildaufbereitung prüfen.
+- **Spectrum Analyzer / Peak-Tuning** — All-Band-Scan mit Peak-Erkennung und direkter Abstimmung als eigenständige Scanner-Erweiterung prüfen.
+- **Web-Control-Erweiterungen** — ausgewählte Funktionen aus den oben genannten Projekten auf die vorhandene ATS-Mini-Dev-Weboberfläche übertragen, sofern sie zur aktuellen Architektur passen.
+
+Status: Recherche-/Ideenliste, keine Zusage einer bereits integrierten oder hardwarevalidierten Funktion. Bestehende Decoder und NAVTEX zuerst stabilisieren; keine parallelen Audio- oder ADC-Sampler hinzufügen und die geltenden ATS-Mini-Dev-Hardwaregrenzen einhalten.
+

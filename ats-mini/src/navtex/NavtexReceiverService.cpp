@@ -246,6 +246,21 @@ void NavtexReceiverService::runSelfTest() {
   }
   Serial.printf("[NAVTEX-TEST] ENCODE codewords=%u\n", static_cast<unsigned>(codeCount));
 
+  // Verify the bit-to-word synchronizer independently before exercising the
+  // audio demodulator. This separates a phasing detector regression from DSP.
+  NavtexSitorBSync syncSelfCheck;
+  for (uint8_t word = 0; word < NavtexSitorBSync::kPhasingWords; ++word) {
+    const uint8_t phasing = (word & 1U) ? NavtexCcIr476::kAlpha : NavtexCcIr476::kRep;
+    for (uint8_t bitIndex = 0; bitIndex < 7; ++bitIndex) {
+      uint8_t ignoredCodeword = 0;
+      syncSelfCheck.pushBit(((phasing >> bitIndex) & 1U) != 0, ignoredCodeword);
+    }
+  }
+  Serial.printf("[NAVTEX-TEST] SYNC SELF-CHECK locked=%d errors=%u dxEven=%d\n",
+                syncSelfCheck.status().locked ? 1 : 0,
+                static_cast<unsigned>(syncSelfCheck.status().phasingErrors),
+                syncSelfCheck.status().dxOnEvenSlots ? 1 : 0);
+
   demod_.reset(); sync_.reset(); fec_.reset(); ccir_.reset();
   const size_t slotCount = codeCount * 2U + NavtexSitorBFec::kDiversitySlots;
   uint8_t slots[256]{};

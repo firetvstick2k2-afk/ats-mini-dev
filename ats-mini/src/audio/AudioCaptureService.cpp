@@ -12,7 +12,7 @@ bool AudioCaptureService::begin() {
     Serial.println("[AUDIO] begin: capture task already initialized");
     return true;
   }
-  Serial.printf("[AUDIO] begin GPIO=%u rate=%u heap=%u stack=%u\\n",
+  Serial.printf("[AUDIO] begin GPIO=%u rate=%u heap=%u stack=%u\n",
                 static_cast<unsigned>(kPin), static_cast<unsigned>(kSampleRate),
                 static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
@@ -23,7 +23,7 @@ bool AudioCaptureService::begin() {
   pinMode(kPin, INPUT);
   Serial.println("[AUDIO] creating capture task stack=4096 core=0");
   const BaseType_t taskResult = xTaskCreatePinnedToCore(taskEntry, "audio-capture", 4096, this, 3, nullptr, 0);
-  Serial.printf("[AUDIO] capture task result=%ld heap=%u\\n",
+  Serial.printf("[AUDIO] capture task result=%ld heap=%u\n",
                 static_cast<long>(taskResult), static_cast<unsigned>(ESP.getFreeHeap()));
   if (taskResult != pdPASS) return false;
   initialized_ = true;

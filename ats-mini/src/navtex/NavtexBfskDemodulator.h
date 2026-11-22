@@ -10,7 +10,7 @@
 // Output: one hard bit decision at the recovered 100-baud bit clock.
 // NAVTEX audio defaults: MARK=1615 Hz (bit 1), SPACE=1785 Hz (bit 0).
 //
-// A sliding quadrature correlator measures both tones over 20 ms. A simple
+// A sliding quadrature correlator measures both tones over one 10 ms bit. A simple
 // transition-assisted timing loop tracks the 10 ms bit period. The output
 // bit stream is intended for NavtexSitorBSync::pushBit().
 class NavtexBfskDemodulator {

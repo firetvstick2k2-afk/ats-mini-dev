@@ -17,6 +17,7 @@
 #include "PageUpdate.h"
 #include "PagePatches.h"
 #include "AllBandWebScanner.h"
+#include "WeatherService.h"
 #include <new>
 
 #include <WiFi.h>
@@ -794,6 +795,16 @@ static void webInit()
     request->send(200, "text/html", webConfigPage());
   });
 
+  server.on("/weather/save", HTTP_POST, [] (AsyncWebServerRequest *request) {
+    if(!webIsAuthenticated(request)) return request->requestAuthentication();
+    if(!request->hasParam("postal", true))
+      return request->send(400, "text/plain; charset=utf-8", "Bitte eine fünfstellige deutsche Postleitzahl eingeben.");
+    const String postal = request->getParam("postal", true)->value();
+    if(!weatherService.setPostalCode(postal.c_str()))
+      return request->send(400, "text/plain; charset=utf-8", "Ungültige Postleitzahl. Bitte genau fünf Ziffern eingeben.");
+    request->redirect("/config");
+  });
+
   server.on("/splash.png", HTTP_GET, [] (AsyncWebServerRequest *request) {
     if(!LittleFS.exists(SPLASH_PATH))
       return request->send(404, "text/plain", "Not found");
@@ -1340,7 +1351,7 @@ const String webConfigPage()
     {"scan_hidden", scanHidden? "CHECKED" : ""},
     {"scroll", scrollDirection<0? "CHECKED" : ""},
     {"half_step", encoderHalfStep? "CHECKED" : ""}, {"zoom", zoomMenu? "CHECKED" : ""},
-    {"resolution", splashResolution}
+    {"resolution", splashResolution}, {"postal", weatherService.postalCode()}
   }, {
     {"navigation", [](String &out) { webNavigation(out, "/config"); }},
     {"utc_options", [](String &out) {

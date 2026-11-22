@@ -37,7 +37,7 @@ private:
   bool initialized_ = false, wifiBlocked_ = false, signal_ = false, audioPresent_ = false;
   volatile uint16_t audioLevel_ = 0, audioPeak_ = 0;
   volatile bool audioClipped_ = false;
-  float dcEstimate_ = 2048.0f, devSum_ = 0.0f;
+  float dcEstimate_ = 2048.0f, devSum_ = 0.0f, devPeak_ = 0.0f;
   uint32_t devCount_ = 0, clippedCount_ = 0;
   float toneNoiseFloor_ = 0.0f;
   float toneCandidateHz_ = 700.0f;

@@ -1010,7 +1010,7 @@ bool ftxUiTick(uint32_t now)
 
 void drawFtxDecoderPage()
 {
-  const uint16_t bg=0x0000, cyan=0x07FF;
+  const uint16_t bg=0x0000, blue=0x001F, cyan=0x07FF;
   spr.fillSprite(bg);
   // Keep only the display's outer frame; message rows are borderless.
   char frequencyText[24];

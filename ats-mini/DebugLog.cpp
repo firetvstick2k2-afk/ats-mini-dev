@@ -22,6 +22,7 @@ constexpr size_t kLogLineBytes = 256;
 constexpr size_t kFlushChunkBytes = 192;
 
 struct LogRecord {
+  uint32_t sequence = 0;
   uint16_t length = 0;
   char data[kLogLineBytes] = {};
 };
@@ -34,6 +35,7 @@ uint8_t gCount = 0;
 uint16_t gTailOffset = 0;
 uint32_t gDroppedRecords = 0;
 uint32_t gReportedDroppedRecords = 0;
+uint32_t gNextSequence = 1;
 bool gUsbStateKnown = false;
 bool gLastUsbPlugged = false;
 
@@ -61,6 +63,7 @@ void queueText(const char* text, size_t length) {
   memcpy(record.data, text, length);
   record.data[length] = '\0';
   record.length = static_cast<uint16_t>(length);
+  record.sequence = gNextSequence++;
   gHead = static_cast<uint8_t>((gHead + 1U) % kLogRecordCount);
   ++gCount;
   portEXIT_CRITICAL(&gLogMux);
@@ -189,10 +192,12 @@ void atsDebugFlushTick() {
 
   uint8_t output[kFlushChunkBytes];
   size_t amount = 0;
+  uint32_t recordSequence = 0;
 
   portENTER_CRITICAL(&gLogMux);
   if (gCount) {
     const LogRecord& record = gRecords[gTail];
+    recordSequence = record.sequence;
     const size_t remaining = record.length > gTailOffset
                                ? static_cast<size_t>(record.length - gTailOffset) : 0;
     if (remaining) {
@@ -213,7 +218,7 @@ void atsDebugFlushTick() {
     const size_t sent = Serial.write(output, amount);
     if (sent) {
       portENTER_CRITICAL(&gLogMux);
-      if (gCount) {
+      if (gCount && gRecords[gTail].sequence == recordSequence) {
         gTailOffset = static_cast<uint16_t>(gTailOffset + sent);
         if (gTailOffset >= gRecords[gTail].length) {
           gTail = static_cast<uint8_t>((gTail + 1U) % kLogRecordCount);

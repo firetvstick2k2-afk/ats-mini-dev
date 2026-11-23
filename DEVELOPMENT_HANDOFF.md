@@ -8,6 +8,16 @@
 
 # ATS Mini Development Handoff
 
+## Unveränderliche Branch-Regel (vom Nutzer festgelegt, 2026-11-23)
+
+- Im Ziel-Repository `firetvstick2k2-afk/ats-mini-dev` sind **ausschließlich zwei Branches erlaubt: `main` und `development`**.
+- **Es dürfen zu keinem Zeitpunkt weitere Branches angelegt werden** – weder temporäre Feature-, Fix-, Test-, Backup- noch Release-Branches.
+- Sämtliche Entwicklungsarbeit, Codeänderungen und Dokumentationsänderungen erfolgen direkt auf `development`.
+- `main` bleibt unangetastet, außer der Nutzer erteilt ausdrücklich einen konkreten Auftrag, der `main` betrifft. Auch dann wird kein zusätzlicher Branch angelegt.
+- Vor Änderungen bei Bedarf die Branch-Liste kontrollieren. Keine Branch-Erstellung, kein Branch-Wechsel auf neu angelegte Branches und keine Workflows/Automationen verwenden, die zusätzliche Branches erzeugen.
+- Diese Vorgabe ist dauerhaft und gilt für alle zukünftigen Arbeiten im Ziel-Repository ohne zeitliche Ausnahme.
+
+
 ## RSS-Nachrichtenansicht – Textüberlauf und Trennlinie (2026-11-22)
 
 - Nutzer hat nach dem ersten Hardwaretest die deutlich bessere Lesbarkeit bestätigt, aber am rechten Ende der drei Textzeilen und am Ende des Lauftextes abgeschnittene/unerwünschte Zeichenfolgen gemeldet (Foto vom ATS Mini).

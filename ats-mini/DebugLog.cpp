@@ -201,7 +201,13 @@ void atsDebugTick() {
 
   if ((uint32_t)(now - lastHealthReportMs) >= 10000UL) {
     lastHealthReportMs = now;
-    atsDebugLogf("[SYS][HEALTH] uptime_ms=%lu heap_free=%u heap_min=%u heap_max_block=%u psram_free=%u tasks=%u loop_stack_high_water=%u max_loop_gap_ms=%lu slow_loop_count=%lu",
+    uint8_t queuedRecords = 0;
+    uint32_t droppedRecords = 0;
+    portENTER_CRITICAL(&gLogMux);
+    queuedRecords = gCount;
+    droppedRecords = gDroppedRecords;
+    portEXIT_CRITICAL(&gLogMux);
+    atsDebugLogf("[SYS][HEALTH] uptime_ms=%lu heap_free=%u heap_min=%u heap_max_block=%u psram_free=%u tasks=%u loop_stack_high_water=%u loop_gap_max_ms=%lu slow_loops=%lu usb_host=%u usb_tx_free=%d log_queue=%u log_dropped=%lu",
                  static_cast<unsigned long>(now),
                  static_cast<unsigned>(ESP.getFreeHeap()),
                  static_cast<unsigned>(ESP.getMinFreeHeap()),
@@ -210,7 +216,10 @@ void atsDebugTick() {
                  static_cast<unsigned>(uxTaskGetNumberOfTasks()),
                  static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),
                  static_cast<unsigned long>(maxLoopGapMs),
-                 static_cast<unsigned long>(slowLoopCount));
+                 static_cast<unsigned long>(slowLoopCount),
+                 usbHostPresent() ? 1U : 0U, Serial.availableForWrite(),
+                 static_cast<unsigned>(queuedRecords),
+                 static_cast<unsigned long>(droppedRecords));
     maxLoopGapMs = 0;
     slowLoopCount = 0;
   }

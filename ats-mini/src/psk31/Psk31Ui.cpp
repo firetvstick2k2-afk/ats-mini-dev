@@ -9,18 +9,123 @@
 #include <string.h>
 
 namespace {
+struct Psk31Preset {
+  const char* label;
+  uint32_t frequencyKHz;
+  uint8_t modulation;
+  uint8_t bandwidthChoice;
+};
+
+static constexpr Psk31Preset kPsk31Presets[] = {
+  {"160m  PSK31", 1838, USB, 4},
+  {"80m   PSK31", 3580, USB, 4},
+  {"40m   PSK31", 7070, USB, 4},
+  {"30m   PSK31", 10140, USB, 4},
+  {"20m   PSK31", 14070, USB, 4},
+  {"17m   PSK31", 18100, USB, 4},
+  {"15m   PSK31", 21070, USB, 4},
+  {"10m   PSK31", 28120, USB, 4},
+};
+constexpr uint8_t kPsk31PresetCount =
+  sizeof(kPsk31Presets) / sizeof(kPsk31Presets[0]);
+constexpr uint8_t kActionCount = 6;
+constexpr uint32_t kPreviewDelayMs = 2000;
+
 Psk31Service service;
 bool pageActive = false;
-bool menuOpen = false;
-uint8_t menuIndex = 0;
+bool actionsOpen = false;
+bool presetsOpen = false;
+uint8_t actionSelection = 0;
+uint8_t presetSelection = 0;
+uint32_t previewStartedAt = 0;
+bool previewPending = false;
+bool previewActive = false;
+VfoState originalVfo{};
+int16_t originalBfo = 0;
+bool originalValid = false;
+int targetBandIndex = -1;
+Band targetBandOriginal{};
+bool targetBandSnapshotValid = false;
 uint8_t restoreNetworkMode = NET_OFF;
 uint8_t volumeBefore = 0;
 bool volumeBoost = false;
 uint32_t lastRefresh = 0;
-constexpr uint8_t kMenuCount = 5;
+
+bool tunePreset(const Psk31Preset& preset) {
+  int bestBand = -1;
+  uint32_t bestWidth = UINT32_MAX;
+  for (int i = 0; i < getTotalBands(); ++i) {
+    const Band& candidate = bands[i];
+    if (candidate.bandType == FM_BAND_TYPE ||
+        preset.frequencyKHz < candidate.minimumFreq ||
+        preset.frequencyKHz > candidate.maximumFreq) continue;
+    const uint32_t width = candidate.maximumFreq - candidate.minimumFreq;
+    if (width < bestWidth) { bestWidth = width; bestBand = i; }
+  }
+  if (bestBand < 0) return false;
+
+  targetBandIndex = bestBand;
+  targetBandOriginal = bands[bestBand];
+  targetBandSnapshotValid = true;
+  Band& target = bands[bestBand];
+  target.bandMode = preset.modulation;
+  target.currentFreq = static_cast<uint16_t>(preset.frequencyKHz);
+  target.bandwidthIdx = preset.bandwidthChoice;
+  currentBFO = 0;
+  selectBand(static_cast<uint8_t>(bestBand), false);
+  currentMode = preset.modulation;
+  currentFrequency = rx.getFrequency();
+  return currentFrequency == preset.frequencyKHz;
+}
+
+void restorePreview(bool clearState = true) {
+  if (originalValid && previewActive) {
+    if (targetBandSnapshotValid && targetBandIndex >= 0 &&
+        targetBandIndex < getTotalBands())
+      bands[targetBandIndex] = targetBandOriginal;
+    Band& saved = bands[originalVfo.band];
+    saved.currentFreq = originalVfo.freq;
+    saved.bandMode = originalVfo.mode;
+    saved.currentStepIdx = originalVfo.stepIdx;
+    saved.bandwidthIdx = originalVfo.bandwidthIdx;
+    selectBand(originalVfo.band, false);
+    if (currentBFO != originalBfo) updateBFO(originalBfo, true);
+  }
+  previewPending = false;
+  previewActive = false;
+  if (clearState) {
+    originalValid = false;
+    targetBandIndex = -1;
+    targetBandSnapshotValid = false;
+  }
+}
+
+void schedulePreview(uint32_t now) {
+  if (!originalValid) {
+    originalVfo = captureVfo();
+    originalBfo = currentBFO;
+    originalValid = true;
+  }
+  previewPending = true;
+  previewActive = false;
+  previewStartedAt = now;
+}
+
+void commitPreview() {
+  originalValid = false;
+  targetBandIndex = -1;
+  targetBandSnapshotValid = false;
+  previewPending = false;
+  previewActive = false;
+}
 }
 
 bool psk31UiOpen() {
+  actionsOpen = presetsOpen = false;
+  actionSelection = presetSelection = 0;
+  previewPending = previewActive = originalValid = false;
+  targetBandIndex = -1;
+  targetBandSnapshotValid = false;
   restoreNetworkMode = wifiModeIdx;
   netStop();
   if (getWiFiStatus() != 0 || !service.enter(sharedAudioCapture(), true)) {
@@ -34,14 +139,16 @@ bool psk31UiOpen() {
   if (volumeBoost) { volume = 50; rx.setVolume(volume); }
   currentFrequency = rx.getFrequency();
   bands[bandIdx].currentFreq = currentFrequency;
-  menuOpen = false; menuIndex = 0;
-  pageActive = true; lastRefresh = 0;
+  pageActive = true;
+  lastRefresh = 0;
   return true;
 }
 
 void psk31UiExit() {
   if (!pageActive) return;
-  pageActive = false; menuOpen = false;
+  restorePreview();
+  pageActive = false;
+  actionsOpen = presetsOpen = false;
   service.exit();
   if (volumeBoost) { volume = volumeBefore; rx.setVolume(volume); volumeBoost = false; }
   netInit(restoreNetworkMode);
@@ -49,31 +156,79 @@ void psk31UiExit() {
 }
 
 void psk31UiRotate(int16_t delta) {
-  if (!pageActive || !menuOpen || !delta) return;
-  int next = static_cast<int>(menuIndex) + (delta > 0 ? 1 : -1);
-  while (next < 0) next += kMenuCount;
-  menuIndex = static_cast<uint8_t>(next % kMenuCount);
+  if (!pageActive || !actionsOpen || !delta) return;
+  if (presetsOpen) {
+    int next = static_cast<int>(presetSelection) + (delta > 0 ? 1 : -1);
+    if (next < 0) next = kPsk31PresetCount - 1;
+    if (next >= kPsk31PresetCount) next = 0;
+    if (previewActive) restorePreview();
+    presetSelection = static_cast<uint8_t>(next);
+    schedulePreview(millis());
+    return;
+  }
+  int next = static_cast<int>(actionSelection) + (delta > 0 ? 1 : -1);
+  if (next < 0) next = kActionCount - 1;
+  if (next >= kActionCount) next = 0;
+  actionSelection = static_cast<uint8_t>(next);
 }
 
 void psk31UiClick() {
   if (!pageActive) return;
-  if (!menuOpen) { menuOpen = true; menuIndex = 0; return; }
-  switch (menuIndex) {
+  if (!actionsOpen) {
+    actionsOpen = true;
+    actionSelection = 0;
+    return;
+  }
+  if (presetsOpen) {
+    if (previewPending && !previewActive) {
+      previewPending = false;
+      previewActive = true;
+      if (!tunePreset(kPsk31Presets[presetSelection])) {
+        restorePreview();
+        statusShow("PSK31 preset unavailable", "No matching receiver band");
+        return;
+      }
+    }
+    if (previewActive) commitPreview();
+    else restorePreview();
+    presetsOpen = actionsOpen = false;
+    return;
+  }
+  switch (actionSelection) {
     case 0:
       if (!service.setRunning(!service.active()))
         statusShow("PSK31 receiver", "Could not change RX state");
       break;
-    case 1: service.clearText(); break;
-    case 2: service.resetDecoder(); break;
-    case 3: menuOpen = false; break;
+    case 1:
+      presetsOpen = true;
+      presetSelection = 0;
+      schedulePreview(millis());
+      break;
+    case 2: service.clearText(); break;
+    case 3: service.resetDecoder(); break;
+    case 4: actionsOpen = false; break;
     default: psk31UiExit(); break;
   }
 }
 
 bool psk31UiTick(uint32_t now) {
-  if (!pageActive || static_cast<uint32_t>(now - lastRefresh) < 100) return false;
-  lastRefresh = now;
-  return true;
+  if (!pageActive) return false;
+  bool changed = false;
+  if (presetsOpen && previewPending &&
+      static_cast<uint32_t>(now - previewStartedAt) >= kPreviewDelayMs) {
+    previewPending = false;
+    previewActive = true;
+    if (!tunePreset(kPsk31Presets[presetSelection])) {
+      restorePreview(false);
+      statusShow("PSK31 preset unavailable", "No matching receiver band");
+    }
+    changed = true;
+  }
+  if (static_cast<uint32_t>(now - lastRefresh) >= 100) {
+    lastRefresh = now;
+    changed = true;
+  }
+  return changed;
 }
 
 void drawPsk31DecoderPage() {
@@ -140,10 +295,30 @@ void drawPsk31DecoderPage() {
   spr.setFont(FONT_SMALL);
   spr.drawString("CLICK: ACTIONS   LONG PRESS: EXIT", 160, 162);
 
-  if (menuOpen) {
-    const char* labels[kMenuCount] = {"STOP RX / START RX", "CLEAR TEXT", "RESET DECODER", "BACK", "EXIT PSK31"};
-    const char* values[kMenuCount] = {service.active() ? "RUNNING" : "PAUSED", nullptr, nullptr, nullptr, nullptr};
-    DecoderMenuUi::draw("PSK31 ACTIONS", labels, values, kMenuCount, menuIndex,
-                        "TURN: SELECT", "CLICK: OPEN", nullptr, true);
+  if (actionsOpen) {
+    if (presetsOpen) {
+      char storage[kPsk31PresetCount][40] = {};
+      const char* labels[kPsk31PresetCount] = {};
+      for (uint8_t i = 0; i < kPsk31PresetCount; ++i) {
+        snprintf(storage[i], sizeof(storage[i]), "%s  %u.%03u USB",
+                 kPsk31Presets[i].label,
+                 static_cast<unsigned>(kPsk31Presets[i].frequencyKHz / 1000),
+                 static_cast<unsigned>(kPsk31Presets[i].frequencyKHz % 1000));
+        labels[i] = storage[i];
+      }
+      const char* state = previewActive ? "PROBE TUNED" : previewPending ? "2 SEC PROBE..." : "SELECT";
+      DecoderMenuUi::draw("PSK31 FREQUENCIES", labels, nullptr, kPsk31PresetCount,
+                          presetSelection, "TURN: SELECT", "CLICK: APPLY", state);
+    } else {
+      const char* labels[kActionCount] = {
+        "STOP RX / START RX", "PSK31 FREQUENCIES", "CLEAR TEXT",
+        "RESET DECODER", "BACK", "EXIT PSK31"
+      };
+      const char* values[kActionCount] = {
+        service.active() ? "RUNNING" : "PAUSED", nullptr, nullptr, nullptr, nullptr, nullptr
+      };
+      DecoderMenuUi::draw("PSK31 ACTIONS", labels, values, kActionCount, actionSelection,
+                          "TURN: SELECT", "CLICK: OPEN", nullptr, true);
+    }
   }
 }

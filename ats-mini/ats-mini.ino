@@ -269,8 +269,8 @@ void setup()
     while(digitalRead(ENCODER_PUSH_BUTTON)==LOW) delay(100);
   }
 
-  // Always start quietly, regardless of the volume saved from the previous session.
-  volume = 10;
+  // Restore the firmware's standard startup volume.
+  volume = DEFAULT_VOLUME;
 
   webDiagLog("BOOT: startup");
 

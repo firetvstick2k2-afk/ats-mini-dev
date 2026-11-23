@@ -34,6 +34,7 @@ public:
   };
   bool begin();
   void update(bool wifiConnected);
+  void requestRefresh();
   Snapshot snapshot() const;
   static const Band& band(uint8_t index);
   static const char* statusText(Status status);

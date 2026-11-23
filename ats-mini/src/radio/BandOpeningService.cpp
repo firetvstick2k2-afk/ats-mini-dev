@@ -140,7 +140,7 @@ void BandOpeningService::update(bool wifiConnected) {
   publish(connectionState);
   // Opening the monitor (or regaining router access) must trigger a fetch
   // immediately instead of waiting for the previous five-minute cadence.
-  if (wifiConnected && !wasConnected) {
+  if (wifiConnected && !wasConnected && (!lastAttemptMs_ || millis() - lastAttemptMs_ >= kRefreshIntervalMs)) {
     refreshRequested_ = true;
     Serial.println("[BANDOPEN] Wi-Fi available; immediate refresh requested");
   }
@@ -149,6 +149,15 @@ void BandOpeningService::update(bool wifiConnected) {
       wifiConnected ? "ON" : "OFF", static_cast<int>(WiFi.status()), snapshot().valid ? 1U : 0U);
   }
 
+}
+void BandOpeningService::requestRefresh() {
+  const uint32_t now = millis();
+  if (!lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs) {
+    refreshRequested_ = true;
+    Serial.println("[BANDOPEN] manual refresh requested");
+  } else {
+    Serial.println("[BANDOPEN] manual refresh throttled; five-minute interval not reached");
+  }
 }
 BandOpeningService::Snapshot BandOpeningService::snapshot() const {
   Snapshot copy;
@@ -177,7 +186,7 @@ void BandOpeningService::taskLoop() {
   for (;;) {
     const uint32_t now = millis();
     const bool due = refreshRequested_ || !lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs;
-    if (wifiConnected_ && (refreshRequested_ || !lastMufAttemptMs_ || now - lastMufAttemptMs_ >= kRefreshIntervalMs)) {
+    if (wifiConnected_ && (!lastMufAttemptMs_ || now - lastMufAttemptMs_ >= kRefreshIntervalMs)) {
       lastMufAttemptMs_ = now;
       float muf = 0.0f;
       bandLogf("[BANDOPEN][FM_MUF] cycle start wifi=%d heap=%u",

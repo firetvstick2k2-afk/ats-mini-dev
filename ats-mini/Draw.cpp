@@ -1068,7 +1068,6 @@ static void drawWeatherScreen()
   spr.drawString("Drehen/Klick: Seite  |  Lang: Zurueck",12,155);
 }
 
-template <typename Canvas>
 static void drawBandOpeningScreen(const BandOpeningService::Snapshot* snapshot, uint8_t page) {
   constexpr uint16_t BLUE=0x001F, CYAN=0x07FF, GREEN=0x07E0;
   constexpr uint16_t YELLOW=0xFFE0, RED=0xF800, GREY=0x8410, WHITE=0xFFFF, DARK=0x0000;

@@ -1,9 +1,17 @@
 # ATS Mini Dev — Übergabe für neuen Chat
 
+## Verbindliche Main-Übernahmeregel (vom Nutzer festgelegt, 2026-11-23)
+- Entwicklung und Dokumentationspflege erfolgen ausschließlich auf `development`; `main` bleibt bis zu einem ausdrücklichen Auftrag unverändert.
+- Lautet der ausdrückliche Auftrag **„Bitte Main überschreiben“**, wird `main` vollständig und ohne inhaltliche Rücksicht auf seinen bisherigen Stand auf den aktuellen Stand von `development` gesetzt.
+- Das Ergebnis muss eine vollständige **1:1-Kopie** sein. Keine Zusammenführung, kein Beibehalten einzelner alter Dateien/Änderungen aus `main`; widersprüchliche oder ältere Inhalte in `main` werden vollständig ersetzt.
+- Die Anweisung darf nicht eigenständig vorweggenommen werden. Ohne ausdrückliche Freigabe keine Änderung an `main`.
+- Es bleiben jederzeit genau die beiden erlaubten Branches `main` und `development`; niemals weitere Branches erstellen.
+- Nach der Übernahme Commit-/Dateistand beider Branches kontrollieren und die erfolgreiche Gleichheit verifizieren.
+
 > **Aktueller Stand 2026-11-23:** Die ausführliche, maßgebliche Projektdokumentation ist `DEVELOPMENT_HANDOFF.md`. Diese Kurz-Übergabe ist nur ein Einstieg; bei Abweichungen gilt immer der aktuelle Stand in `DEVELOPMENT_HANDOFF.md`.
 
 ## Aktuelle Repository- und Quellenregel (2026-11-23)
-- **Branch-Regel ohne Ausnahme:** Im Ziel-Repository sind ausschließlich `main` und `development` erlaubt. Niemals weitere Branches erstellen (auch keine temporären Feature-/Fix-/Test-/Backup-/Release-Branches). Alle Arbeiten direkt auf `development`; `main` bleibt unangetastet.
+- **Branch-Regel ohne Ausnahme:** Im Ziel-Repository sind ausschließlich `main` und `development` erlaubt. Niemals weitere Branches erstellen. Alle Arbeiten direkt auf `development`. `main` bleibt unverändert, bis der Nutzer ausdrücklich „Bitte Main überschreiben“ sagt; dann wird `main` vollständig als 1:1-Kopie auf den aktuellen Stand von `development` gesetzt, ohne alte oder widersprüchliche Inhalte beizubehalten.
 - Ziel: `firetvstick2k2-afk/ats-mini-dev`, ausschließlich Branch `development`; `main` bleibt unangetastet.
 - Primäres Quellprojekt für Ports: `firetvstick2k2-afk/Mini_OS`; bekannten Port-Quellbranch `dev/first-build-preparation` je Feature erneut prüfen.
 - Zusätzlicher Recherche-/Projektkatalog: `esp32-si4732/awesome-ats-mini`; weitere geeignete öffentliche GitHub-Quellen sind ausdrücklich erlaubt.

@@ -1,5 +1,6 @@
 #include "math.h"
 #include "Common.h"
+#include "DebugLog.h"
 #include "Themes.h"
 #include "Utils.h"
 #include "Draw.h"
@@ -1020,6 +1021,7 @@ static void clickSettings(int cmd, bool shortPress)
       if(webDiagEnabled) webDiagLog("USB LOG DISABLED");
       webDiagEnabled = !webDiagEnabled;
       if(webDiagEnabled) webDiagLog("USB LOG ENABLED");
+      atsDebugSettingsReady(webDiagEnabled);
       prefsRequestSave(SAVE_SETTINGS, true);
       break;
     case MENU_UPDATEFW:   updateFwIdx = 0; currentCmd = CMD_UPDATEFW; break;

@@ -26,7 +26,7 @@
 #include "WeatherService.h"
 #include "NewsService.h"
 #include "MoonCalendar.h"
-#include "BandOpeningService.h"
+#include "src/radio/BandOpeningService.h"
 #include <WiFi.h>
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"

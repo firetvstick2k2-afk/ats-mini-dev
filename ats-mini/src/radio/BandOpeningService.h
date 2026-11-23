@@ -30,6 +30,7 @@ public:
     float fmMufMHz = 0.0f;
     bool fmMufValid = false;
     bool fmMufStale = true;
+    uint32_t fmMufUpdatedAtMs = 0;
   };
   bool begin();
   void update(bool wifiConnected);

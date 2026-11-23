@@ -8,13 +8,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdarg.h>
 
 
 namespace {
+void bandLogf(const char* format, ...) {
+  char line[320];
+  va_list args;
+  va_start(args, format);
+  vsnprintf(line, sizeof(line), format, args);
+  va_end(args);
+  const size_t length = strlen(line);
+  if (length && line[length - 1] == '\n') Serial.print(line);
+  else Serial.println(line);
+}
 constexpr char kFeedUrl[] = "https://www.mapforham.com/hf-propagation/data/solar.json";
 constexpr char kFmMufUrl[] = "https://fmdx.org/includes/tools/get_muf.php";
 constexpr uint32_t kRefreshIntervalMs = 5UL * 60UL * 1000UL;
 constexpr uint32_t kRetryIntervalMs = 5UL * 60UL * 1000UL;
+constexpr uint32_t kFreshAgeMs = 2UL * 60UL * 60UL * 1000UL;
+constexpr uint32_t kMaximumAgeMs = 24UL * 60UL * 60UL * 1000UL;
 constexpr size_t kMaxResponseBytes = 16384;
 // These are the exact receive windows in BandManager.cpp, represented in kHz.
 // Rows without a matching Map For HAM band_detail entry intentionally remain grey.
@@ -116,7 +129,7 @@ bool BandOpeningService::begin() {
   initial.waitingForWifi = !wifiConnected_;
   publish(initial);
   const BaseType_t created = xTaskCreatePinnedToCore(taskEntry, "BandOpenWorker", 12288, this, 1, &taskHandle_, 0);
-  Serial.printf("[BANDOPEN] worker %s\n", created == pdPASS ? "created" : "creation failed");
+  bandLogf("[BANDOPEN] worker %s\n", created == pdPASS ? "created" : "creation failed");
   return created == pdPASS;
 }
 void BandOpeningService::update(bool wifiConnected) {
@@ -132,7 +145,7 @@ void BandOpeningService::update(bool wifiConnected) {
     Serial.println("[BANDOPEN] Wi-Fi available; immediate refresh requested");
   }
   if (wifiConnected != wasConnected) {
-    Serial.printf("[BANDOPEN][GATE] monitor_data_access=%s wifi_status=%d snapshot_valid=%u",
+    bandLogf("[BANDOPEN][GATE] monitor_data_access=%s wifi_status=%d snapshot_valid=%u",
       wifiConnected ? "ON" : "OFF", static_cast<int>(WiFi.status()), snapshot().valid ? 1U : 0U);
   }
 
@@ -146,6 +159,11 @@ BandOpeningService::Snapshot BandOpeningService::snapshot() const {
     for (uint8_t i = 0; i < kBandCount; ++i) copy.rows[i] = {};
   }
   copy.stale = ageStale;
+  if (copy.fmMufValid && copy.fmMufUpdatedAtMs) {
+    const uint32_t mufAge = millis() - copy.fmMufUpdatedAtMs;
+    copy.fmMufStale = mufAge >= kFreshAgeMs;
+    if (mufAge >= kMaximumAgeMs) copy.fmMufValid = false;
+  }
   return copy;
 }
 void BandOpeningService::publish(const Snapshot& value) {
@@ -159,24 +177,28 @@ void BandOpeningService::taskLoop() {
   for (;;) {
     const uint32_t now = millis();
     const bool due = refreshRequested_ || !lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs;
-    if (wifiConnected_ && (!lastMufAttemptMs_ || now - lastMufAttemptMs_ >= kRefreshIntervalMs)) {
+    if (wifiConnected_ && (refreshRequested_ || !lastMufAttemptMs_ || now - lastMufAttemptMs_ >= kRefreshIntervalMs)) {
       lastMufAttemptMs_ = now;
       float muf = 0.0f;
-      Serial.printf("[BANDOPEN][FM_MUF] cycle start wifi=%d heap=%u",
+      bandLogf("[BANDOPEN][FM_MUF] cycle start wifi=%d heap=%u",
         static_cast<int>(WiFi.status()), static_cast<unsigned>(ESP.getFreeHeap()));
       const bool ok = fetchFmMuf(muf);
-      Serial.printf("[BANDOPEN][FM_MUF] cycle result=%s value_mhz=%.1f heap=%u",
+      bandLogf("[BANDOPEN][FM_MUF] cycle result=%s value_mhz=%.1f heap=%u",
         ok ? "OK" : "FAILED", ok ? muf : 0.0f, static_cast<unsigned>(ESP.getFreeHeap()));
       Snapshot current = snapshot();
-      current.fmMufStale = !ok;
-      if (ok) { current.fmMufMHz = muf; current.fmMufValid = true; }
+      if (ok) {
+        current.fmMufMHz = muf; current.fmMufValid = true;
+        current.fmMufStale = false; current.fmMufUpdatedAtMs = millis();
+      } else {
+        current.fmMufStale = !current.fmMufUpdatedAtMs || (millis() - current.fmMufUpdatedAtMs >= kFreshAgeMs);
+      }
       publish(current);
     }
     if (wifiConnected_ && due) {
       const bool wasRequested = refreshRequested_;
       refreshRequested_ = false;
       lastAttemptMs_ = now;
-      Serial.printf("[BANDOPEN][HF] cycle start trigger=%s wifi=%d heap=%u",
+      bandLogf("[BANDOPEN][HF] cycle start trigger=%s wifi=%d heap=%u",
         wasRequested ? "IMMEDIATE" : "SCHEDULED", static_cast<int>(WiFi.status()),
         static_cast<unsigned>(ESP.getFreeHeap()));
       Snapshot current = snapshot();
@@ -197,8 +219,9 @@ void BandOpeningService::taskLoop() {
         fresh.fmMufMHz = latest.fmMufMHz;
         fresh.fmMufValid = latest.fmMufValid;
         fresh.fmMufStale = latest.fmMufStale;
+        fresh.fmMufUpdatedAtMs = latest.fmMufUpdatedAtMs;
         publish(fresh);
-        Serial.printf("[BANDOPEN][HF] publish SUCCESS source_updated=%s elapsed_ms=%lu valid=1 stale=0",
+        bandLogf("[BANDOPEN][HF] publish SUCCESS source_updated=%s elapsed_ms=%lu valid=1 stale=0",
           fresh.sourceUpdated, static_cast<unsigned long>(millis() - now));
       } else {
         current = snapshot();
@@ -207,7 +230,7 @@ void BandOpeningService::taskLoop() {
         current.stale = true;
         publish(current);
         lastAttemptMs_ = millis() - kRefreshIntervalMs + kRetryIntervalMs;
-        Serial.printf("[BANDOPEN][HF] publish FAILED; retained_valid=%u retained_source=%s retry_in_ms=%lu",
+        bandLogf("[BANDOPEN][HF] publish FAILED; retained_valid=%u retained_source=%s retry_in_ms=%lu",
           current.valid ? 1U : 0U, current.sourceUpdated,
           static_cast<unsigned long>(kRetryIntervalMs));
       }
@@ -231,17 +254,17 @@ bool BandOpeningService::fetchFmMuf(float& value) {
   }
   const int status = http.GET();
   if (status != HTTP_CODE_OK) {
-    Serial.printf("[BANDOPEN][FM_MUF] GET failed http=%d error=%s elapsed_ms=%lu",
+    bandLogf("[BANDOPEN][FM_MUF] GET failed http=%d error=%s elapsed_ms=%lu",
       status, http.errorToString(status).c_str(), static_cast<unsigned long>(millis() - startedAt));
     http.end();
     return false;
   }
   const int length = http.getSize();
-  Serial.printf("[BANDOPEN][FM_MUF] HTTP 200 content_length=%d", length);
+  bandLogf("[BANDOPEN][FM_MUF] HTTP 200 content_length=%d", length);
   if (length > 8192) { http.end(); Serial.println("[BANDOPEN][FM_MUF] response rejected: too large"); return false; }
   String body = http.getString();
   http.end();
-  Serial.printf("[BANDOPEN][FM_MUF] body_bytes=%u elapsed_ms=%lu",
+  bandLogf("[BANDOPEN][FM_MUF] body_bytes=%u elapsed_ms=%lu",
     static_cast<unsigned>(body.length()), static_cast<unsigned long>(millis() - startedAt));
   if (body.isEmpty() || body.length() > 8192 || body.startsWith("<")) {
     Serial.println("[BANDOPEN][FM_MUF] response body empty/oversize/HTML");
@@ -250,7 +273,7 @@ bool BandOpeningService::fetchFmMuf(float& value) {
   JsonDocument doc;
   const DeserializationError parseError = deserializeJson(doc, body);
   if (parseError) {
-    Serial.printf("[BANDOPEN][FM_MUF] JSON parse FAILED: %s", parseError.c_str());
+    bandLogf("[BANDOPEN][FM_MUF] JSON parse FAILED: %s", parseError.c_str());
     return false;
   }
   JsonVariantConst field = doc["europe"]["max_frequency"];
@@ -259,17 +282,17 @@ bool BandOpeningService::fetchFmMuf(float& value) {
   if (field.is<const char*>() && (!text || strcmp(text, "No data") == 0)) return false;
   const float parsed = text ? strtof(text, nullptr) : field.as<float>();
   if (!isfinite(parsed) || parsed < 30.0f || parsed > 300.0f) {
-    Serial.printf("[BANDOPEN][FM_MUF] value rejected parsed=%.2f", parsed);
+    bandLogf("[BANDOPEN][FM_MUF] value rejected parsed=%.2f", parsed);
     return false;
   }
   value = parsed;
-  Serial.printf("[BANDOPEN][FM_MUF] value accepted %.2f MHz", value);
+  bandLogf("[BANDOPEN][FM_MUF] value accepted %.2f MHz", value);
   return true;
 }
 
 bool BandOpeningService::fetchConditions(Snapshot& result) {
   const uint32_t startedAt = millis();
-  Serial.printf("[BANDOPEN][HF] HTTPS begin url=MapForHAM wifi=%d heap=%u",
+  bandLogf("[BANDOPEN][HF] HTTPS begin url=MapForHAM wifi=%d heap=%u",
     static_cast<int>(WiFi.status()), static_cast<unsigned>(ESP.getFreeHeap()));
   WiFiClientSecure client;
   client.setTimeout(8000);
@@ -288,27 +311,27 @@ bool BandOpeningService::fetchConditions(Snapshot& result) {
   Serial.println("[BANDOPEN][HF] http.begin OK; GET started with JSON Accept and firmware User-Agent");
   const int status = http.GET();
   if (status != HTTP_CODE_OK) {
-    Serial.printf("[BANDOPEN][HF] GET failed http=%d error=%s content_type=%s server=%s elapsed_ms=%lu",
+    bandLogf("[BANDOPEN][HF] GET failed http=%d error=%s content_type=%s server=%s elapsed_ms=%lu",
       status, http.errorToString(status).c_str(), http.header("Content-Type").c_str(),
       http.header("Server").c_str(), static_cast<unsigned long>(millis() - startedAt));
     http.end();
     return false;
   }
   const int length = http.getSize();
-  Serial.printf("[BANDOPEN][HF] HTTP 200 content_length=%d", length);
+  bandLogf("[BANDOPEN][HF] HTTP 200 content_length=%d", length);
   if (length > static_cast<int>(kMaxResponseBytes)) {
     http.end();
-    Serial.printf("[BANDOPEN][HF] response rejected too large length=%d limit=%u",
+    bandLogf("[BANDOPEN][HF] response rejected too large length=%d limit=%u",
       length, static_cast<unsigned>(kMaxResponseBytes));
     return false;
   }
   String body = http.getString();
   http.end();
-  Serial.printf("[BANDOPEN][HF] body_bytes=%u elapsed_ms=%lu heap=%u",
+  bandLogf("[BANDOPEN][HF] body_bytes=%u elapsed_ms=%lu heap=%u",
     static_cast<unsigned>(body.length()), static_cast<unsigned long>(millis() - startedAt),
     static_cast<unsigned>(ESP.getFreeHeap()));
   if (body.isEmpty() || body.length() > kMaxResponseBytes) {
-    Serial.printf("[BANDOPEN][HF] response rejected empty_or_oversize bytes=%u",
+    bandLogf("[BANDOPEN][HF] response rejected empty_or_oversize bytes=%u",
       static_cast<unsigned>(body.length()));
     return false;
   }
@@ -316,19 +339,19 @@ bool BandOpeningService::fetchConditions(Snapshot& result) {
   JsonDocument doc;
   const DeserializationError error = deserializeJson(doc, body);
   if (error) {
-    Serial.printf("[BANDOPEN][HF] JSON parse FAILED: %s", error.c_str());
+    bandLogf("[BANDOPEN][HF] JSON parse FAILED: %s", error.c_str());
     return false;
   }
-  Serial.printf("[BANDOPEN][HF] JSON parse OK document_bytes=%u",
+  bandLogf("[BANDOPEN][HF] JSON parse OK document_bytes=%u",
     static_cast<unsigned>(body.length()));
   const char* updated = doc["updated"] | "";
   bool sourceStale = true;
   if (!updated[0] || !timestampIsFresh(updated, &sourceStale)) {
-    Serial.printf("[BANDOPEN][HF] timestamp REJECTED value=%s system_epoch=%lld",
+    bandLogf("[BANDOPEN][HF] timestamp REJECTED value=%s system_epoch=%lld",
       updated, static_cast<long long>(time(nullptr)));
     return false;
   }
-  Serial.printf("[BANDOPEN][HF] timestamp accepted value=%s system_epoch=%lld",
+  bandLogf("[BANDOPEN][HF] timestamp accepted value=%s system_epoch=%lld",
     updated, static_cast<long long>(time(nullptr)));
   result.stale = sourceStale;
   strncpy(result.sourceUpdated, updated, sizeof(result.sourceUpdated) - 1);
@@ -338,7 +361,7 @@ bool BandOpeningService::fetchConditions(Snapshot& result) {
     Serial.println("[BANDOPEN][HF] JSON has no bands_detail array");
     return false;
   }
-  Serial.printf("[BANDOPEN][HF] bands_detail entries=%u",
+  bandLogf("[BANDOPEN][HF] bands_detail entries=%u",
     static_cast<unsigned>(details.size()));
 
   uint8_t matchedBands = 0;
@@ -357,13 +380,13 @@ bool BandOpeningService::fetchConditions(Snapshot& result) {
         break;
       }
     }
-    Serial.printf("[BANDOPEN][HF][BAND] %s band_m=%u found=%u day=%s night=%s",
+    bandLogf("[BANDOPEN][HF][BAND] %s band_m=%u found=%u day=%s night=%s",
       kBands[i].name, static_cast<unsigned>(meters), foundBand ? 1U : 0U,
       statusText(result.rows[i].day), statusText(result.rows[i].night));
   }
   // At least one known amateur band must have a usable assessment.
   const bool any = matchedBands > 0;
-  Serial.printf("[BANDOPEN][HF] parsed=%u/10 source_updated=%s total_elapsed_ms=%lu result=%s",
+  bandLogf("[BANDOPEN][HF] parsed=%u/10 source_updated=%s total_elapsed_ms=%lu result=%s",
     static_cast<unsigned>(matchedBands), updated, static_cast<unsigned long>(millis() - startedAt),
     any ? "VALID" : "NO_RATED_BANDS");
   return any;

@@ -3,6 +3,7 @@
 // =================================
 
 #include "Common.h"
+#include "DebugLog.h"
 #include <Wire.h>
 #include "Rotary.h"
 #include "Button.h"
@@ -178,11 +179,15 @@ void drawEcoWaterfallStatic(LGFX_Sprite &targetSprite) {
 //
 void setup()
 {
-  newsService.begin();
   setenv("TZ", "UTC0", 1);
   tzset();
 
   Serial.begin(115200);
+  delay(50);
+  atsDebugBegin();
+
+  // Start background workers only after USB CDC and the debug logger are ready.
+  newsService.begin();
 
   pinMode(ENCODER_PUSH_BUTTON, INPUT_PULLUP);
   pinMode(ENCODER_PIN_A, INPUT_PULLUP);
@@ -690,6 +695,7 @@ bool processRssiSnr()
 
 void loop()
 {
+  atsDebugTick();
   static bool decoderMenuLongPressHandled = false;
   uint32_t currentTime = millis();
   // Remember the last band and frequency used for frequency-dependent layout hints.

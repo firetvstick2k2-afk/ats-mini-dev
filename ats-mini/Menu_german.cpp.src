@@ -152,6 +152,7 @@ static const char *decoderCategoryLabels[] = {
   "SSB-QSO",
   "Signal / Datenfunk",
   "CB-Funk",
+  "BEENDEN",
 };
 static uint8_t decoderCategoryIndex = 0;
 static uint8_t decoderMenuIdx = 0;
@@ -2322,7 +2323,7 @@ bool decoderFrequencyRotate(int16_t enc)
     decoderSelectionChangedAt = millis();
   }
   else
-    decoderCategoryIndex = wrap_range(decoderCategoryIndex, enc, 0, kDecoderFrequencyCategoryCount - 1);
+    decoderCategoryIndex = wrap_range(decoderCategoryIndex, enc, 0, kDecoderFrequencyCategoryCount);
   return true;
 }
 
@@ -2330,6 +2331,12 @@ bool decoderFrequencyClick()
 {
   if(!decoderPresetView)
   {
+    if(decoderCategoryIndex == kDecoderFrequencyCategoryCount)
+    {
+      currentCmd = CMD_DECODER_MENU;
+      decoderCategoryIndex = 0;
+      return true;
+    }
     decoderPresetView = true;
     decoderPresetIndex = 0;
     decoderLastTunedPreset = -1;
@@ -2393,7 +2400,7 @@ void drawDecoderFrequencyMenu()
 {
   if(!decoderPresetView) {
     DecoderMenuUi::draw("DECODER FREQUENZEN", decoderCategoryLabels, nullptr,
-                        kDecoderFrequencyCategoryCount, decoderCategoryIndex,
+                        kDecoderFrequencyCategoryCount + 1, decoderCategoryIndex,
                         "DREHEN: WÄHLEN", "KLICK: ÖFFNEN");
     return;
   }

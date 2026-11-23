@@ -39,6 +39,22 @@ uint32_t gNextSequence = 1;
 bool gUsbStateKnown = false;
 bool gLastUsbPlugged = false;
 
+const char* resetReasonName(esp_reset_reason_t reason) {
+  switch (reason) {
+    case ESP_RST_POWERON: return "POWERON";
+    case ESP_RST_EXT: return "EXTERNAL";
+    case ESP_RST_SW: return "SOFTWARE";
+    case ESP_RST_PANIC: return "PANIC";
+    case ESP_RST_INT_WDT: return "INT_WATCHDOG";
+    case ESP_RST_TASK_WDT: return "TASK_WATCHDOG";
+    case ESP_RST_WDT: return "WATCHDOG";
+    case ESP_RST_DEEPSLEEP: return "DEEP_SLEEP";
+    case ESP_RST_BROWNOUT: return "BROWNOUT";
+    case ESP_RST_SDIO: return "SDIO";
+    default: return "OTHER";
+  }
+}
+
 bool usbHostPresent() {
 #if ATS_DEBUG_USE_HWCDC
   return HWCDC::isPlugged();
@@ -121,8 +137,8 @@ void atsDebugBegin() {
 
   const esp_reset_reason_t reason = esp_reset_reason();
   atsDebugLogf("========== ATS MINI USB DIAGNOSTICS ==========");
-  atsDebugLogf("[BOOT] reset_reason=%d chip=%s rev=%u cpu_mhz=%u",
-               static_cast<int>(reason), ESP.getChipModel(),
+  atsDebugLogf("[BOOT] reset_reason=%s (%d) chip=%s rev=%u cpu_mhz=%u",
+               resetReasonName(reason), static_cast<int>(reason), ESP.getChipModel(),
                static_cast<unsigned>(ESP.getChipRevision()),
                static_cast<unsigned>(ESP.getCpuFreqMHz()));
   atsDebugLogf("[BOOT][MEM] heap_free=%u heap_min=%u heap_max_block=%u psram_total=%u psram_free=%u",

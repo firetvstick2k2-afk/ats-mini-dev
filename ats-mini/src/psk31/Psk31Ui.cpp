@@ -80,9 +80,13 @@ void drawPsk31DecoderPage() {
   constexpr uint16_t bg = 0x0000, cyan = 0x07FF, green = 0x07E0, white = 0xFFFF, grey = 0x7BEF;
   spr.fillSprite(bg);
   char frequency[24] = {};
-  snprintf(frequency, sizeof(frequency), "%lu.%03lu kHz",
-           static_cast<unsigned long>(currentFrequency / 1000),
-           static_cast<unsigned long>(currentFrequency % 1000));
+  if (currentFrequency >= 1000) {
+    snprintf(frequency, sizeof(frequency), "%lu.%03lu MHz",
+             static_cast<unsigned long>(currentFrequency / 1000),
+             static_cast<unsigned long>(currentFrequency % 1000));
+  } else {
+    snprintf(frequency, sizeof(frequency), "%u kHz", static_cast<unsigned>(currentFrequency));
+  }
   spr.setTextDatum(TL_DATUM);
   spr.setTextColor(white);
   spr.drawString(frequency, 8, 5, &lgfx::fonts::Orbitron_Light_24);

@@ -114,7 +114,11 @@ bool Psk31Decoder::pushSample(int16_t sample, char& decoded) {
   signal_ = magnitude >= kSignalThreshold;
   symbolI_ = symbolQ_ = 0.0f;
   samplesInSymbol_ = 0;
-  if (!signal_) { havePrevious_ = false; return false; }
+  if (!signal_) {
+    havePrevious_ = false;
+    varicode_ = 0; varicodeBits_ = 0; zeroRun_ = 0;
+    return false;
+  }
   if (!havePrevious_) {
     previousI_ = currentI; previousQ_ = currentQ; havePrevious_ = true;
     return false;

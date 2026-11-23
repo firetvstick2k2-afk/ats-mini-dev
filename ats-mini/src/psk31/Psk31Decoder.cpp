@@ -176,6 +176,7 @@ bool Psk31Decoder::pushSample(int16_t sample, char& decoded) {
   if (!signal_) {
     havePrevious_ = false;
     varicode_ = 0; varicodeBits_ = 0; zeroRun_ = 0;
+    discardingCode_ = false;
     memset(timingEnvelope_, 0, sizeof(timingEnvelope_));
     timingClock_ = 0.0f;
     return false;

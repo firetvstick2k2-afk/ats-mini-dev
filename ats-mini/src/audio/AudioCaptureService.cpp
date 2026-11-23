@@ -82,10 +82,29 @@ void AudioCaptureService::sampleTask() {
   size_t count = 0;
   int64_t base = 0, next = 0;
   uint64_t index = 0;
+  uint32_t lastHealthReportMs = millis();
+  uint32_t lastOverrunReportMs = 0;
+  size_t lastSubscriberCount = SIZE_MAX;
 
   for (;;) {
     Subscriber active[kMaxSubscribers]{};
-    if (snapshotSubscribers(active, kMaxSubscribers) == 0) {
+    const size_t activeCount = snapshotSubscribers(active, kMaxSubscribers);
+    if (activeCount != lastSubscriberCount) {
+      lastSubscriberCount = activeCount;
+      atsDebugLogf("[AUDIO][SUBSCRIBERS] active=%u sample_rate=%u block_samples=%u",
+                   static_cast<unsigned>(activeCount), static_cast<unsigned>(kSampleRate),
+                   static_cast<unsigned>(kBlockSamples));
+    }
+    const uint32_t healthNow = millis();
+    if (activeCount && (uint32_t)(healthNow - lastHealthReportMs) >= 15000UL) {
+      lastHealthReportMs = healthNow;
+      atsDebugLogf("[AUDIO][TASK_HEALTH] heap_free=%u heap_min=%u task_stack_high_water=%u subscribers=%u sample_rate=%u",
+                   static_cast<unsigned>(ESP.getFreeHeap()),
+                   static_cast<unsigned>(ESP.getMinFreeHeap()),
+                   static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),
+                   static_cast<unsigned>(activeCount), static_cast<unsigned>(kSampleRate));
+    }
+    if (activeCount == 0) {
       count = 0;
       base = next = 0;
       index = 0;
@@ -124,7 +143,15 @@ void AudioCaptureService::sampleTask() {
       base = next = esp_timer_get_time();
       index = 0;
     }
-    if (esp_timer_get_time() - next > 10000) {
+    const int64_t lateMicros = esp_timer_get_time() - next;
+    if (lateMicros > 10000) {
+      if ((uint32_t)(millis() - lastOverrunReportMs) >= 5000UL) {
+        lastOverrunReportMs = millis();
+        atsDebugLogf("[AUDIO][SAMPLE_OVERRUN] late_us=%lld sample_index=%llu heap_free=%u",
+                     static_cast<long long>(lateMicros),
+                     static_cast<unsigned long long>(index),
+                     static_cast<unsigned>(ESP.getFreeHeap()));
+      }
       base = next = esp_timer_get_time();
       index = 0;
     }

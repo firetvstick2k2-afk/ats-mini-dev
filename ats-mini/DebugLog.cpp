@@ -1,5 +1,7 @@
 #include "DebugLog.h"
 
+extern bool webDiagEnabled;
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -86,7 +88,7 @@ void queueText(const char* text, size_t length) {
 }
 
 void queueBody(const char* body) {
-  if (!body) return;
+  if (!body || !webDiagEnabled) return;
   char line[kLogLineBytes];
   const int written = snprintf(line, sizeof(line), "[%10lu ms] %s\n",
                                 static_cast<unsigned long>(millis()), body);

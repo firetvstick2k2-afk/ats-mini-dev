@@ -121,7 +121,7 @@ void atsStandardLogf(const char* format, ...) {
   if (bodyLength <= 0) return;
 
   char line[256];
-  const int lineLength = snprintf(line, sizeof(line), "[%10lu ms] %s\\n",
+  const int lineLength = snprintf(line, sizeof(line), "[%10lu ms] %s\n",
                                   static_cast<unsigned long>(millis()), body);
   if (lineLength <= 0 || static_cast<size_t>(lineLength) >= sizeof(line)) return;
 

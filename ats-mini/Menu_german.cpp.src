@@ -197,7 +197,7 @@ static const char *menu[]
 #define MENU_ABOUT        20
 #define MENU_WEBLOG       21
 
-bool webDiagEnabled = true;
+bool webDiagEnabled = false;
 
 static uint8_t updateFwIdx = 0;
 static const char *const updateFwActions[] = {"Check", "Update"};
@@ -226,7 +226,7 @@ static const char *settings[] =
   "BLUETOOTH",
   "WLAN-VERBINDUNG",
   "ÜBER",
-  "DIAGNOSE-LOG",
+  "USB-LOG",
 };
 
 const FMRegion fmRegions[] = {
@@ -992,7 +992,7 @@ static void clickMenu(int cmd, bool shortPress)
 
 static const char *settingLabel(int idx)
 {
-  if(idx == MENU_WEBLOG) return webDiagEnabled ? "DIAG-LOG: EIN" : "DIAG-LOG: AUS";
+  if(idx == MENU_WEBLOG) return webDiagEnabled ? "USB-LOG: EIN" : "USB-LOG: AUS";
   return settings[idx];
 }
 
@@ -1039,9 +1039,9 @@ static void clickSettings(int cmd, bool shortPress)
     case MENU_DSP_PATCHES: currentCmd = CMD_DSP_PATCHES; break;
     case MENU_ABOUT:      currentCmd = CMD_ABOUT;      break;
     case MENU_WEBLOG:
-      if(webDiagEnabled) webDiagLog("DIAGNOSTIC LOG DISABLED");
+      if(webDiagEnabled) webDiagLog("USB-LOG AUS");
       webDiagEnabled = !webDiagEnabled;
-      if(webDiagEnabled) webDiagLog("DIAGNOSTIC LOG ENABLED");
+      if(webDiagEnabled) webDiagLog("USB-LOG EIN");
       prefsRequestSave(SAVE_SETTINGS, true);
       break;
     case MENU_UPDATEFW:   updateFwIdx = 0; currentCmd = CMD_UPDATEFW; break;

@@ -330,6 +330,7 @@ void setup()
   atsDebugLogf("[BOOT][RADIO] receiver setup complete heap_free=%u", (unsigned)ESP.getFreeHeap());
 
   const bool settingsLoaded = prefsLoad(SAVE_SETTINGS|SAVE_VERIFY);
+  atsDebugSettingsReady(webDiagEnabled);
   atsDebugLogf("[BOOT][SETTINGS] loaded=%u usb_log_enabled=%u heap=%u", settingsLoaded ? 1U : 0U, webDiagEnabled ? 1U : 0U, (unsigned)ESP.getFreeHeap());
   if(!settingsLoaded)
   {

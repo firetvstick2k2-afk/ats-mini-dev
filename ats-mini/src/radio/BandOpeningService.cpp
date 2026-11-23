@@ -132,6 +132,8 @@ bool BandOpeningService::begin() {
   publish(initial);
   const BaseType_t created = xTaskCreatePinnedToCore(taskEntry, "BandOpenWorker", 12288, this, 1, &taskHandle_, 0);
   bandLogf("[BANDOPEN] worker %s\n", created == pdPASS ? "created" : "creation failed");
+  atsStandardLogf("[BANDOPEN][STATUS] HF monitor worker %s",
+                  created == pdPASS ? "started" : "FAILED to start");
   return created == pdPASS;
 }
 void BandOpeningService::update(bool wifiConnected) {
@@ -145,10 +147,14 @@ void BandOpeningService::update(bool wifiConnected) {
   if (wifiConnected && !wasConnected && (!lastAttemptMs_ || millis() - lastAttemptMs_ >= kRefreshIntervalMs)) {
     refreshRequested_ = true;
     atsDebugLogf("[BANDOPEN] Wi-Fi available; immediate refresh requested");
+    atsStandardLogf("[BANDOPEN][STATUS] Wi-Fi available; HF data refresh requested");
   }
   if (wifiConnected != wasConnected) {
     bandLogf("[BANDOPEN][GATE] monitor_data_access=%s wifi_status=%d snapshot_valid=%u",
       wifiConnected ? "ON" : "OFF", static_cast<int>(WiFi.status()), snapshot().valid ? 1U : 0U);
+    atsStandardLogf("[BANDOPEN][STATUS] Wi-Fi %s; monitor data access %s",
+      wifiConnected ? "connected" : "disconnected",
+      wifiConnected ? "available" : "waiting");
   }
 
 }
@@ -157,6 +163,7 @@ void BandOpeningService::requestRefresh() {
   if (!lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs) {
     refreshRequested_ = true;
     atsDebugLogf("[BANDOPEN] manual refresh requested");
+    atsStandardLogf("[BANDOPEN][STATUS] Manual HF monitor refresh requested");
   } else {
     atsDebugLogf("[BANDOPEN] manual refresh throttled; five-minute interval not reached");
   }
@@ -204,7 +211,9 @@ void BandOpeningService::taskLoop() {
         static_cast<int>(WiFi.status()), static_cast<unsigned>(ESP.getFreeHeap()));
       const bool ok = fetchFmMuf(muf);
       bandLogf("[BANDOPEN][FM_MUF] cycle result=%s value_mhz=%.1f heap=%u",
-        ok ? "OK" : "FAILED", ok ? muf : 0.0f, static_cast<unsigned>(ESP.getFreeHeap()));
+        ok ? "OK" : "FAILED", ok ? "OK" : "FAILED");
+      atsStandardLogf("[BANDOPEN][STATUS] FM MUF update %s%s",
+        ok ? "OK" : "FAILED", ok ? "" : " (previous value retained if available)");
       Snapshot current = snapshot();
       if (ok) {
         current.fmMufMHz = muf; current.fmMufValid = true;
@@ -243,6 +252,8 @@ void BandOpeningService::taskLoop() {
         publish(fresh);
         bandLogf("[BANDOPEN][HF] publish SUCCESS source_updated=%s elapsed_ms=%lu valid=1 stale=0",
           fresh.sourceUpdated, static_cast<unsigned long>(millis() - now));
+        atsStandardLogf("[BANDOPEN][STATUS] HF data updated successfully; source=%s elapsed=%lu ms",
+          fresh.sourceUpdated, static_cast<unsigned long>(millis() - now));
       } else {
         current = snapshot();
         current.fetching = false;
@@ -252,6 +263,9 @@ void BandOpeningService::taskLoop() {
         lastAttemptMs_ = millis() - kRefreshIntervalMs + kRetryIntervalMs;
         bandLogf("[BANDOPEN][HF] publish FAILED; retained_valid=%u retained_source=%s retry_in_ms=%lu",
           current.valid ? 1U : 0U, current.sourceUpdated,
+          static_cast<unsigned long>(kRetryIntervalMs));
+        atsStandardLogf("[BANDOPEN][STATUS] HF data update FAILED; cached_data=%s; retry in %lu ms",
+          current.valid ? "retained" : "not available",
           static_cast<unsigned long>(kRetryIntervalMs));
       }
     }

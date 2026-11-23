@@ -1652,3 +1652,13 @@ Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherch
 - Standard-USB-Log bleibt unabhängig vom USB-LOG-Schalter unverändert aktiv. USB-LOG ist für die nächste Bandmonitor-Diagnose einzuschalten, damit die detaillierten HF-/FM-MUF-Ausgaben sichtbar werden.
 - Commit: `1f4e4d64915765b6b4095cedeb8bf3c6b8d7188b`.
 - **Prüfstatus:** Quelländerung committed; kein Build, kein Actions-Lauf und kein Hardwaretest gestartet. ESP-IDF-/I²C-Rauschen ist anhand der geänderten Log-Level-Konfiguration logisch unterdrückt, Compiler- und Geräteprüfung stehen noch aus.
+
+
+## UKW/FM-Bewertung aus 2-m-Status (2026-11-24)
+- Die separate FM-MUF-Abfrage an `fmdx.org/includes/tools/get_muf.php` wurde vollständig entfernt.
+- UKW/FM (Index 28) übernimmt unmittelbar denselben Status wie 2 m (Index 26), jeweils für Tag und Nacht. Der Anzeigetyp lautet `2m ~`, damit die abgeleitete Schätzung erkennbar bleibt.
+- UKW wird zusammen mit 2 m auf Unknown zurückgesetzt, sobald die 2-m-Daten älter als sechs Stunden sind. Bei fehlgeschlagenem 2-m-Abruf bleibt der letzte gültige Status erhalten; UKW bleibt daran gekoppelt.
+- Keine zusätzliche API, keine zusätzliche HTTPS-Anfrage und keine separate MUF-Anzeige mehr. Die SQ3SWG-2-m-Datenquelle bleibt unverändert; 70 cm bleibt unabhängig.
+- Die Ableitung ist ausdrücklich ein persönlicher Indikator für mögliche FM-DX-Bedingungen, keine direkte Messung der UKW-Rundfunk-MUF und keine Empfangsgarantie.
+- Source-only; kein Compile, kein GitHub Actions Build, kein Flash und kein Hardwaretest. Nächster manueller OSPI-DE-Build ist #69; nur auf ausdrückliche Aufforderung starten.
+

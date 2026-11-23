@@ -1,3 +1,28 @@
+## Band Opening Monitor – SWL/VHF-Erweiterung (2026-11-23)
+
+- Zielbranch: `development`; kein Branch angelegt und `main` nicht verändert.
+- Die zehn direkten Map-For-HAM-AFU-Bewertungen bleiben unverändert: 160, 80, 60, 40, 30, 20, 17, 15, 12 und 10 m.
+- Map For HAM `solar.json` liefert zusätzlich vier veröffentlichte Gruppenwerte (`bands`). Diese werden als klar markierte Näherung (`SWL ~`) verwendet:
+  - `80m-40m`: 90 m, 75 m, 49 m, 41 m
+  - `30m-20m`: 31 m, 25 m, 22 m
+  - `17m-15m`: 19 m, 16 m, 15 m BC
+  - `12m-10m`: 13 m
+  Diese Gruppenwerte sind keine individuellen Bandmessungen. Tag/Nacht werden aus dem jeweiligen Gruppenwert übernommen.
+- 11 m CB bleibt eine Ableitung aus 10 m und 12 m (`CB ~`): gleiche Nachbarwerte werden übernommen; bei unterschiedlichen bekannten Werten wird Fair/Mittel gesetzt; fehlt einer der beiden Werte, bleibt 11 m Unknown.
+- LW/MW bleiben bewusst ohne Ampelfarbe. Für diese Bereiche wurde keine ausreichend belastbare, frei nutzbare Live-Datenquelle integriert; keine erfundenen Bedingungen.
+- Neue VHF/UHF-Aktivitätsquelle: SQ3SWG öffentliche, schreibgeschützte API (kein API-Key):
+  - `https://skeds.sq3swg.com/api/v1/public/propagation` für die europäische höchste Sporadic-E-MUF.
+  - `/spots?band=144&hours=6&limit=30` für 2-m-DX-Spots.
+  - `/spots?band=432&hours=6&limit=30` für 70-cm-DX-Spots.
+  - Abruf alle 15 Minuten; zwischen den drei Requests liegen mindestens 1,1 Sekunden (API-Limit ungefähr 1 Request/Sekunde).
+  - 2 m: Good bei Es-MUF >= 144 MHz oder mindestens 3 Spots in 6 h; Fair bei 1–2 Spots; ohne Nachweis Unknown.
+  - 70 cm: Good bei mindestens 3 Spots in 6 h; Fair bei 1–2 Spots; ohne Nachweis Unknown.
+  - Fehlende Spots bedeuten ausdrücklich nicht „Band geschlossen“ und werden daher nicht rot, sondern Unknown dargestellt. Beide Zeitspalten erhalten denselben Aktivitätsstatus. VHF-Daten verfallen nach 6 Stunden ohne erfolgreichen Abruf.
+  - Anzeige-Typ für 2 m/70 cm: `DX-AKT`. Die SQ3SWG-Seite nennt hamqsl.com (N0NBH) und prop.kc2g.com/GIRO als zugrunde liegende Datenquellen; diese Herkunft ist bei einer späteren Dokumentation/Anzeige zu berücksichtigen.
+- UKW/FM-MUF: vorhandener FMDX-Endpunkt und Parser bleiben unverändert. Die Firmware protokolliert bei einem Fehler bereits HTTP-Status und kompletten kurzen Antwort-Payload; ohne verifizierte alternative API wird kein Ersatz-Endpunkt geraten.
+- `BandOpeningService.cpp` und `BandOpeningService.h` enthalten die Änderungen. Das bestehende Display-Layout wurde nicht umgestaltet.
+- GitHub Actions wurde nicht gestartet. Letzter vorhandener Build: #68 (erfolgreich, vor diesen Änderungen); nächster manueller Build ist #69. Der Nutzer startet ihn selbst und testet anschließend die Hardware.
+
 ## PSK31 BPSK RX — initial integration (2026-11-23)
 
 - Development priority: **PSK31 → WWV → HF-DSC → NCDXF/IARU**.

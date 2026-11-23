@@ -29,6 +29,7 @@ public:
     bool fetchFailed = false;
     uint32_t vhf2mUpdatedAtMs = 0;
     uint32_t vhf70cmUpdatedAtMs = 0;
+    uint32_t wsprUpdatedAtMs = 0;
   };
   bool begin();
   void update(bool wifiConnected);
@@ -41,11 +42,13 @@ private:
   void taskLoop();
   bool fetchConditions(Snapshot& result);
   bool fetchVhfConditions(Snapshot& result);
+  bool fetchWsprConditions(Snapshot& result);
   void publish(const Snapshot& value);
   volatile bool wifiConnected_ = false;
   volatile bool refreshRequested_ = false;
   uint32_t lastAttemptMs_ = 0;
   uint32_t lastVhfAttemptMs_ = 0;
+  uint32_t lastWsprAttemptMs_ = 0;
   TaskHandle_t taskHandle_ = nullptr;
   mutable portMUX_TYPE snapshotMux_ = portMUX_INITIALIZER_UNLOCKED;
   Snapshot snapshot_{};

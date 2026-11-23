@@ -110,9 +110,6 @@ bool Psk31Decoder::pushSample(int16_t sample, char& decoded) {
   const float nextCos = oscCos_ * stepCos_ - oscSin_ * stepSin_;
   const float nextSin = oscSin_ * stepCos_ + oscCos_ * stepSin_;
   oscCos_ = nextCos; oscSin_ = nextSin;
-  symbolI_ += iFilter_;
-  symbolQ_ += qFilter_;
-  ++samplesInSymbol_;
 
   const float magnitude = sqrtf(iFilter_ * iFilter_ + qFilter_ * qFilter_);
   if (++timingDecimation_ < kTimingDecimation) return false;
@@ -143,12 +140,13 @@ bool Psk31Decoder::pushSample(int16_t sample, char& decoded) {
   if (timingClock_ < kTimingSamplesPerSymbol) return false;
   timingClock_ -= kTimingSamplesPerSymbol;
 
-  const float currentI = symbolI_ / static_cast<float>(samplesInSymbol_);
-  const float currentQ = symbolQ_ / static_cast<float>(samplesInSymbol_);
+  // Sample the matched low-pass I/Q vector at the recovered symbol
+  // instant. Averaging over the entire symbol smears 180-degree transitions
+  // and corrupts differential decisions.
+  const float currentI = iFilter_;
+  const float currentQ = qFilter_;
   const float symbolMagnitude = sqrtf(currentI * currentI + currentQ * currentQ);
   signal_ = symbolMagnitude >= kSignalThreshold;
-  symbolI_ = symbolQ_ = 0.0f;
-  samplesInSymbol_ = 0;
   if (!signal_) {
     havePrevious_ = false;
     varicode_ = 0; varicodeBits_ = 0; zeroRun_ = 0;

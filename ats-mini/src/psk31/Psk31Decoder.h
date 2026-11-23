@@ -27,6 +27,7 @@ private:
   uint16_t varicode_ = 0;
   uint8_t varicodeBits_ = 0;
   uint8_t zeroRun_ = 0;
+  bool discardingCode_ = false;
   bool havePrevious_ = false;
   bool signal_ = false;
 };

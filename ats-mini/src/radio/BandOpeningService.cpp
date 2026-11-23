@@ -332,7 +332,7 @@ bool BandOpeningService::fetchFmMuf(float& value) {
   }
   char* parseEnd = nullptr;
   const float parsed = text ? strtof(text, &parseEnd) : field.as<float>();
-  if (text && (parseEnd == text || (parseEnd && *parseEnd != '\\0'))) {
+  if (text && (parseEnd == text || (parseEnd && *parseEnd != '\0'))) {
     bandLogf("[BANDOPEN][FM_MUF] numeric conversion failed: %s", text);
     return false;
   }

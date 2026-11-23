@@ -355,9 +355,13 @@ void drawLayoutTEF6686()
         ? getFreqInputPos() + (pushAndRotate ? 0x80 : 0)
         : 100;
 
+    // SSB frequencies include a three-digit BFO suffix (e.g. .000).
+    // Shift the complete readout left so the suffix clears the right-side unit box.
+    const int frequencyX = (isSSB() && currentBFO == 0) ? 185 : 230;
+
     drawFrequency(
       currentFrequency,
-      230,
+      frequencyX,
       45,
       400,
       400,

@@ -6,7 +6,7 @@
 #include "WeatherService.h"
 #include "NewsService.h"
 #include "MoonCalendar.h"
-#include "BandOpeningService.h"
+#include "src/radio/BandOpeningService.h"
 extern uint8_t bandOpeningPage;
 #include "BleMode.h"
 #include "Draw.h"

@@ -1,4 +1,5 @@
 #include "BandOpeningService.h"
+#include "../../DebugLog.h"
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -18,9 +19,10 @@ void bandLogf(const char* format, ...) {
   va_start(args, format);
   vsnprintf(line, sizeof(line), format, args);
   va_end(args);
-  const size_t length = strlen(line);
-  if (length && line[length - 1] == '\n') Serial.print(line);
-  else Serial.println(line);
+  size_t length = strlen(line);
+  while (length && (line[length - 1] == '\n' || line[length - 1] == '\r'))
+    line[--length] = '\0';
+  atsDebugLogf("%s", line);
 }
 constexpr char kFeedUrl[] = "https://www.mapforham.com/hf-propagation/data/solar.json";
 constexpr char kFmMufUrl[] = "https://fmdx.org/includes/tools/get_muf.php";
@@ -142,7 +144,7 @@ void BandOpeningService::update(bool wifiConnected) {
   // immediately instead of waiting for the previous five-minute cadence.
   if (wifiConnected && !wasConnected && (!lastAttemptMs_ || millis() - lastAttemptMs_ >= kRefreshIntervalMs)) {
     refreshRequested_ = true;
-    Serial.println("[BANDOPEN] Wi-Fi available; immediate refresh requested");
+    atsDebugLogf("[BANDOPEN] Wi-Fi available; immediate refresh requested");
   }
   if (wifiConnected != wasConnected) {
     bandLogf("[BANDOPEN][GATE] monitor_data_access=%s wifi_status=%d snapshot_valid=%u",
@@ -154,9 +156,9 @@ void BandOpeningService::requestRefresh() {
   const uint32_t now = millis();
   if (!lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs) {
     refreshRequested_ = true;
-    Serial.println("[BANDOPEN] manual refresh requested");
+    atsDebugLogf("[BANDOPEN] manual refresh requested");
   } else {
-    Serial.println("[BANDOPEN] manual refresh throttled; five-minute interval not reached");
+    atsDebugLogf("[BANDOPEN] manual refresh throttled; five-minute interval not reached");
   }
 }
 BandOpeningService::Snapshot BandOpeningService::snapshot() const {
@@ -182,7 +184,7 @@ void BandOpeningService::taskEntry(void* context) {
   static_cast<BandOpeningService*>(context)->taskLoop();
 }
 void BandOpeningService::taskLoop() {
-  Serial.println("[BANDOPEN] worker entered");
+  atsDebugLogf("[BANDOPEN] worker entered");
   uint32_t lastMemoryReportMs = millis();
   for (;;) {
     const uint32_t now = millis();
@@ -259,7 +261,7 @@ void BandOpeningService::taskLoop() {
 
 bool BandOpeningService::fetchFmMuf(float& value) {
   const uint32_t startedAt = millis();
-  Serial.println("[BANDOPEN][FM_MUF] HTTPS begin");
+  atsDebugLogf("[BANDOPEN][FM_MUF] HTTPS begin");
   WiFiClientSecure client;
   client.setTimeout(8000);
   client.useBuiltinCACertBundle();
@@ -267,7 +269,7 @@ bool BandOpeningService::fetchFmMuf(float& value) {
   http.setTimeout(8000);
   http.setReuse(false);
   if (!http.begin(client, kFmMufUrl)) {
-    Serial.println("[BANDOPEN][FM_MUF] http.begin FAILED");
+    atsDebugLogf("[BANDOPEN][FM_MUF] http.begin FAILED");
     return false;
   }
   const int status = http.GET();
@@ -279,13 +281,13 @@ bool BandOpeningService::fetchFmMuf(float& value) {
   }
   const int length = http.getSize();
   bandLogf("[BANDOPEN][FM_MUF] HTTP 200 content_length=%d", length);
-  if (length > 8192) { http.end(); Serial.println("[BANDOPEN][FM_MUF] response rejected: too large"); return false; }
+  if (length > 8192) { http.end(); atsDebugLogf("[BANDOPEN][FM_MUF] response rejected: too large"); return false; }
   String body = http.getString();
   http.end();
   bandLogf("[BANDOPEN][FM_MUF] body_bytes=%u elapsed_ms=%lu",
     static_cast<unsigned>(body.length()), static_cast<unsigned long>(millis() - startedAt));
   if (body.isEmpty() || body.length() > 8192 || body.startsWith("<")) {
-    Serial.println("[BANDOPEN][FM_MUF] response body empty/oversize/HTML");
+    atsDebugLogf("[BANDOPEN][FM_MUF] response body empty/oversize/HTML");
     return false;
   }
   // Keep the complete short upstream payload in the USB log. The endpoint
@@ -300,7 +302,7 @@ bool BandOpeningService::fetchFmMuf(float& value) {
   }
   JsonVariantConst field = doc["europe"]["max_frequency"];
   if (field.isUnbound() || field.isNull()) {
-    Serial.println("[BANDOPEN][FM_MUF] JSON field europe.max_frequency missing/null");
+    atsDebugLogf("[BANDOPEN][FM_MUF] JSON field europe.max_frequency missing/null");
     return false;
   }
   if (!field.is<const char*>() && !field.is<float>() && !field.is<double>() && !field.is<int>()) {
@@ -343,11 +345,11 @@ bool BandOpeningService::fetchConditions(Snapshot& result) {
   const char* responseHeaders[] = {"Content-Type", "Server"};
   http.collectHeaders(responseHeaders, 2);
   if (!http.begin(client, kFeedUrl)) {
-    Serial.println("[BANDOPEN][HF] http.begin FAILED (TLS/URL/client setup)");
+    atsDebugLogf("[BANDOPEN][HF] http.begin FAILED (TLS/URL/client setup)");
     return false;
   }
   http.addHeader("Accept", "application/json");
-  Serial.println("[BANDOPEN][HF] http.begin OK; GET started with JSON Accept and firmware User-Agent");
+  atsDebugLogf("[BANDOPEN][HF] http.begin OK; GET started with JSON Accept and firmware User-Agent");
   const int status = http.GET();
   if (status != HTTP_CODE_OK) {
     bandLogf("[BANDOPEN][HF] GET failed http=%d error=%s content_type=%s server=%s elapsed_ms=%lu",
@@ -397,7 +399,7 @@ bool BandOpeningService::fetchConditions(Snapshot& result) {
   result.sourceUpdated[sizeof(result.sourceUpdated) - 1] = '\0';
   JsonArrayConst details = doc["bands_detail"].as<JsonArrayConst>();
   if (details.isNull() || details.size() == 0) {
-    Serial.println("[BANDOPEN][HF] JSON has no bands_detail array");
+    atsDebugLogf("[BANDOPEN][HF] JSON has no bands_detail array");
     return false;
   }
   bandLogf("[BANDOPEN][HF] bands_detail entries=%u",

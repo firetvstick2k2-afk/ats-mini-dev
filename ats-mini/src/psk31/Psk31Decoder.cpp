@@ -167,7 +167,7 @@ bool Psk31Decoder::pushSample(int16_t sample, char& decoded) {
   if (phaseError > kPi * 0.5f) phaseError -= kPi;
   else if (phaseError < -kPi * 0.5f) phaseError += kPi;
   const float frequencyError = phaseError * kBaud / (2.0f * kPi);
-  frequencyCorrectionHz_ -= kAfcGain * frequencyError;
+  frequencyCorrectionHz_ += kAfcGain * frequencyError;
   if (frequencyCorrectionHz_ > kAfcLimitHz) frequencyCorrectionHz_ = kAfcLimitHz;
   if (frequencyCorrectionHz_ < -kAfcLimitHz) frequencyCorrectionHz_ = -kAfcLimitHz;
   const float phaseStep = 2.0f * kPi * (toneHz_ + frequencyCorrectionHz_) /

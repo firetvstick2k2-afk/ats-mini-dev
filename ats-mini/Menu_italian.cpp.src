@@ -211,7 +211,7 @@ static const char *menuXXL[] =
 #define MENU_ABOUT        20
 #define MENU_WEBLOG       21
 
-bool webDiagEnabled = true;
+bool webDiagEnabled = false;
 
 static uint8_t updateFwIdx = 0;
 static const char *const updateFwActions[] = {"Verifica", "Aggiorna"};
@@ -223,7 +223,7 @@ static const char *settings[] =
   "Tema", "Layout UI", "Zoom menu", "Direzione", "RDS",
   "Stereo FM", "Regione FM", "Calibraz.", "DSP Patch",
   "CaricaEiBi", "AggiornaFW", "Porta USB", "Porta TCP",
-  "Bluetooth", "Wi-Fi", "Info", "Log diag.",
+  "Bluetooth", "Wi-Fi", "Info", "Log USB",
 };
 
 static const char *settingsXXL[] =
@@ -233,7 +233,7 @@ static const char *settingsXXL[] =
   "DIREZIONE SCORRIMENTO", "RDS", "STEREO FM", "REGIONE FM",
   "CALIBRAZIONE", "PATCH DSP", "CARICA DATI EIBI", "AGGIORNA FIRMWARE",
   "PORTA USB", "PORTA TCP", "BLUETOOTH", "WI-FI", "INFORMAZIONI",
-  "REGISTRO DIAGNOSTICO"
+  "LOG USB"
 };
 
 const FMRegion fmRegions[] = { { 0x1, "EU/JP/AU" }, { 0x2, "US" } };
@@ -1008,7 +1008,7 @@ static void clickDecoderMenu(int idx)
 
 static const char *settingLabel(int idx)
 {
-  if(idx == MENU_WEBLOG) return webDiagEnabled ? "Log diag.: ON" : "Log diag.: OFF";
+  if(idx == MENU_WEBLOG) return webDiagEnabled ? "Log USB: ON" : "Log USB: OFF";
   return settings[idx];
 }
 
@@ -1039,9 +1039,9 @@ static void clickSettings(int cmd, bool shortPress)
     case MENU_DSP_PATCHES: currentCmd = CMD_DSP_PATCHES; break;
     case MENU_ABOUT:      currentCmd = CMD_ABOUT;      break;
     case MENU_WEBLOG:
-      if(webDiagEnabled) webDiagLog("LOG DIAG. DISATT.");
+      if(webDiagEnabled) webDiagLog("LOG USB DISATTIVATO");
       webDiagEnabled = !webDiagEnabled;
-      if(webDiagEnabled) webDiagLog("LOG DIAG. ATTIVO");
+      if(webDiagEnabled) webDiagLog("LOG USB ATTIVO");
       prefsRequestSave(SAVE_SETTINGS, true);
       break;
     case MENU_UPDATEFW:   updateFwIdx = 0; currentCmd = CMD_UPDATEFW; break;

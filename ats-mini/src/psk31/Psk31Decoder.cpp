@@ -112,7 +112,7 @@ bool Psk31Decoder::pushSample(int16_t sample, char& decoded) {
   oscCos_ = nextCos; oscSin_ = nextSin;
   symbolI_ += iFilter_;
   symbolQ_ += qFilter_;
-  if (++samplesInSymbol_ < static_cast<uint16_t>(kSampleRate / kBaud)) return false;
+  ++samplesInSymbol_;
 
   const float magnitude = sqrtf(iFilter_ * iFilter_ + qFilter_ * qFilter_);
   if (++timingDecimation_ < kTimingDecimation) return false;

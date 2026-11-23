@@ -106,15 +106,15 @@ void NewsService::taskEntry(void* p){static_cast<NewsService*>(p)->taskLoop();}
 void NewsService::taskLoop(){uint32_t lastMemoryReportMs=millis();for(;;){const uint32_t now=millis();if((uint32_t)(now-lastMemoryReportMs)>=60000UL){lastMemoryReportMs=now;atsDebugLogf("[NEWS][MEM] stage=periodic free_heap=%u max_block=%u min_free=%u task_stack_high_water=%u\n",(unsigned)ESP.getFreeHeap(),(unsigned)ESP.getMaxAllocHeap(),(unsigned)ESP.getMinFreeHeap(),(unsigned)uxTaskGetStackHighWaterMark(nullptr));}if(refreshRequested_&&active_&&wifiConnected_){refreshRequested_=false;lastAttemptMs_=millis();if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);snapshot_->fetching=true;snapshot_->failed=false;xSemaphoreGive(snapshotMutex_);}void* memory=heap_caps_malloc(sizeof(Snapshot),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);if(!memory)memory=malloc(sizeof(Snapshot));Snapshot* fresh=memory?new(memory) Snapshot():nullptr;bool ok=fresh&&fetchFeeds(*fresh);if(fresh){fresh->fetching=false;fresh->failed=!ok;fresh->valid=fresh->count>0;fresh->updatedAtMs=millis();if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);*snapshot_=*fresh;xSemaphoreGive(snapshotMutex_);}fresh->~Snapshot();heap_caps_free(fresh);}else if(snapshotMutex_){xSemaphoreTake(snapshotMutex_,portMAX_DELAY);snapshot_->fetching=false;snapshot_->failed=true;xSemaphoreGive(snapshotMutex_);}}vTaskDelay(pdMS_TO_TICKS(250));}}
 bool NewsService::fetchFeeds(Snapshot& s){Configuration c=configuration();bool any=false,success=false;for(uint8_t i=0;i<MAX_FEEDS&&s.count<MAX_ITEMS;i++)if(c.feeds[i].enabled&&c.feeds[i].url[0]){any=true;success=fetchFeed(i,c.feeds[i],s)||success;}sortItems(s);return any&&success;}
 bool NewsService::fetchFeed(uint8_t i,const Feed& f,Snapshot& s){
-  Serial.printf("[NEWS] Feed %u start: %s\n",(unsigned)(i+1),f.url);
+  atsDebugLogf("[NEWS] Feed %u start: %s\n",(unsigned)(i+1),f.url);
   WiFiClientSecure client; client.setInsecure(); client.setTimeout(TIMEOUT_MS);
   HTTPClient http; http.setConnectTimeout(TIMEOUT_MS); http.setTimeout(TIMEOUT_MS);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); http.setRedirectLimit(5);
   http.setReuse(false); http.setUserAgent("Mozilla/5.0 (compatible; ATS-Mini-RSS/1.0)");
-  if(!http.begin(client,f.url)){Serial.printf("[NEWS] Feed %u begin failed\n",(unsigned)(i+1));return false;}
+  if(!http.begin(client,f.url)){atsDebugLogf("[NEWS] Feed %u begin failed\n",(unsigned)(i+1));return false;}
   http.addHeader("Accept","application/rss+xml, application/atom+xml, application/xml, text/xml, */*");
   int status=http.GET();
-  if(status!=HTTP_CODE_OK){Serial.printf("[NEWS] Feed %u HTTP error: %d (%s)\n",(unsigned)(i+1),status,http.errorToString(status).c_str());http.end();return false;}
+  if(status!=HTTP_CODE_OK){atsDebugLogf("[NEWS] Feed %u HTTP error: %d (%s)\n",(unsigned)(i+1),status,http.errorToString(status).c_str());http.end();return false;}
 
   const String fallback=hostOf(f.url);
   String entry,probe;
@@ -127,7 +127,7 @@ bool NewsService::fetchFeed(uint8_t i,const Feed& f,Snapshot& s){
   uint32_t lastDataMs=millis();
   uint8_t yieldCounter=0;
   auto* stream=http.getStreamPtr();
-  if(!stream){Serial.printf("[NEWS] Feed %u stream unavailable\n",(unsigned)(i+1));http.end();return false;}
+  if(!stream){atsDebugLogf("[NEWS] Feed %u stream unavailable\n",(unsigned)(i+1));http.end();return false;}
 
   while((stream->connected()||stream->available())&&
         (uint32_t)(millis()-lastDataMs)<TIMEOUT_MS&&s.count<MAX_ITEMS){
@@ -168,7 +168,7 @@ bool NewsService::fetchFeed(uint8_t i,const Feed& f,Snapshot& s){
           if(clean(title).length()>=3)++parsed;
           add(s,title,source,date,body,i);
         }else{
-          Serial.printf("[NEWS] Feed %u skipped article: over %u bytes\n",(unsigned)(i+1),(unsigned)MAX_ENTRY_BYTES);
+          atsDebugLogf("[NEWS] Feed %u skipped article: over %u bytes\n",(unsigned)(i+1),(unsigned)MAX_ENTRY_BYTES);
         }
         collecting=false;
         oversize=false;
@@ -178,8 +178,8 @@ bool NewsService::fetchFeed(uint8_t i,const Feed& f,Snapshot& s){
     if((++yieldCounter&0xFF)==0)vTaskDelay(1);
   }
   http.end();
-  Serial.printf("[NEWS] Feed %u streamed=%u bytes parsed=%u added=%u total=%u\n",
+  atsDebugLogf("[NEWS] Feed %u streamed=%u bytes parsed=%u added=%u total=%u\n",
     (unsigned)(i+1),(unsigned)received,(unsigned)parsed,(unsigned)(s.count-before),(unsigned)s.count);
-  if(collecting)Serial.printf("[NEWS] Feed %u incomplete final article ignored\n",(unsigned)(i+1));
+  if(collecting)atsDebugLogf("[NEWS] Feed %u incomplete final article ignored\n",(unsigned)(i+1));
   return parsed>0;
 }

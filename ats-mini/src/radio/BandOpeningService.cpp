@@ -228,7 +228,8 @@ BandOpeningService::Snapshot BandOpeningService::snapshot() const {
   if (copy.valid && !timestampIsFresh(copy.sourceUpdated, &ageStale)) {
     copy.valid = false;
     for (uint8_t i = 0; i < kBandCount; ++i) {
-      if (i != 26 && i != 27) copy.rows[i] = {};
+      // LW/MW (WSPR) and VHF/UHF/FM have independent source freshness.
+      if (i > 3 && i != 26 && i != 27 && i != 28) copy.rows[i] = {};
     }
   }
   if (copy.vhf2mUpdatedAtMs &&
@@ -491,6 +492,8 @@ bool BandOpeningService::fetchWsprConditions(Snapshot& result) {
 
   // WSPR band -1 is LF (136 kHz); band 0 is MF (474.2 kHz).
   // These are propagation proxies, not direct LW/MW broadcast measurements.
+  result.rows[0] = {};
+  for (uint8_t i = 1; i <= 3; ++i) result.rows[i] = {};
   if (foundLf) {
     result.rows[0].day = lfStatus;
     result.rows[0].night = lfStatus;

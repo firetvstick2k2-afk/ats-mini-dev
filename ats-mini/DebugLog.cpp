@@ -165,6 +165,8 @@ void atsDebugSettingsReady(bool enabled) {
     gTail = 0;
     gCount = 0;
     gTailOffset = 0;
+    gDroppedRecords = 0;
+    gReportedDroppedRecords = 0;
   }
   portEXIT_CRITICAL(&gLogMux);
   if (enabled) atsDebugLogf("[LOG] USB diagnostics enabled by Settings");

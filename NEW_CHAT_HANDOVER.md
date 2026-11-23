@@ -1,5 +1,16 @@
 # ATS Mini Dev — Übergabe für neuen Chat
 
+> **Aktueller Stand 2026-11-23:** Die ausführliche, maßgebliche Projektdokumentation ist `DEVELOPMENT_HANDOFF.md`. Diese Kurz-Übergabe ist nur ein Einstieg; bei Abweichungen gilt immer der aktuelle Stand in `DEVELOPMENT_HANDOFF.md`.
+
+## Aktuelle Repository- und Quellenregel (2026-11-23)
+- Ziel: `firetvstick2k2-afk/ats-mini-dev`, ausschließlich Branch `development`; `main` bleibt unangetastet.
+- Primäres Quellprojekt für Ports: `firetvstick2k2-afk/Mini_OS`; bekannten Port-Quellbranch `dev/first-build-preparation` je Feature erneut prüfen.
+- Zusätzlicher Recherche-/Projektkatalog: `esp32-si4732/awesome-ats-mini`; weitere geeignete öffentliche GitHub-Quellen sind ausdrücklich erlaubt.
+- Vor jedem Port Lizenz, Quellcommit, Hardware-Kompatibilität, Abhängigkeiten und vorhandene ATS-Mini-Architektur prüfen. Keine fremde Firmware-Basis blind übernehmen; Herkunft und Lizenzhinweise erhalten.
+- Build #68: Run [45131502744](https://github.com/firetvstick2k2/ats-mini-dev/actions/runs/45131502744), OSPI-DE erfolgreich; Artifact `Mini_OS_#68.bin`; gebauter Commit `ab89441be19bd22d1d79e4953a1e712948b550fe`. Flash und Hardwaretest stehen noch aus.
+- Builds/Actions werden weiterhin vom Nutzer manuell gestartet; der Assistant flasht nicht.
+
+
 ## RSS-Nachrichtenansicht – Textüberlauf und Trennlinie (2026-11-22)
 
 - Nutzer hat nach dem ersten Hardwaretest die deutlich bessere Lesbarkeit bestätigt, aber am rechten Ende der drei Textzeilen und am Ende des Lauftextes abgeschnittene/unerwünschte Zeichenfolgen gemeldet (Foto vom ATS Mini).

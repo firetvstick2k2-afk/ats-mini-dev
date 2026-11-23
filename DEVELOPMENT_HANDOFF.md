@@ -4,7 +4,7 @@
 - PSK31 is being added as a standalone BPSK31 receive module under `ats-mini/src/psk31/`, using the existing shared `AudioCaptureService` subscriber interface (4 kHz / GPIO11). It does not create another ADC reader.
 - **Isolation requirement:** do not modify FT8/FT4 decoder DSP, services, timing, synchronization, logging or UI behavior. Their implementation files are intentionally excluded from this feature. The only shared application changes are the new decoder command/menu registration and dispatch.
 - Initial receiver design: fixed 1000 Hz audio down-conversion, 31.25 baud differential BPSK decisions, PSK31 Varicode framing on `00`, bounded text storage, pause/resume and clear/reset controls.
-- The new path still requires a user build and real on-air validation for tuning tolerance, symbol timing, weak-signal behavior and text accuracy. No build, GitHub Actions run or flash is to be started by the assistant.
+- **Build #68:** GitHub Actions run [45131502744](https://github.com/firetvstick2k2-afk/ats-mini-dev/actions/runs/45131502744) completed successfully on 2026-11-23. The `build ospi-de` job passed; artifact `Mini_OS_#68.bin` was produced. Built revision: `ab89441be19bd22d1d79e4953a1e712948b550fe` (`Fix FM MUF numeric string parsing terminator`). This confirms compilation only; the user still needs to flash the artifact and validate PSK31/HF Band Monitor behavior on the device. No flash or hardware test has been performed by the assistant.
 
 # ATS Mini Development Handoff
 
@@ -1555,40 +1555,51 @@ Diese Regel ist verbindlich für jede zukünftige Änderung, Erweiterung und Int
 - Kleine Statusmeldungen, technische Hinweise und nebensächliche Texte innerhalb einzelner Funktionen sind ausdrücklich nachrangig. Sie müssen nicht bei jeder Änderung aufwendig vereinheitlicht werden. Der Schwerpunkt liegt auf der Auffindbarkeit und Verständlichkeit der Menüs.
 - Diese Prüfung ist Teil der verbindlichen Abschlusskontrolle und muss bei jeder passenden Änderung durchgeführt und im Handoff berücksichtigt werden.
 
-## Aktualisierte Entwicklungs- und Zukunftsfeature-Referenz — 2026-11-22
+## Aktuelle Portierungs- und Quellenstrategie — 2026-11-23
 
-### Verbindliche Projektbasis (ersetzt die frühere Mini_OS-Portierungsregel)
-- **Maßgebliche und aktuelle Entwicklungsbasis ist ausschließlich dieses Repository:** `firetvstick2k2-afk/ats-mini-dev`, Branch **`development`**.
-- Die frühere Festlegung, `firetvstick2k2-afk/Mini_OS` / `dev/first-build-preparation` sei die verbindliche Portierungsquelle, ist **veraltet und aufgehoben**.
-- Neue Funktionen, Decoder, UI-Änderungen und Fehlerkorrekturen werden künftig anhand des aktuellen ATS Mini Dev-Codes entwickelt und integriert. Mini_OS darf höchstens als historische Herkunfts-/Vergleichsreferenz dienen, nicht als maßgebliche Quelle oder Voraussetzung.
-- Vor jeder Änderung die aktuelle Datei und ihren SHA aus `development` abrufen; nach dem Commit erneut abrufen und verifizieren. `main` bleibt unangetastet. Keine Builds starten; der Nutzer startet GitHub Actions selbst.
+Diese Regel wurde vom Nutzer am 2026-11-23 ausdrücklich neu festgelegt und ersetzt die entgegenstehende Quellenregel vom 2026-11-22.
 
-### GitHub-Referenzen für mögliche Zukunftsfunktionen
-Diese Projekte sind Ideengeber zur gezielten Prüfung von Funktionen. Sie sind **keine Portierungsbasis**; vor einer Umsetzung stets Kompatibilität mit ATS Mini Dev, Hardware, Speicher, Audioarchitektur und Lizenz prüfen.
+### Repositories und Rollen
+- **Primäres Quellprojekt für Ports:** [firetvstick2k2-afk/Mini_OS](https://github.com/firetvstick2k2-afk/Mini_OS).
+- **Bekannter Quellbranch für bereits geplante/übernommene Module:** `dev/first-build-preparation`. Vor jedem Port den tatsächlich passenden aktuellen Branch und Commit erneut prüfen; nicht automatisch annehmen, dass dieser Branch für jedes Feature der richtige ist.
+- **Zielprojekt:** [firetvstick2k2-afk/ats-mini-dev](https://github.com/firetvstick2k2-afk/ats-mini-dev).
+- **Ziel-Arbeitsbranch:** ausschließlich `development`. `main` bleibt unangetastet.
+- **Feature-Katalog und Recherche-Einstieg:** [esp32-si4732/awesome-ats-mini](https://github.com/esp32-si4732/awesome-ats-mini). Diese Liste dient zum Entdecken weiterer Projekte; sie ist nicht selbst die eigentliche Implementierungsquelle.
+- **Weitere Quellen:** Der Nutzer erlaubt ausdrücklich, geeignete öffentliche GitHub-Repositories und weitere dort auffindbare Projekte als zusätzliche Quellen zu verwenden. Die Auswahl und technische Bewertung übernimmt der Assistant eigenständig.
 
-1. **ATS-Mini Pro** — https://github.com/sirruf/ats-mini-pro
-   - LVGL-Oberfläche, Spectrum-/Waterfall-Bandscope und Tuning-Cursor
-   - Integrierte Weboberfläche, HTTP-Control-API, BLE-/Seriell-Steuerung und MCP-Anbindung
-   - Auto-Scan mit Übernahme gefundener Stationen in den Speicher
-2. **ATS Mini Monster** — https://github.com/Ho52198/ats-mini-monster
-   - Echtzeit-Spectrum-Analyzer mit Peak-Erkennung
-   - Erweiterte Weboberfläche und direkte Frequenzeingabe
-   - Direkt zugängliches Info-Panel für Volume, Squelch, Step, Bandwidth, AGC, Band, Mode und Frequency
-3. **ATS Mini Custom** — https://github.com/gorucommit/ats-mini_custom
-   - Signal-Scale-Ansicht und Bandplan-Markierungen
-   - Web-Control-Branch mit Live-Status, Scan-Daten und Fernbedienung
-   - Separater experimenteller Waterfall-Branch; Zustand und Wartbarkeit vor Nutzung prüfen
-4. **G8PTN ATS_MINI** — https://github.com/G8PTN/ATS_MINI
-   - VFO/BFO-Abstimmung, Kalibrierung, AVC/AGC, Helligkeit, Batteriespannung und serielle Steuerung
-5. **ATS Mini Upstream** — https://github.com/esp32-si4732/ats-mini
-   - Referenz für Upstream-Verhalten und Kompatibilitätsabgleich, nicht automatisch Ziel für Feature-Portierungen
+### Verbindlicher Portierungsablauf
+1. Passendes Projekt, Branch, Commit und relevante Dateien im Quell-Repository identifizieren.
+2. Lizenz und Weitergabebedingungen prüfen. Herkunft und erforderliche Copyright-/Lizenzhinweise erhalten. Bei unklarer oder inkompatibler Lizenz nicht einfach kopieren; stattdessen unabhängige Implementierung anhand zulässiger Dokumentation erwägen.
+3. Hardware-Kompatibilität für ATS Mini V4 / ESP32-S3 / SI4732, Display, GPIO11-Audio, OSPI/QSPI, Flash-/PSRAM-Budget und vorhandene Peripherie prüfen.
+4. Abhängigkeiten und Schnittstellen gegen die bestehende Architektur in `ats-mini-dev/development` abgleichen. Keine vollständigen Fremd-Firmware-Basen blind übernehmen.
+5. Funktionen möglichst isoliert portieren. Bestehende Decoder, Audio-Capture, Radio-Steuerung, Dual RX, Web Spectrum, Layouts und LittleFS-Verhalten schützen, sofern eine Änderung nicht ausdrücklich nötig und dokumentiert ist.
+6. Nach dem Port Quellherkunft, übernommene/angepasste Dateien, Lizenzhinweise, Änderungen, offene Risiken und benötigte Hardwaretests im Handoff festhalten. Benutzer sichtbare Änderungen zusätzlich im passenden Changelog dokumentieren.
+7. Builds/Actions nicht selbst starten. Der Nutzer startet sie manuell und führt Flash- sowie Hardwaretests aus. Nur belegte Build- und Testergebnisse als erfolgreich markieren.
+
+### Hinweise zum aktuellen Mini_OS-Quellprojekt
+- Das README im Branch `dev/first-build-preparation` beschreibt Mini_OS als separates, modular geplantes Projekt mit Scaffold-/Architekturarbeiten; Radio-/Displaybetrieb ist dort laut README noch nicht implementiert.
+- Das Quell-Repository und seine Branches werden als Quellcode-/Recherchebasis gelesen. Keine Commits, Builds, Actions oder Flash-Vorgänge im Quell-Repository ohne ausdrücklichen separaten Auftrag.
+- Frühere Portierungsnotizen nennen Wetter, Newsticker und Mondkalender aus `firetvstick2k2-afk/Mini_OS`, Branch `dev/first-build-preparation`. Diese Herkunftsangaben bleiben bestehen; zukünftige Ports müssen trotzdem erneut anhand des tatsächlichen Quellstands verifiziert werden.
+- Die frühere Festlegung vom 2026-11-22, Mini_OS sei nur eine historische Vergleichsreferenz und keine Portierungsquelle, ist durch die neue ausdrückliche Nutzerentscheidung vom 2026-11-23 aufgehoben.
+
+### Weitere mögliche GitHub-Quellen aus dem ATS-Mini-Ökosystem
+Die folgenden Projekte sind Beispiele aus dem `awesome-ats-mini`-Katalog und dürfen bei passendem Bedarf geprüft werden. Keine Funktion gilt dadurch automatisch als portiert oder kompatibel:
+- [esp32-si4732/ats-mini](https://github.com/esp32-si4732/ats-mini) — Upstream-Referenz und Kompatibilitätsabgleich.
+- [ep3mhb/resonik-ats-mini](https://github.com/ep3mhb/resonik-ats-mini) — FT8/FT4, CW, Bandpläne, Beacon-Tracking und Signal-Logging.
+- [epiHATR/ats-mini](https://github.com/epiHATR/ats-mini) — FT8 und Audio-Waterfall.
+- [GNBD/miniradio](https://github.com/GNBD/miniradio) — alternative UI, Wetter, Web Control und Theme-Editor.
+- [GNBD/ats-mini-dualboot](https://github.com/GNBD/ats-mini-dualboot) — Dual-Boot- und Recovery-Referenz; Änderungen an Boot-/Partitionslogik bleiben gesondert freigabepflichtig.
+- [sirruf/ats-mini-pro](https://github.com/sirruf/ats-mini-pro) — LVGL, Spectrum/Waterfall und Web-/API-Steuerung.
+- [Ho52198/ats-mini-monster](https://github.com/Ho52198/ats-mini-monster) — Spectrum-Peaks, Web-Control und Speicherfunktionen.
+- [G8PTN/ATS_MINI](https://github.com/G8PTN/ATS_MINI) — Abstimmung, Kalibrierung und Receiver-Funktionen.
+
+Geschlossene Firmware-Projekte oder reine Binär-Releases dürfen als Funktions-/Ideenreferenz dienen, nicht als Quelle für nicht verfügbare Implementierungen. Die jeweils aktuelle Lizenz und der konkrete Quellstand sind vor jedem Port erneut zu prüfen.
 
 ### Decoder- und Empfangsfunktionen zur späteren Prüfung
-- **PSK31** — digitaler Textfunk; Kandidat für einen weiteren Decoder.
-- **SSTV** — Empfang und Darstellung von Funkbildern; RAM- und Displayanforderungen prüfen.
-- **WEFAX** — Wetterfax; Audio-Passband, Sample-Rate und Bildaufbereitung prüfen.
-- **Spectrum Analyzer / Peak-Tuning** — All-Band-Scan mit Peak-Erkennung und direkter Abstimmung als eigenständige Scanner-Erweiterung prüfen.
-- **Web-Control-Erweiterungen** — ausgewählte Funktionen aus den oben genannten Projekten auf die vorhandene ATS-Mini-Dev-Weboberfläche übertragen, sofern sie zur aktuellen Architektur passen.
+- **PSK31** — aktuell begonnene BPSK31-Empfangsintegration; Build #68 erfolgreich, On-Air-Test noch offen.
+- **WWV** — nächste geplante Empfangsfunktion nach PSK31.
+- **HF-DSC** — danach als isolierter Empfangsdecoder prüfen.
+- **NCDXF/IARU** — anschließend Beacon-Erkennung/Anzeige prüfen.
+- Weitere Kandidaten wie SSTV, WEFAX, NAVTEX, Olivia/Contestia und andere digitale Empfangsarten bleiben Recherche-/Backlog-Themen, bis die aktuelle Prioritätenfolge abgeschlossen oder vom Nutzer geändert wurde.
 
-Status: Recherche-/Ideenliste, keine Zusage einer bereits integrierten oder hardwarevalidierten Funktion. Bestehende Decoder und NAVTEX zuerst stabilisieren; keine parallelen Audio- oder ADC-Sampler hinzufügen und die geltenden ATS-Mini-Dev-Hardwaregrenzen einhalten.
-
+Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherche und Quellenauswahl, bedeutet aber keine pauschale Lizenzfreigabe, technische Kompatibilität oder automatische Übernahme.

@@ -144,7 +144,8 @@ void atsDebugBegin() {
   // All diagnostic records use the bounded RAM queue below.
   Serial.setTxTimeoutMs(0);
   // Keep normal ESP-IDF warnings/errors on the standard USB stream.
-  // Verbose ESP-IDF diagnostics are enabled only by the separate USB-LOG switch.
+  // The USB-LOG switch controls structured firmware diagnostics; it must not
+  // turn on verbose ESP-IDF driver output.
   esp_log_level_set("*", ESP_LOG_WARN);
   atsStandardLogf("[USB] Standard USB logging ready; extra USB-LOG is OFF until Settings enables it.");
 
@@ -182,8 +183,12 @@ void atsDebugSettingsReady(bool enabled) {
 
   // The switch controls only the additional diagnostic stream.
   // Standard USB messages continue independently when this is disabled.
-  esp_log_level_set("*", enabled ? ESP_LOG_VERBOSE : ESP_LOG_WARN);
-  if (enabled) atsDebugLogf("[LOG] Extra USB diagnostics enabled by Settings");
+  // USB-LOG enables the firmware's structured atsDebugLogf() diagnostics.
+  // Keep ESP-IDF itself at WARN in both modes: INFO/DEBUG/VERBOSE driver chatter
+  // (especially I2C transactions) obscures useful application diagnostics.
+  // Warnings and errors from ESP-IDF remain visible.
+  esp_log_level_set("*", ESP_LOG_WARN);
+  if (enabled) atsDebugLogf("[LOG] Extra USB diagnostics enabled; ESP-IDF limited to WARN+");
   else atsStandardLogf("[USB] Extra USB-LOG disabled; standard logging remains active.");
 }
 
@@ -197,12 +202,9 @@ void atsDebugTick() {
   if (lastLoopStartMs) {
     const uint32_t gap = now - lastLoopStartMs;
     if (gap > maxLoopGapMs) maxLoopGapMs = gap;
-    if (gap > 250U) {
-      ++slowLoopCount;
-      atsDebugLogf("[LOOP][SLOW] start_to_start_gap_ms=%lu heap_free=%u",
-                   static_cast<unsigned long>(gap),
-                   static_cast<unsigned>(ESP.getFreeHeap()));
-    }
+    // Count slow loop intervals for the periodic health summary instead of
+    // printing one line for every transient delay.
+    if (gap > 500U) ++slowLoopCount;
   }
   lastLoopStartMs = now;
 
@@ -216,7 +218,7 @@ void atsDebugTick() {
     atsDebugLogf("[USB][LINK] host_present=%u", plugged ? 1U : 0U);
   }
 
-  if ((uint32_t)(now - lastHealthReportMs) >= 10000UL) {
+  if ((uint32_t)(now - lastHealthReportMs) >= 60000UL) {
     lastHealthReportMs = now;
     uint8_t queuedRecords = 0;
     uint32_t droppedRecords = 0;

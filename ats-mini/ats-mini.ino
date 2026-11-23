@@ -329,7 +329,9 @@ void setup()
   rx.setup(RESET_PIN, MW_BAND_TYPE);
   atsDebugLogf("[BOOT][RADIO] receiver setup complete heap_free=%u", (unsigned)ESP.getFreeHeap());
 
-  if(!prefsLoad(SAVE_SETTINGS|SAVE_VERIFY))
+  const bool settingsLoaded = prefsLoad(SAVE_SETTINGS|SAVE_VERIFY);
+  atsDebugLogf("[BOOT][SETTINGS] loaded=%u usb_log_enabled=%u heap=%u", settingsLoaded ? 1U : 0U, webDiagEnabled ? 1U : 0U, (unsigned)ESP.getFreeHeap());
+  if(!settingsLoaded)
   {
     prefsSave(SAVE_SETTINGS);
     spr.fillSprite(TH.bg);

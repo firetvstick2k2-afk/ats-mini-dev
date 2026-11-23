@@ -57,7 +57,9 @@ jobs:
             - --profile
             - esp32s3-ospi
             - --build-property
-            - compiler.cpp.extra_flags=-DCONFIG_ASYNC_TCP_STACK_SIZE=32768
+            - compiler.cpp.extra_flags=-DCONFIG_ASYNC_TCP_STACK_SIZE=32768 -DUSE_ESP_IDF_LOG
+            - --build-property
+            - compiler.c.extra_flags=-DUSE_ESP_IDF_LOG
             - --export-binaries
           enable-deltas-report: false
           enable-warnings-report: true

@@ -135,8 +135,8 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_WEATHER     20
 #define MENU_MOON_CALENDAR 21
 #define MENU_FM_DX       22
-#define MENU_DECODER_MENU 23
-#define MENU_BAND_OPENING 24
+#define MENU_BAND_OPENING 23
+#define MENU_DECODER_MENU 24
 #define MENU_SETTINGS    25
 #define MENU_BACK        26
 

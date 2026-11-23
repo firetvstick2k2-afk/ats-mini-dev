@@ -1,4 +1,5 @@
 #include "WeatherService.h"
+#include "DebugLog.h"
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -16,7 +17,7 @@ void weatherLog(const char* format, ...) {
   va_start(args, format);
   vsnprintf(line, sizeof(line), format, args);
   va_end(args);
-  Serial.println(line);
+  atsDebugLogf("%s", line);
 }
 
 constexpr char kWeatherNamespace[] = "weather";

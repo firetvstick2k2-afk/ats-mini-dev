@@ -851,3 +851,16 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 - Die Ableitung ist ausdrücklich ein persönlicher Indikator für mögliche FM-DX-Bedingungen, keine direkte Messung der UKW-Rundfunk-MUF und keine Empfangsgarantie.
 - Source-only; kein Compile, kein GitHub Actions Build, kein Flash und kein Hardwaretest. Nächster manueller OSPI-DE-Build ist #69; nur auf ausdrückliche Aufforderung starten.
 
+
+
+## LW/MW-Monitor – WSPR-Live-Ableitung (2026-11-24)
+
+- Nur LW und MW ergänzt; keine Änderung an 2 m, 70 cm oder UKW/FM.
+- WSPR-Live-Read-only-API: `https://db1.wspr.live/`; eine aggregierte ClickHouse-Abfrage für LF-Band `-1` (136 kHz) und MF-Band `0` (474,2 kHz), letzte sechs Stunden, RX-Stationen in Europa.
+- LW übernimmt LF; MW1/MW2/MW3 übernehmen MF. Typkennzeichnung `LF ~` / `MF ~`; Proxy-Schätzung, keine direkte Rundfunkbandmessung.
+- GOOD ab mindestens drei verschiedenen RX-Stationen und mindestens 500 km maximaler Empfangsdistanz; FAIR bei mindestens einer Meldung; UNKNOWN ohne Meldung. Day/Night erhalten denselben aktuellen rollierenden Aktivitätsstatus.
+- Aktualisierung alle 15 Minuten, Ablauf nach sechs Stunden. Eigene Zeitmarke; WSPR-Zeilen 0–3 bleiben bei HF-Feed-Ausfällen erhalten.
+- Lizenz-/Nutzungshinweis: WSPR Live erlaubt eigene Projekte nur bei kostenlos zugänglichen Ergebnissen und schließt kommerzielle/profit-orientierte Nutzung aus. Faire, zeit-/bandbegrenzte Abfragen.
+- Diagnosepräfix `[BANDOPEN][WSPR]`.
+- Commits: cpp `38af3b41797be1326b3ee9059272bc865e36a162`, Header `ad0dedfb583a8f819cd1bbedd1db8cdd9fcc07e1`, Snapshot-Erhalt `7be455123291be823d8535ab6152d8febd3966a5`, Handoff `c807a672b8cfa52caf32999a6a6f55befdf54ff5`.
+- Kein Build, kein Actions-Lauf, kein Flash und kein Gerätetest. Nächster manueller Build bleibt #69; USB-Log muss API-JSON und reale LF/MF-Daten verifizieren.

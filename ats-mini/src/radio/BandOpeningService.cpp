@@ -36,7 +36,8 @@ constexpr uint32_t kFreshAgeMs = 2UL * 60UL * 60UL * 1000UL;
 constexpr uint32_t kMaximumAgeMs = 24UL * 60UL * 60UL * 1000UL;
 constexpr size_t kMaxResponseBytes = 16384;
 // These are the exact receive windows in BandManager.cpp, represented in kHz.
-// Rows without a matching Map For HAM band_detail entry intentionally remain grey.
+// Direct band_detail values are used where available; SWL group estimates and
+// the 11m interpolation are visibly marked with "~". LW/MW remain un-rated.
 const BandOpeningService::Band kBands[BandOpeningService::kBandCount] = {
   {"LW Band", "SWL", 100, 495, 0},
   {"MW1 Band", "SWL", 100, 1800, 0},
@@ -438,7 +439,7 @@ bool BandOpeningService::fetchVhfConditions(Snapshot& result) {
   // The service asks for a six-hour spot window. A spot proves reported
   // activity, not that the whole band is closed when no spot is present.
   vTaskDelay(pdMS_TO_TICKS(1100));
-  const String twoMeterUrl = String(kVhfApiBase) + "spots?band=144&hours=6&limit=100";
+  const String twoMeterUrl = String(kVhfApiBase) + "spots?band=144&hours=6&limit=30";
   const bool twoMeterOk = fetchJsonDocument(twoMeterUrl.c_str(), doc, "144");
   if (twoMeterOk || propagationOk) {
     size_t spots = twoMeterOk ? doc["spots"].size() : 0;
@@ -457,7 +458,7 @@ bool BandOpeningService::fetchVhfConditions(Snapshot& result) {
   }
 
   vTaskDelay(pdMS_TO_TICKS(1100));
-  const String seventyCmUrl = String(kVhfApiBase) + "spots?band=432&hours=6&limit=100";
+  const String seventyCmUrl = String(kVhfApiBase) + "spots?band=432&hours=6&limit=30";
   const bool seventyCmOk = fetchJsonDocument(seventyCmUrl.c_str(), doc, "432");
   if (seventyCmOk) {
     const size_t spots = doc["spots"].size();

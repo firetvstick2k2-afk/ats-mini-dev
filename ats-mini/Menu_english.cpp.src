@@ -171,7 +171,7 @@ static const char *menu[]
   "Steps", "Seek", "Scan", "Memory", "Squelch",
   "Bandwidth", "Frequency", "AGC/ATTN", "AVC",
   "SoftMute", "DUAL RX", "VFO A/B", "VHF Spectrum",
-  "ALL Band Spectrum", "News", "Weather report", "Moon calendar", "FM DX", "Decoder", "Settings", "Back",
+  "ALL Band Spectrum", "News", "Weather report", "Moon calendar", "FM DX", "Band Opening Monitor", "Decoder", "Settings", "Back",
 };
 
 #define MENU_BRIGHTNESS   0

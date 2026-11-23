@@ -26,8 +26,11 @@ void bandLogf(const char* format, ...) {
 }
 constexpr char kFeedUrl[] = "https://www.mapforham.com/hf-propagation/data/solar.json";
 constexpr char kVhfApiBase[] = "https://skeds.sq3swg.com/api/v1/public/";
+constexpr char kWsprUrl[] = "https://db1.wspr.live/?query=SELECT+band%2Ccount%28%29+AS+spots%2CuniqExact%28rx_sign%29+AS+receivers%2Cmax%28distance%29+AS+max_km+FROM+wspr.rx+WHERE+time+%3E+now%28%29+-+INTERVAL+6+HOUR+AND+band+IN+%28-1%2C0%29+AND+rx_lat+BETWEEN+35+AND+72+AND+rx_lon+BETWEEN+-15+AND+35+GROUP+BY+band+FORMAT+JSON";
 constexpr uint32_t kRefreshIntervalMs = 5UL * 60UL * 1000UL;
 constexpr uint32_t kVhfRefreshIntervalMs = 15UL * 60UL * 1000UL;
+constexpr uint32_t kWsprRefreshIntervalMs = 15UL * 60UL * 1000UL;
+constexpr uint32_t kWsprMaximumAgeMs = 6UL * 60UL * 60UL * 1000UL;
 constexpr uint32_t kVhfMaximumAgeMs = 6UL * 60UL * 60UL * 1000UL;
 constexpr size_t kMaxVhfResponseBytes = 32768;
 constexpr uint32_t kRetryIntervalMs = 5UL * 60UL * 1000UL;
@@ -36,12 +39,13 @@ constexpr uint32_t kMaximumAgeMs = 24UL * 60UL * 60UL * 1000UL;
 constexpr size_t kMaxResponseBytes = 16384;
 // These are the exact receive windows in BandManager.cpp, represented in kHz.
 // Direct band_detail values are used where available; SWL group estimates and
-// the 11m interpolation are visibly marked with "~". LW/MW remain un-rated.
+// the 11m interpolation are visibly marked with "~". LW/MW use WSPR LF/MF
+// activity as clearly labelled propagation proxies.
 const BandOpeningService::Band kBands[BandOpeningService::kBandCount] = {
-  {"LW Band", "SWL", 100, 495, 0},
-  {"MW1 Band", "SWL", 100, 1800, 0},
-  {"MW2 Band", "SWL", 495, 1701, 0},
-  {"MW3 Band", "SWL", 1700, 3500, 0},
+  {"LW Band", "LF ~", 100, 495, 0},
+  {"MW1 Band", "MF ~", 100, 1800, 0},
+  {"MW2 Band", "MF ~", 495, 1701, 0},
+  {"MW3 Band", "MF ~", 1700, 3500, 0},
   {"160m Band", "AFU", 1800, 2000, 160},
   {"90m Band", "SWL ~", 3200, 3400, 0},
   {"80m Band", "AFU", 3500, 4000, 80},
@@ -235,6 +239,10 @@ BandOpeningService::Snapshot BandOpeningService::snapshot() const {
   if (copy.vhf70cmUpdatedAtMs &&
       millis() - copy.vhf70cmUpdatedAtMs >= kVhfMaximumAgeMs)
     copy.rows[27] = {};
+  if (copy.wsprUpdatedAtMs &&
+      millis() - copy.wsprUpdatedAtMs >= kWsprMaximumAgeMs) {
+    for (uint8_t i = 0; i < 4; ++i) copy.rows[i] = {};
+  }
   copy.stale = ageStale;
   return copy;
 }
@@ -258,6 +266,17 @@ void BandOpeningService::taskLoop() {
         static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
     }
     const bool due = refreshRequested_ || !lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs;
+    if (wifiConnected_ && (!lastWsprAttemptMs_ || now - lastWsprAttemptMs_ >= kWsprRefreshIntervalMs)) {
+      lastWsprAttemptMs_ = now;
+      Snapshot current = snapshot();
+      bandLogf("[BANDOPEN][WSPR] cycle start heap=%u", static_cast<unsigned>(ESP.getFreeHeap()));
+      if (fetchWsprConditions(current)) {
+        publish(current);
+        atsStandardLogf("[BANDOPEN][STATUS] LW/MW WSPR proxy data refreshed");
+      } else {
+        bandLogf("[BANDOPEN][WSPR] cycle failed; cached values retained");
+      }
+    }
     if (wifiConnected_ && (!lastVhfAttemptMs_ || now - lastVhfAttemptMs_ >= kVhfRefreshIntervalMs)) {
       lastVhfAttemptMs_ = now;
       Snapshot current = snapshot();
@@ -299,6 +318,8 @@ void BandOpeningService::taskLoop() {
         fresh.rows[28] = latest.rows[28];
         fresh.vhf2mUpdatedAtMs = latest.vhf2mUpdatedAtMs;
         fresh.vhf70cmUpdatedAtMs = latest.vhf70cmUpdatedAtMs;
+        for (uint8_t i = 0; i < 4; ++i) fresh.rows[i] = latest.rows[i];
+        fresh.wsprUpdatedAtMs = latest.wsprUpdatedAtMs;
         publish(fresh);
         bandLogf("[BANDOPEN][HF] publish SUCCESS source_updated=%s elapsed_ms=%lu valid=1 stale=0",
           fresh.sourceUpdated, static_cast<unsigned long>(millis() - now));
@@ -388,6 +409,108 @@ bool BandOpeningService::fetchVhfConditions(Snapshot& result) {
     anyUpdated ? "UPDATED" : "FAILED",
     static_cast<unsigned long>(millis() - startedAt));
   return anyUpdated;
+}
+
+
+bool BandOpeningService::fetchWsprConditions(Snapshot& result) {
+  using Status = BandOpeningService::Status;
+  const uint32_t startedAt = millis();
+  WiFiClientSecure client;
+  client.setTimeout(10000);
+  client.useBuiltinCACertBundle();
+  HTTPClient http;
+  http.setTimeout(10000);
+  http.setReuse(false);
+  http.setUserAgent("ATS-Mini-OS/1.0 (+https://github.com/firetvstick2k2-afk/ats-mini-dev)");
+  if (!http.begin(client, kWsprUrl)) {
+    bandLogf("[BANDOPEN][WSPR] http.begin FAILED");
+    return false;
+  }
+  http.addHeader("Accept", "application/json");
+  const int statusCode = http.GET();
+  if (statusCode != HTTP_CODE_OK) {
+    bandLogf("[BANDOPEN][WSPR] GET failed http=%d error=%s",
+      statusCode, http.errorToString(statusCode).c_str());
+    http.end();
+    return false;
+  }
+  const int length = http.getSize();
+  if (length > 8192) {
+    bandLogf("[BANDOPEN][WSPR] response too large length=%d", length);
+    http.end();
+    return false;
+  }
+  String body = http.getString();
+  http.end();
+  if (body.isEmpty() || body.length() > 8192) {
+    bandLogf("[BANDOPEN][WSPR] empty/oversize body bytes=%u",
+      static_cast<unsigned>(body.length()));
+    return false;
+  }
+
+  JsonDocument doc;
+  const DeserializationError error = deserializeJson(doc, body);
+  if (error) {
+    bandLogf("[BANDOPEN][WSPR] JSON parse FAILED: %s", error.c_str());
+    return false;
+  }
+  JsonArrayConst rows = doc["data"].as<JsonArrayConst>();
+  if (rows.isNull()) {
+    bandLogf("[BANDOPEN][WSPR] JSON has no data array");
+    return false;
+  }
+
+  bool foundLf = false;
+  bool foundMf = false;
+  Status lfStatus = Status::Unknown;
+  Status mfStatus = Status::Unknown;
+  uint32_t lfSpots = 0, mfSpots = 0;
+  uint32_t lfReceivers = 0, mfReceivers = 0;
+  uint32_t lfMaxKm = 0, mfMaxKm = 0;
+
+  for (JsonObjectConst item : rows) {
+    const int band = item["band"] | 99;
+    const uint32_t spots = item["spots"] | 0U;
+    const uint32_t receivers = item["receivers"] | 0U;
+    const uint32_t maxKm = item["max_km"] | 0U;
+    if (band == -1) {
+      foundLf = true;
+      lfSpots = spots; lfReceivers = receivers; lfMaxKm = maxKm;
+      if (spots > 0) lfStatus = (receivers >= 3 && maxKm >= 500) ? Status::Good : Status::Fair;
+    } else if (band == 0) {
+      foundMf = true;
+      mfSpots = spots; mfReceivers = receivers; mfMaxKm = maxKm;
+      if (spots > 0) mfStatus = (receivers >= 3 && maxKm >= 500) ? Status::Good : Status::Fair;
+    }
+  }
+
+  if (!foundLf && !foundMf) {
+    bandLogf("[BANDOPEN][WSPR] valid JSON but no LF/MF aggregate rows");
+    return false;
+  }
+
+  // WSPR band -1 is LF (136 kHz); band 0 is MF (474.2 kHz).
+  // These are propagation proxies, not direct LW/MW broadcast measurements.
+  if (foundLf) {
+    result.rows[0].day = lfStatus;
+    result.rows[0].night = lfStatus;
+    bandLogf("[BANDOPEN][WSPR][LF] spots=%lu receivers=%lu max_km=%lu status=%s",
+      static_cast<unsigned long>(lfSpots), static_cast<unsigned long>(lfReceivers),
+      static_cast<unsigned long>(lfMaxKm), statusText(lfStatus));
+  }
+  if (foundMf) {
+    for (uint8_t i = 1; i <= 3; ++i) {
+      result.rows[i].day = mfStatus;
+      result.rows[i].night = mfStatus;
+    }
+    bandLogf("[BANDOPEN][WSPR][MF] spots=%lu receivers=%lu max_km=%lu status=%s applied=MW1,MW2,MW3",
+      static_cast<unsigned long>(mfSpots), static_cast<unsigned long>(mfReceivers),
+      static_cast<unsigned long>(mfMaxKm), statusText(mfStatus));
+  }
+  result.wsprUpdatedAtMs = millis();
+  bandLogf("[BANDOPEN][WSPR] cycle result=UPDATED elapsed_ms=%lu",
+    static_cast<unsigned long>(millis() - startedAt));
+  return true;
 }
 
 bool BandOpeningService::fetchConditions(Snapshot& result) {

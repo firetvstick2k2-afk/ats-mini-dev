@@ -800,14 +800,14 @@ void loop()
     bandOpeningSessionActive = true;
     bandOpeningPage = 0;
     bandOpeningService.begin();
-    Serial.println("[BANDOPEN][UI] monitor opened; requesting Wi-Fi");
+    atsDebugLogf("[BANDOPEN][UI] monitor opened; requesting Wi-Fi");
     netWeatherBegin();
   }
   if(!bandOpeningOpen && bandOpeningSessionActive)
   {
     bandOpeningSessionActive = false;
     bandOpeningWifiCleanupPending = true;
-    Serial.println("[BANDOPEN][UI] monitor closed; stopping new requests");
+    atsDebugLogf("[BANDOPEN][UI] monitor closed; stopping new requests");
   }
   bool bandOpeningConnected = WiFi.status() == WL_CONNECTED;
   if(bandOpeningSessionActive) bandOpeningConnected = netWeatherPoll();

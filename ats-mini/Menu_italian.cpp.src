@@ -1890,7 +1890,7 @@ void drawFullScreenMenu(uint16_t cmd)
   const int idx = (settingsPage && rawIdx > MENU_ZOOM) ? rawIdx - 1 : rawIdx;
   const int count = settingsPage ? ITEM_COUNT(settings) - 1 : (spectrumPage ? ITEM_COUNT(spectrumMenu) : (decoderPage ? ITEM_COUNT(decoderMenu) : ITEM_COUNT(menu)));
   const char *title = settingsPage ? "IMPOSTAZ." : (spectrumPage ? "SPETTRO" : (decoderPage ? "DECODER" : "MENU PRINC."));
-  const char *selected = settingsPage ? ((rawIdx == MENU_WEBLOG && !webDiagEnabled) ? "REGISTRO DIAGNOSTICO: OFF" : (rawIdx == MENU_WEBLOG ? "REGISTRO DIAGNOSTICO: ON" : settingsXXL[rawIdx])) : (spectrumPage ? spectrumMenuXXL[idx] : (decoderPage ? decoderMenuXXL[idx] : menuXXL[idx]));
+  const char *selected = settingsPage ? ((rawIdx == MENU_WEBLOG && !webDiagEnabled) ? "LOG USB: OFF" : (rawIdx == MENU_WEBLOG ? "LOG USB: ON" : settingsXXL[rawIdx])) : (spectrumPage ? spectrumMenuXXL[idx] : (decoderPage ? decoderMenuXXL[idx] : menuXXL[idx]));
   const char *displaySelected = selected;
   // Render menu labels in uppercase without corrupting UTF-8 umlauts.
   char uppercaseLabel[96];

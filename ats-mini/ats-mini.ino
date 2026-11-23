@@ -174,6 +174,59 @@ void drawEcoWaterfallStatic(LGFX_Sprite &targetSprite) {
     targetSprite.fillRect(wfX + X_MID_START + X_MID_WIDTH, wfY, WATERFALL_WIDTH - (X_MID_START + X_MID_WIDTH), WATERFALL_HEIGHT, 0x001F);
 }
 
+// Compact state snapshots make display/audio shutdowns diagnosable even when
+// the USB terminal is disconnected at the moment the event occurs.
+static void atsDebugRadioStateTick()
+{
+  static bool initialized = false;
+  static uint16_t lastCmd = 0xFFFF;
+  static uint8_t lastMode = 0xFF;
+  static uint8_t lastLayout = 0xFF;
+  static uint16_t lastFrequency = 0xFFFF;
+  static int16_t lastBfo = INT16_MIN;
+  static bool lastSleeping = false;
+  static int lastMutePin = -1;
+  static int lastAmpPin = -2;
+  static uint32_t lastSnapshotMs = 0;
+
+  const bool sleeping = sleepOn();
+  const int mutePin = digitalRead(AUDIO_MUTE);
+  const int ampPin = PIN_AMP_EN >= 0 ? digitalRead(PIN_AMP_EN) : -1;
+  const bool changed = !initialized || currentCmd != lastCmd ||
+    currentMode != lastMode || uiLayoutIdx != lastLayout ||
+    currentFrequency != lastFrequency || currentBFO != lastBfo ||
+    sleeping != lastSleeping || mutePin != lastMutePin || ampPin != lastAmpPin;
+
+  if(changed)
+  {
+    atsDebugLogf("[RADIO][STATE_CHANGE] cmd=%u mode=%u freq_raw=%u bfo=%d layout=%u sleeping=%u mute_gpio=%d amp_gpio=%d volume=%u brightness_setting=%u sleep_timeout=%u",
+      (unsigned)currentCmd, (unsigned)currentMode, (unsigned)currentFrequency,
+      (int)currentBFO, (unsigned)uiLayoutIdx, sleeping ? 1U : 0U,
+      mutePin, ampPin, (unsigned)volume, (unsigned)currentBrt,
+      (unsigned)currentSleep);
+    lastCmd = currentCmd;
+    lastMode = currentMode;
+    lastLayout = uiLayoutIdx;
+    lastFrequency = currentFrequency;
+    lastBfo = currentBFO;
+    lastSleeping = sleeping;
+    lastMutePin = mutePin;
+    lastAmpPin = ampPin;
+    initialized = true;
+  }
+
+  const uint32_t now = millis();
+  if((uint32_t)(now - lastSnapshotMs) >= 15000UL)
+  {
+    lastSnapshotMs = now;
+    atsDebugLogf("[RADIO][STATE] cmd=%u mode=%u freq_raw=%u bfo=%d layout=%u sleeping=%u mute_gpio=%d amp_gpio=%d volume=%u brightness_setting=%u sleep_timeout=%u heap=%u",
+      (unsigned)currentCmd, (unsigned)currentMode, (unsigned)currentFrequency,
+      (int)currentBFO, (unsigned)uiLayoutIdx, sleeping ? 1U : 0U,
+      mutePin, ampPin, (unsigned)volume, (unsigned)currentBrt,
+      (unsigned)currentSleep, (unsigned)ESP.getFreeHeap());
+  }
+}
+
 //
 // Hardware initialization and setup
 //
@@ -185,9 +238,12 @@ void setup()
   Serial.begin(115200);
   delay(50);
   atsDebugBegin();
+  atsDebugFlushTick();
+  atsDebugLogf("[BOOT][SETUP] setup() entered");
 
   // Start background workers only after USB CDC and the debug logger are ready.
   newsService.begin();
+  atsDebugLogf("[BOOT][WORKER] NewsService begin requested heap=%u tasks=%u", (unsigned)ESP.getFreeHeap(), (unsigned)uxTaskGetNumberOfTasks());
 
   pinMode(ENCODER_PUSH_BUTTON, INPUT_PULLUP);
   pinMode(ENCODER_PIN_A, INPUT_PULLUP);
@@ -213,6 +269,7 @@ void setup()
 
   tft.init();
   tft.setRotation(3);
+  atsDebugLogf("[BOOT][DISPLAY] TFT initialized rotation=3 heap=%u", (unsigned)ESP.getFreeHeap());
 
   tft.fillScreen(TH.bg);
   spr.setPsram(true);
@@ -696,6 +753,7 @@ bool processRssiSnr()
 void loop()
 {
   atsDebugTick();
+  atsDebugRadioStateTick();
   static bool decoderMenuLongPressHandled = false;
   uint32_t currentTime = millis();
   // Remember the last band and frequency used for frequency-dependent layout hints.
@@ -1003,7 +1061,11 @@ void loop()
     elapsedSleep = elapsedCommand = currentTime = millis();
   }
 
+  const uint32_t serialLoopStartedUs = micros();
   int ser_event = serialLoop(usbModeIdx);
+  const uint32_t serialLoopDurationUs = micros() - serialLoopStartedUs;
+  if(serialLoopDurationUs > 10000UL)
+    atsDebugLogf("[USB][SERIAL_LOOP_SLOW] duration_us=%lu rx_available=%d", (unsigned long)serialLoopDurationUs, Serial.available());
   needRedraw |= !!(ser_event & REMOTE_CHANGED);
   pb1st.isPressed |= !!(ser_event & REMOTE_PRESSED);
   pb1st.wasClicked |= !!(ser_event & REMOTE_CLICK);
@@ -1606,10 +1668,15 @@ void loop()
   }
 
   if(needRedraw) {
+    const uint32_t drawStartedUs = micros();
     drawScreen();
+    const uint32_t drawDurationUs = micros() - drawStartedUs;
+    if(drawDurationUs > 50000UL)
+      atsDebugLogf("[DISPLAY][DRAW_SLOW] duration_us=%lu cmd=%u layout=%u heap=%u", (unsigned long)drawDurationUs, (unsigned)currentCmd, (unsigned)uiLayoutIdx, (unsigned)ESP.getFreeHeap());
     // Statischer Rahmen und blaue Seiten des Eco-Wasserfalls beim Redraw
     drawEcoWaterfallStatic(spr);
   }
 
   delay(5);
+  atsDebugFlushTick();
 }

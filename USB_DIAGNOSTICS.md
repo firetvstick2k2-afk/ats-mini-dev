@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Settings item is named **USB-LOG** (DE), **USB Log** (EN), and **Log USB** (IT). It controls the central USB CDC diagnostic stream. The default is OFF unless an existing saved preference enables it.
+The Settings item is named **USB-LOG** (DE), **USB Log** (EN), and **Log USB** (IT). It controls only the additional diagnostic stream. The standard USB log is independent and remains available when this switch is OFF.
 
 The logger is intended for a phone acting as USB host, including a Samsung Galaxy S22 Ultra, with a USB serial terminal application. It does not create new diagnostic files in LittleFS and does not use Wi-Fi for log transport.
 
@@ -11,17 +11,19 @@ The logger is intended for a phone acting as USB host, including a Samsung Galax
 1. Connect the ATS Mini's native USB data port to the phone with a data-capable USB-C cable/OTG connection.
 2. Open a USB serial terminal app and select the ATS Mini USB serial device.
 3. Use 115200 baud, 8 data bits, no parity, 1 stop bit (8N1) if the app asks.
-4. Enable **Settings → USB-LOG** on the radio.
+4. The standard USB log is available without changing any setting. Enable **Settings → USB-LOG** only when additional diagnostics are needed.
 5. Start the terminal app's own recording/log-to-file feature if a copy on the phone is wanted.
 
 ## Safety and transport design
 
 - USB CDC TX timeout is set to zero so serial output cannot wait indefinitely for a disconnected or non-reading terminal.
-- Diagnostic producers enqueue fixed-size records in a bounded 48-record RAM queue.
-- The main radio loop drains the queue in small chunks only when USB has room; no additional FreeRTOS logging worker is created.
+- Standard messages use `atsStandardLogf("...")`; they are independent of the Settings switch and are intended for deliberately selected, low-volume events.
+- Additional diagnostic producers use `atsDebugLogf("...")`; they enqueue fixed-size records in a bounded 48-record RAM queue and are suppressed while USB-LOG is OFF.
+- The main radio loop drains the additional-diagnostics queue in small chunks only when USB-LOG is ON and USB has room; no additional FreeRTOS logging worker is created.
+- ESP-IDF warning/error output remains at the normal standard log level while USB-LOG is OFF. Verbose ESP-IDF output is enabled only while USB-LOG is ON.
 - If the queue fills while the phone is disconnected or not reading, the oldest records are overwritten and an overflow counter is reported when output resumes.\n- `usb_host` reports the USB bus/host link, not necessarily whether the terminal app is currently open; `usb_tx_free` and `log_queue` help identify a terminal that has stopped reading while the cable remains connected.
 - The queue is RAM-only. A full power loss/reset clears buffered records; reset cause and boot memory information are logged after the saved Settings state is loaded.
-- Use `atsDebugLogf("...")` for new diagnostic events. Do not add blocking serial writes, file writes, or high-rate per-sample logging to time-critical radio/audio paths.
+- Use `atsStandardLogf("...")` for a normal message that should remain visible with USB-LOG OFF. Use `atsDebugLogf("...")` for extra diagnostics that should appear only with USB-LOG ON. Do not add blocking serial writes, file writes, or high-rate per-sample logging to time-critical radio/audio paths.
 
 ## Diagnostic coverage
 

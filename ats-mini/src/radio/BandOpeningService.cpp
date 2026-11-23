@@ -25,7 +25,6 @@ void bandLogf(const char* format, ...) {
   atsDebugLogf("%s", line);
 }
 constexpr char kFeedUrl[] = "https://www.mapforham.com/hf-propagation/data/solar.json";
-constexpr char kFmMufUrl[] = "https://fmdx.org/includes/tools/get_muf.php";
 constexpr char kVhfApiBase[] = "https://skeds.sq3swg.com/api/v1/public/";
 constexpr uint32_t kRefreshIntervalMs = 5UL * 60UL * 1000UL;
 constexpr uint32_t kVhfRefreshIntervalMs = 15UL * 60UL * 1000UL;
@@ -67,7 +66,7 @@ const BandOpeningService::Band kBands[BandOpeningService::kBandCount] = {
   {"10m Band", "AFU", 28000, 29700, 10},
   {"2m Band", "DX-AKT", 144000, 146000, 0},
   {"70cm Band", "DX-AKT", 430000, 440000, 0},
-  {"UKW / FM", "FM-DX", 64000, 108000, 0}
+  {"UKW / FM", "2m ~", 64000, 108000, 0}
 };
 
 
@@ -229,17 +228,14 @@ BandOpeningService::Snapshot BandOpeningService::snapshot() const {
     }
   }
   if (copy.vhf2mUpdatedAtMs &&
-      millis() - copy.vhf2mUpdatedAtMs >= kVhfMaximumAgeMs)
+      millis() - copy.vhf2mUpdatedAtMs >= kVhfMaximumAgeMs) {
     copy.rows[26] = {};
+    copy.rows[28] = {};
+  }
   if (copy.vhf70cmUpdatedAtMs &&
       millis() - copy.vhf70cmUpdatedAtMs >= kVhfMaximumAgeMs)
     copy.rows[27] = {};
   copy.stale = ageStale;
-  if (copy.fmMufValid && copy.fmMufUpdatedAtMs) {
-    const uint32_t mufAge = millis() - copy.fmMufUpdatedAtMs;
-    copy.fmMufStale = mufAge >= kFreshAgeMs;
-    if (mufAge >= kMaximumAgeMs) copy.fmMufValid = false;
-  }
   return copy;
 }
 void BandOpeningService::publish(const Snapshot& value) {
@@ -274,25 +270,6 @@ void BandOpeningService::taskLoop() {
         bandLogf("[BANDOPEN][VHF] cycle failed; cached values retained");
       }
     }
-    if (wifiConnected_ && (!lastMufAttemptMs_ || now - lastMufAttemptMs_ >= kRefreshIntervalMs)) {
-      lastMufAttemptMs_ = now;
-      float muf = 0.0f;
-      bandLogf("[BANDOPEN][FM_MUF] cycle start wifi=%d heap=%u",
-        static_cast<int>(WiFi.status()), static_cast<unsigned>(ESP.getFreeHeap()));
-      const bool ok = fetchFmMuf(muf);
-      bandLogf("[BANDOPEN][FM_MUF] cycle result=%s value_mhz=%.1f heap=%u",
-        ok ? "OK" : "FAILED", ok ? muf : 0.0f, static_cast<unsigned>(ESP.getFreeHeap()));
-      atsStandardLogf("[BANDOPEN][STATUS] FM MUF update %s%s",
-        ok ? "OK" : "FAILED", ok ? "" : " (previous value retained if available)");
-      Snapshot current = snapshot();
-      if (ok) {
-        current.fmMufMHz = muf; current.fmMufValid = true;
-        current.fmMufStale = false; current.fmMufUpdatedAtMs = millis();
-      } else {
-        current.fmMufStale = !current.fmMufUpdatedAtMs || (millis() - current.fmMufUpdatedAtMs >= kFreshAgeMs);
-      }
-      publish(current);
-    }
     if (wifiConnected_ && due) {
       const bool wasRequested = refreshRequested_;
       refreshRequested_ = false;
@@ -319,12 +296,9 @@ void BandOpeningService::taskLoop() {
         // when the HF/solar snapshot is replaced.
         fresh.rows[26] = latest.rows[26];
         fresh.rows[27] = latest.rows[27];
+        fresh.rows[28] = latest.rows[28];
         fresh.vhf2mUpdatedAtMs = latest.vhf2mUpdatedAtMs;
         fresh.vhf70cmUpdatedAtMs = latest.vhf70cmUpdatedAtMs;
-        fresh.fmMufMHz = latest.fmMufMHz;
-        fresh.fmMufValid = latest.fmMufValid;
-        fresh.fmMufStale = latest.fmMufStale;
-        fresh.fmMufUpdatedAtMs = latest.fmMufUpdatedAtMs;
         publish(fresh);
         bandLogf("[BANDOPEN][HF] publish SUCCESS source_updated=%s elapsed_ms=%lu valid=1 stale=0",
           fresh.sourceUpdated, static_cast<unsigned long>(millis() - now));
@@ -347,78 +321,6 @@ void BandOpeningService::taskLoop() {
     }
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
-}
-
-bool BandOpeningService::fetchFmMuf(float& value) {
-  const uint32_t startedAt = millis();
-  atsDebugLogf("[BANDOPEN][FM_MUF] HTTPS begin");
-  WiFiClientSecure client;
-  client.setTimeout(8000);
-  client.useBuiltinCACertBundle();
-  HTTPClient http;
-  http.setTimeout(8000);
-  http.setReuse(false);
-  if (!http.begin(client, kFmMufUrl)) {
-    atsDebugLogf("[BANDOPEN][FM_MUF] http.begin FAILED");
-    return false;
-  }
-  const int status = http.GET();
-  if (status != HTTP_CODE_OK) {
-    bandLogf("[BANDOPEN][FM_MUF] GET failed http=%d error=%s elapsed_ms=%lu",
-      status, http.errorToString(status).c_str(), static_cast<unsigned long>(millis() - startedAt));
-    http.end();
-    return false;
-  }
-  const int length = http.getSize();
-  bandLogf("[BANDOPEN][FM_MUF] HTTP 200 content_length=%d", length);
-  if (length > 8192) { http.end(); atsDebugLogf("[BANDOPEN][FM_MUF] response rejected: too large"); return false; }
-  String body = http.getString();
-  http.end();
-  bandLogf("[BANDOPEN][FM_MUF] body_bytes=%u elapsed_ms=%lu",
-    static_cast<unsigned>(body.length()), static_cast<unsigned long>(millis() - startedAt));
-  if (body.isEmpty() || body.length() > 8192 || body.startsWith("<")) {
-    atsDebugLogf("[BANDOPEN][FM_MUF] response body empty/oversize/HTML");
-    return false;
-  }
-  // Keep the complete short upstream payload in the USB log. The endpoint
-  // currently returns HTTP 200, but the expected JSON field is not being
-  // accepted; logging the exact payload avoids guessing its schema.
-  bandLogf("[BANDOPEN][FM_MUF] payload=%s", body.c_str());
-  JsonDocument doc;
-  const DeserializationError parseError = deserializeJson(doc, body);
-  if (parseError) {
-    bandLogf("[BANDOPEN][FM_MUF] JSON parse FAILED: %s", parseError.c_str());
-    return false;
-  }
-  JsonVariantConst field = doc["europe"]["max_frequency"];
-  if (field.isUnbound() || field.isNull()) {
-    atsDebugLogf("[BANDOPEN][FM_MUF] JSON field europe.max_frequency missing/null");
-    return false;
-  }
-  if (!field.is<const char*>() && !field.is<float>() && !field.is<double>() && !field.is<int>()) {
-    bandLogf("[BANDOPEN][FM_MUF] JSON field type unsupported: string=%u number=%u",
-      field.is<const char*>() ? 1U : 0U,
-      (field.is<float>() || field.is<double>() || field.is<int>()) ? 1U : 0U);
-    return false;
-  }
-  const char* text = field.is<const char*>() ? field.as<const char*>() : nullptr;
-  if (field.is<const char*>() && (!text || !text[0] || strcmp(text, "No data") == 0)) {
-    bandLogf("[BANDOPEN][FM_MUF] JSON field contains no usable data: %s", text ? text : "(null)");
-    return false;
-  }
-  char* parseEnd = nullptr;
-  const float parsed = text ? strtof(text, &parseEnd) : field.as<float>();
-  if (text && (parseEnd == text || (parseEnd && *parseEnd != '\0'))) {
-    bandLogf("[BANDOPEN][FM_MUF] numeric conversion failed: %s", text);
-    return false;
-  }
-  if (!isfinite(parsed) || parsed < 30.0f || parsed > 300.0f) {
-    bandLogf("[BANDOPEN][FM_MUF] value rejected parsed=%.2f", parsed);
-    return false;
-  }
-  value = parsed;
-  bandLogf("[BANDOPEN][FM_MUF] value accepted %.2f MHz", value);
-  return true;
 }
 
 bool BandOpeningService::fetchVhfConditions(Snapshot& result) {
@@ -456,6 +358,12 @@ bool BandOpeningService::fetchVhfConditions(Snapshot& result) {
   } else {
     bandLogf("[BANDOPEN][VHF][144] no usable source response; previous value retained");
   }
+
+  // UKW/FM is intentionally a personal estimate: mirror the 2m status.
+  // 2m Sporadic-E openings are a strong indicator for possible FM-DX, but
+  // this is not a direct measurement of the 88-108 MHz broadcast band.
+  result.rows[28] = result.rows[26];
+  bandLogf("[BANDOPEN][FM] estimated from 2m status=%s", statusText(result.rows[28].day));
 
   vTaskDelay(pdMS_TO_TICKS(1100));
   const String seventyCmUrl = String(kVhfApiBase) + "spots?band=432&hours=6&limit=30";

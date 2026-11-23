@@ -211,7 +211,7 @@ void BandOpeningService::taskLoop() {
         static_cast<int>(WiFi.status()), static_cast<unsigned>(ESP.getFreeHeap()));
       const bool ok = fetchFmMuf(muf);
       bandLogf("[BANDOPEN][FM_MUF] cycle result=%s value_mhz=%.1f heap=%u",
-        ok ? "OK" : "FAILED", ok ? "OK" : "FAILED");
+        ok ? "OK" : "FAILED", ok ? muf : 0.0f, static_cast<unsigned>(ESP.getFreeHeap()));
       atsStandardLogf("[BANDOPEN][STATUS] FM MUF update %s%s",
         ok ? "OK" : "FAILED", ok ? "" : " (previous value retained if available)");
       Snapshot current = snapshot();

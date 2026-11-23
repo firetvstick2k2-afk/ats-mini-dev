@@ -962,6 +962,7 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_WEATHER: weatherPage = 0; currentCmd = CMD_WEATHER; weatherService.requestRefresh(); break;
     case MENU_MOON_CALENDAR: currentCmd = CMD_MOON_CALENDAR; break;
     case MENU_FM_DX: fmDxUiOpen(); break;
+    case MENU_BAND_OPENING: currentCmd = CMD_BAND_OPENING; break;
     case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
     case MENU_BACK: currentCmd = CMD_NONE; break;
   }

@@ -108,20 +108,28 @@ void queueV(const char* format, va_list args) {
   queueBody(body);
 }
 
-int atsDebugVprintf(const char* format, va_list args) {
-  char body[192];
-  const int length = vsnprintf(body, sizeof(body), format, args);
-  if (length <= 0) return length;
-
-  char tagged[208];
-  snprintf(tagged, sizeof(tagged), "[ESP-IDF] %s", body);
-  size_t used = strnlen(tagged, sizeof(tagged));
-  while (used && (tagged[used - 1] == '\n' || tagged[used - 1] == '\r'))
-    tagged[--used] = '\0';
-  queueBody(tagged);
-  return length;
-}
 } // namespace
+
+void atsStandardLogf(const char* format, ...) {
+  if (!format || !usbHostPresent()) return;
+
+  char body[208];
+  va_list args;
+  va_start(args, format);
+  const int bodyLength = vsnprintf(body, sizeof(body), format, args);
+  va_end(args);
+  if (bodyLength <= 0) return;
+
+  char line[256];
+  const int lineLength = snprintf(line, sizeof(line), "[%10lu ms] %s\\n",
+                                  static_cast<unsigned long>(millis()), body);
+  if (lineLength <= 0 || static_cast<size_t>(lineLength) >= sizeof(line)) return;
+
+  // Standard messages are independent of USB-LOG and never wait for the host.
+  const int writable = Serial.availableForWrite();
+  if (writable >= lineLength) Serial.write(
+      reinterpret_cast<const uint8_t*>(line), static_cast<size_t>(lineLength));
+}
 
 void atsDebugLogf(const char* format, ...) {
   if (!format) return;
@@ -135,9 +143,10 @@ void atsDebugBegin() {
   // Never let a closed Android terminal stall the radio loop on USB CDC writes.
   // All diagnostic records use the bounded RAM queue below.
   Serial.setTxTimeoutMs(0);
-  esp_log_set_vprintf(atsDebugVprintf);
-  // Keep noisy ESP-IDF verbose output disabled until USB-LOG is enabled in Settings.
+  // Keep normal ESP-IDF warnings/errors on the standard USB stream.
+  // Verbose ESP-IDF diagnostics are enabled only by the separate USB-LOG switch.
   esp_log_level_set("*", ESP_LOG_WARN);
+  atsStandardLogf("[USB] Standard USB logging ready; extra USB-LOG is OFF until Settings enables it.");
 
   const esp_reset_reason_t reason = esp_reset_reason();
   atsDebugLogf("========== ATS MINI USB DIAGNOSTICS ==========");
@@ -171,9 +180,11 @@ void atsDebugSettingsReady(bool enabled) {
   }
   portEXIT_CRITICAL(&gLogMux);
 
-  // Verbose I2C/ESP-IDF traffic is opt-in and follows the live setting.
+  // The switch controls only the additional diagnostic stream.
+  // Standard USB messages continue independently when this is disabled.
   esp_log_level_set("*", enabled ? ESP_LOG_VERBOSE : ESP_LOG_WARN);
-  if (enabled) atsDebugLogf("[LOG] USB diagnostics enabled by Settings");
+  if (enabled) atsDebugLogf("[LOG] Extra USB diagnostics enabled by Settings");
+  else atsStandardLogf("[USB] Extra USB-LOG disabled; standard logging remains active.");
 }
 
 void atsDebugTick() {

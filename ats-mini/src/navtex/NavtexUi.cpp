@@ -227,15 +227,20 @@ void drawNavtexPage() {
   spr.setTextColor(0x07FF);
   spr.setFont(FONT_SMALL);
   spr.drawString("NAVTEX RECEIVER", 160, 10);
-  spr.setTextColor(0xFFFF);
+
+  const bool synced = receiverService.synchronized();
+  const uint16_t statusColor = synced ? 0x07E0 : 0xFFE0;
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(statusColor);
   spr.setFont(FONT_DEFAULT);
-  spr.drawString("SITOR-B / 100 BAUD", 160, 34);
-  char status[48] = {};
-  snprintf(status, sizeof(status), "%s  AUDIO %u",
-           receiverService.synchronized() ? "SYNC" : "SEARCH",
+  spr.drawString("SITOR-B / 100 BAUD", 8, 31);
+  char status[40] = {};
+  snprintf(status, sizeof(status), "%s  AUDIO %u", synced ? "SYNC" : "SEARCH",
            static_cast<unsigned>(receiverService.audioLevel()));
-  spr.setTextColor(receiverService.synchronized() ? 0x07E0 : 0xFFE0);
-  spr.drawString(status, 160, 58);
+  spr.setTextDatum(TR_DATUM);
+  spr.setTextColor(statusColor);
+  spr.setFont(FONT_SMALL);
+  spr.drawString(status, 312, 33);
 
   // Keep the multi-kilobyte message snapshot out of the Arduino loopTask stack.
   static NavtexMessageParser::Message messages[NavtexMessageParser::kMaxMessages]{};
@@ -245,16 +250,24 @@ void drawNavtexPage() {
     char header[32] = {};
     snprintf(header, sizeof(header), "ZCZC %c%c%s", latest.station, latest.subject, latest.serial);
     spr.setTextColor(0x07FF);
-    spr.drawString(header, 8, 82, FONT_SMALL);
+    spr.setTextDatum(TL_DATUM);
+    spr.setFont(FONT_DEFAULT);
+    spr.drawString(header, 8, 58);
     spr.setTextColor(0xFFFF);
     spr.setTextDatum(TL_DATUM);
-    spr.setFont(FONT_SMALL);
-    char line[49] = {};
-    size_t len = strlen(latest.body);
-    if (len > 46) len = 46;
-    memcpy(line, latest.body, len);
-    line[len] = 0;
-    spr.drawString(line, 8, 101);
+    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    const size_t len = strlen(latest.body);
+    constexpr size_t charsPerLine = 32;
+    const int rowY[4] = {82, 104, 126, 148};
+    for (uint8_t row = 0; row < 4; ++row) {
+      const size_t offset = static_cast<size_t>(row) * charsPerLine;
+      if (offset >= len) break;
+      size_t count = len - offset;
+      if (count > charsPerLine) count = charsPerLine;
+      char line[charsPerLine + 1] = {};
+      memcpy(line, latest.body + offset, count);
+      spr.drawString(line, 8, rowY[row]);
+    }
   } else {
     const auto testStatus = receiverService.selfTestStatus();
     if (testStatus == NavtexReceiverService::SelfTestStatus::Running) {

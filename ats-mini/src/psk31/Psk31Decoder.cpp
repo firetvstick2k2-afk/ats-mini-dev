@@ -9,6 +9,8 @@ constexpr float kSignalThreshold = 10.0f;
 constexpr uint8_t kTimingDecimation = 8;
 constexpr uint8_t kTimingSamplesPerSymbol = 16;
 constexpr float kTimingLoopGain = 0.2f;
+constexpr float kAfcGain = 0.08f;
+constexpr float kAfcLimitHz = 10.0f;
 // PSK31 standard Varicode, ASCII 0..127 (ARRL PSK31 specification).
 const char* const kVaricode[128] = {
  "1010101011","1011011011","1011101101","1101110111","1011101011","1101011111","1011101111","1011111101",
@@ -33,7 +35,7 @@ const char* const kVaricode[128] = {
 void Psk31Decoder::setTone(float hz) {
   if (hz < 300.0f || hz > 1700.0f) return;
   toneHz_ = hz;
-  const float phaseStep = 2.0f * kPi * toneHz_ / static_cast<float>(kSampleRate);
+  const float phaseStep = 2.0f * kPi * (toneHz_ + frequencyCorrectionHz_) / static_cast<float>(kSampleRate);
   stepCos_ = cosf(phaseStep);
   stepSin_ = sinf(phaseStep);
   reset();
@@ -42,9 +44,9 @@ void Psk31Decoder::setTone(float hz) {
 void Psk31Decoder::reset() {
   oscCos_ = 1.0f; oscSin_ = 0.0f;
   dc_ = 2048.0f;
-  iFilter_ = qFilter_ = symbolI_ = symbolQ_ = 0.0f;
+  iFilter_ = qFilter_ = 0.0f;
   previousI_ = previousQ_ = 0.0f;
-  samplesInSymbol_ = 0;
+  frequencyCorrectionHz_ = 0.0f;
   timingDecimation_ = 0;
   timingClock_ = 0.0f;
   memset(timingEnvelope_, 0, sizeof(timingEnvelope_));
@@ -140,8 +142,7 @@ bool Psk31Decoder::pushSample(int16_t sample, char& decoded) {
   if (timingClock_ < kTimingSamplesPerSymbol) return false;
   timingClock_ -= kTimingSamplesPerSymbol;
 
-  // Sample the matched low-pass I/Q vector at the recovered symbol
-  // instant. Averaging over the entire symbol smears 180-degree transitions
+  // Sample the filtered I/Q vector at the recovered symbol instant. Averaging over the entire symbol smears 180-degree transitions
   // and corrupts differential decisions.
   const float currentI = iFilter_;
   const float currentQ = qFilter_;
@@ -159,6 +160,20 @@ bool Psk31Decoder::pushSample(int16_t sample, char& decoded) {
     return false;
   }
   const float differential = currentI * previousI_ + currentQ * previousQ_;
+  const float cross = previousI_ * currentQ - previousQ_ * currentI;
+  float phaseError = atan2f(cross, differential);
+  // Remove BPSK's intentional 180-degree data reversals so the AFC follows
+  // only the residual carrier-frequency error.
+  if (phaseError > kPi * 0.5f) phaseError -= kPi;
+  else if (phaseError < -kPi * 0.5f) phaseError += kPi;
+  const float frequencyError = phaseError * kBaud / (2.0f * kPi);
+  frequencyCorrectionHz_ -= kAfcGain * frequencyError;
+  if (frequencyCorrectionHz_ > kAfcLimitHz) frequencyCorrectionHz_ = kAfcLimitHz;
+  if (frequencyCorrectionHz_ < -kAfcLimitHz) frequencyCorrectionHz_ = -kAfcLimitHz;
+  const float phaseStep = 2.0f * kPi * (toneHz_ + frequencyCorrectionHz_) /
+                          static_cast<float>(kSampleRate);
+  stepCos_ = cosf(phaseStep);
+  stepSin_ = sinf(phaseStep);
   previousI_ = currentI; previousQ_ = currentQ;
   char result = 0;
   bool produced = false;

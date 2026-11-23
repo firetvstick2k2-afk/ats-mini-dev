@@ -15,6 +15,7 @@ private:
   void appendBit(uint8_t bit);
   bool decodeVaricode(char& decoded) const;
   float toneHz_ = kDefaultToneHz;
+  float frequencyCorrectionHz_ = 0.0f;
   float oscCos_ = 1.0f, oscSin_ = 0.0f;
   float stepCos_ = 0.0f, stepSin_ = 1.0f;
   float dc_ = 2048.0f;

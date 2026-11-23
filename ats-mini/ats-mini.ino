@@ -294,7 +294,8 @@ void setup()
     while(digitalRead(ENCODER_PUSH_BUTTON) == LOW) delay(100);
   }
 
-  diskInit();
+  const bool storageReady = diskInit();
+  atsDebugLogf("[BOOT][STORAGE] diskInit_result=%u heap_free=%u", storageReady ? 1U : 0U, (unsigned)ESP.getFreeHeap());
   logosInit();  // Prepare /logos and migrate legacy root-level PNG logos.
   dabLogoBegin();
 
@@ -314,6 +315,7 @@ void setup()
   rx.setI2CFastModeCustom(800000UL);
 
   int16_t si4735Addr = rx.getDeviceI2CAddress(RESET_PIN);
+  atsDebugLogf("[BOOT][RADIO] SI4735 address=0x%02X detected=%u", (unsigned)si4735Addr, si4735Addr ? 1U : 0U);
   if(!si4735Addr)
   {
     ledcWrite(PIN_LCD_BL, 255);
@@ -323,7 +325,9 @@ void setup()
     while(1);
   }
 
+  atsDebugLogf("[BOOT][RADIO] receiver setup begin");
   rx.setup(RESET_PIN, MW_BAND_TYPE);
+  atsDebugLogf("[BOOT][RADIO] receiver setup complete heap_free=%u", (unsigned)ESP.getFreeHeap());
 
   if(!prefsLoad(SAVE_SETTINGS|SAVE_VERIFY))
   {
@@ -363,8 +367,11 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A), rotaryEncoder, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B), rotaryEncoder, CHANGE);
 
+  atsDebugLogf("[BOOT][NETWORK] netInit requested mode=%u", (unsigned)wifiModeIdx);
   netInit(wifiModeIdx);
+  atsDebugLogf("[BOOT][BLE] bleInit requested mode=%u", (unsigned)bleModeIdx);
   bleInit(bleModeIdx);
+  atsDebugLogf("[BOOT][READY] setup complete cmd=%u mode=%u freq_raw=%u layout=%u heap=%u tasks=%u", (unsigned)currentCmd, (unsigned)currentMode, (unsigned)currentFrequency, (unsigned)uiLayoutIdx, (unsigned)ESP.getFreeHeap(), (unsigned)uxTaskGetNumberOfTasks());
 }
 
 
@@ -1116,6 +1123,8 @@ void loop()
     {
       dualRxLongPressHandled = true;
       // Long press only dims/wakes the display; Dual RX keeps scanning in the background.
+      atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=dual_rx_encoder_long_press");
+      atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=encoder_long_press cmd=%u", (unsigned)currentCmd);
       sleepOn(!sleepOn());
       elapsedSleep = elapsedCommand = currentTime = millis();
       pb1st.wasClicked = false;
@@ -1468,6 +1477,7 @@ void loop()
       {
         if(currentSleep)
         {
+          atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=encoder_click_wake");
           sleepOn(false);
           needRedraw = true;
         }
@@ -1600,6 +1610,7 @@ void loop()
 
   if(currentSleep && !sleepOn() && ((currentTime - elapsedSleep) > currentSleep * 1000))
   {
+    atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=auto_timeout elapsed_ms=%lu configured_seconds=%u", (unsigned long)(currentTime - elapsedSleep), (unsigned)currentSleep);
     sleepOn(true);
     elapsedSleep = elapsedCommand = currentTime = millis();
   }

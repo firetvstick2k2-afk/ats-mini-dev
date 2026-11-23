@@ -555,6 +555,26 @@ bool BandOpeningService::fetchConditions(Snapshot& result) {
   bandLogf("[BANDOPEN][HF] bands_detail entries=%u",
     static_cast<unsigned>(details.size()));
 
+  uint8_t matchedBands = 0;
+  for (uint8_t i = 0; i < kBandCount; ++i) {
+    result.rows[i] = {};
+    const uint16_t meters = kBands[i].bandMeters;
+    if (!meters) continue;
+    bool foundBand = false;
+    for (JsonObjectConst item : details) {
+      if ((item["band_m"] | 0) == meters) {
+        foundBand = true;
+        result.rows[i].day = parseStatus(item["day"]);
+        result.rows[i].night = parseStatus(item["night"]);
+        if (result.rows[i].day != Status::Unknown || result.rows[i].night != Status::Unknown)
+          ++matchedBands;
+        break;
+      }
+    }
+    bandLogf("[BANDOPEN][HF][BAND] %s band_m=%u found=%u day=%s night=%s",
+      kBands[i].name, static_cast<unsigned>(meters), foundBand ? 1U : 0U,
+      statusText(result.rows[i].day), statusText(result.rows[i].night));
+  }
   // Map For HAM also publishes four wider HF groups. Use those published
   // day/night estimates for the SWL broadcast bands that have no individual
   // band_detail entry. The UI marks these rows with "~" to distinguish them.
@@ -587,26 +607,7 @@ bool BandOpeningService::fetchConditions(Snapshot& result) {
   setSwlEstimate(20, "17m-15m"); // 15m broadcast
   setSwlEstimate(22, "12m-10m"); // 13m
 
-  uint8_t matchedBands = 0;
-  for (uint8_t i = 0; i < kBandCount; ++i) {
-    result.rows[i] = {};
-    const uint16_t meters = kBands[i].bandMeters;
-    if (!meters) continue;
-    bool foundBand = false;
-    for (JsonObjectConst item : details) {
-      if ((item["band_m"] | 0) == meters) {
-        foundBand = true;
-        result.rows[i].day = parseStatus(item["day"]);
-        result.rows[i].night = parseStatus(item["night"]);
-        if (result.rows[i].day != Status::Unknown || result.rows[i].night != Status::Unknown)
-          ++matchedBands;
-        break;
-      }
-    }
-    bandLogf("[BANDOPEN][HF][BAND] %s band_m=%u found=%u day=%s night=%s",
-      kBands[i].name, static_cast<unsigned>(meters), foundBand ? 1U : 0U,
-      statusText(result.rows[i].day), statusText(result.rows[i].night));
-  }
+
   // 11m CB is not supplied as a direct Map For HAM assessment.
   // Estimate it from the adjacent 10m and 12m amateur-band assessments.
   // If both neighbours agree, use that status; if they differ, stay cautious

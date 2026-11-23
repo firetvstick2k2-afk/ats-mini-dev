@@ -26,7 +26,11 @@ void bandLogf(const char* format, ...) {
 }
 constexpr char kFeedUrl[] = "https://www.mapforham.com/hf-propagation/data/solar.json";
 constexpr char kFmMufUrl[] = "https://fmdx.org/includes/tools/get_muf.php";
+constexpr char kVhfApiBase[] = "https://skeds.sq3swg.com/api/v1/public/";
 constexpr uint32_t kRefreshIntervalMs = 5UL * 60UL * 1000UL;
+constexpr uint32_t kVhfRefreshIntervalMs = 15UL * 60UL * 1000UL;
+constexpr uint32_t kVhfMaximumAgeMs = 6UL * 60UL * 60UL * 1000UL;
+constexpr size_t kMaxVhfResponseBytes = 32768;
 constexpr uint32_t kRetryIntervalMs = 5UL * 60UL * 1000UL;
 constexpr uint32_t kFreshAgeMs = 2UL * 60UL * 60UL * 1000UL;
 constexpr uint32_t kMaximumAgeMs = 24UL * 60UL * 60UL * 1000UL;
@@ -39,29 +43,29 @@ const BandOpeningService::Band kBands[BandOpeningService::kBandCount] = {
   {"MW2 Band", "SWL", 495, 1701, 0},
   {"MW3 Band", "SWL", 1700, 3500, 0},
   {"160m Band", "AFU", 1800, 2000, 160},
-  {"90m Band", "SWL", 3200, 3400, 0},
+  {"90m Band", "SWL ~", 3200, 3400, 0},
   {"80m Band", "AFU", 3500, 4000, 80},
-  {"75m Band", "SWL", 3900, 4000, 0},
+  {"75m Band", "SWL ~", 3900, 4000, 0},
   {"60m Band", "AFU", 4700, 5100, 60},
-  {"49m Band", "SWL", 5900, 6200, 0},
+  {"49m Band", "SWL ~", 5900, 6200, 0},
   {"40m Band", "AFU", 7000, 7300, 40},
-  {"41m Band", "SWL", 7200, 7500, 0},
-  {"31m Band", "SWL", 9400, 9900, 0},
+  {"41m Band", "SWL ~", 7200, 7500, 0},
+  {"31m Band", "SWL ~", 9400, 9900, 0},
   {"30m Band", "AFU", 10000, 10200, 30},
-  {"25m Band", "SWL", 11600, 12100, 0},
-  {"22m Band", "SWL", 13500, 13900, 0},
+  {"25m Band", "SWL ~", 11600, 12100, 0},
+  {"22m Band", "SWL ~", 13500, 13900, 0},
   {"20m Band", "AFU", 14000, 14400, 20},
-  {"19m Band", "SWL", 15100, 15900, 0},
+  {"19m Band", "SWL ~", 15100, 15900, 0},
   {"17m Band", "AFU", 18000, 18200, 17},
-  {"16m Band", "SWL", 17400, 18100, 0},
-  {"15m Band (BC)", "SWL", 18900, 19100, 0},
+  {"16m Band", "SWL ~", 17400, 18100, 0},
+  {"15m Band (BC)", "SWL ~", 18900, 19100, 0},
   {"15m Band (AFU)", "AFU", 21000, 21500, 15},
-  {"13m Band", "SWL", 21500, 21900, 0},
+  {"13m Band", "SWL ~", 21500, 21900, 0},
   {"12m Band", "AFU", 24800, 25000, 12},
   {"11m Band", "CB ~", 25600, 26100, 0},
   {"10m Band", "AFU", 28000, 29700, 10},
-  {"2m Band", "AFU", 144000, 146000, 0},
-  {"70cm Band", "AFU", 430000, 440000, 0},
+  {"2m Band", "DX-AKT", 144000, 146000, 0},
+  {"70cm Band", "DX-AKT", 430000, 440000, 0},
   {"UKW / FM", "FM-DX", 64000, 108000, 0}
 };
 
@@ -111,6 +115,51 @@ BandOpeningService::Status parseStatus(JsonVariantConst value) {
   if (strcmp(text, "Fair") == 0) return BandOpeningService::Status::Fair;
   if (strcmp(text, "Good") == 0) return BandOpeningService::Status::Good;
   return BandOpeningService::Status::Unknown;
+}
+
+// Small, bounded JSON GET helper for the public SQ3SWG read-only API.
+bool fetchJsonDocument(const char* url, JsonDocument& doc, const char* tag) {
+  WiFiClientSecure client;
+  client.setTimeout(8000);
+  client.useBuiltinCACertBundle();
+  HTTPClient http;
+  http.setTimeout(8000);
+  http.setReuse(false);
+  http.setUserAgent("ATS-Mini-OS/1.0 (+https://github.com/firetvstick2k2-afk/ats-mini-dev)");
+  if (!http.begin(client, url)) {
+    bandLogf("[BANDOPEN][VHF][%s] http.begin FAILED", tag);
+    return false;
+  }
+  http.addHeader("Accept", "application/json");
+  const int status = http.GET();
+  if (status != HTTP_CODE_OK) {
+    bandLogf("[BANDOPEN][VHF][%s] GET failed http=%d error=%s",
+      tag, status, http.errorToString(status).c_str());
+    http.end();
+    return false;
+  }
+  const int length = http.getSize();
+  if (length > static_cast<int>(kMaxVhfResponseBytes)) {
+    bandLogf("[BANDOPEN][VHF][%s] response too large length=%d", tag, length);
+    http.end();
+    return false;
+  }
+  String body = http.getString();
+  http.end();
+  if (body.isEmpty() || body.length() > kMaxVhfResponseBytes) {
+    bandLogf("[BANDOPEN][VHF][%s] empty/oversize body bytes=%u",
+      tag, static_cast<unsigned>(body.length()));
+    return false;
+  }
+  doc.clear();
+  const DeserializationError error = deserializeJson(doc, body);
+  if (error) {
+    bandLogf("[BANDOPEN][VHF][%s] JSON parse FAILED: %s", tag, error.c_str());
+    return false;
+  }
+  bandLogf("[BANDOPEN][VHF][%s] JSON OK bytes=%u", tag,
+    static_cast<unsigned>(body.length()));
+  return true;
 }
 }
 
@@ -174,8 +223,16 @@ BandOpeningService::Snapshot BandOpeningService::snapshot() const {
   bool ageStale = true;
   if (copy.valid && !timestampIsFresh(copy.sourceUpdated, &ageStale)) {
     copy.valid = false;
-    for (uint8_t i = 0; i < kBandCount; ++i) copy.rows[i] = {};
+    for (uint8_t i = 0; i < kBandCount; ++i) {
+      if (i != 26 && i != 27) copy.rows[i] = {};
+    }
   }
+  if (copy.vhf2mUpdatedAtMs &&
+      millis() - copy.vhf2mUpdatedAtMs >= kVhfMaximumAgeMs)
+    copy.rows[26] = {};
+  if (copy.vhf70cmUpdatedAtMs &&
+      millis() - copy.vhf70cmUpdatedAtMs >= kVhfMaximumAgeMs)
+    copy.rows[27] = {};
   copy.stale = ageStale;
   if (copy.fmMufValid && copy.fmMufUpdatedAtMs) {
     const uint32_t mufAge = millis() - copy.fmMufUpdatedAtMs;
@@ -204,6 +261,18 @@ void BandOpeningService::taskLoop() {
         static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
     }
     const bool due = refreshRequested_ || !lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs;
+    if (wifiConnected_ && (!lastVhfAttemptMs_ || now - lastVhfAttemptMs_ >= kVhfRefreshIntervalMs)) {
+      lastVhfAttemptMs_ = now;
+      Snapshot current = snapshot();
+      bandLogf("[BANDOPEN][VHF] cycle start heap=%u",
+        static_cast<unsigned>(ESP.getFreeHeap()));
+      if (fetchVhfConditions(current)) {
+        publish(current);
+        atsStandardLogf("[BANDOPEN][STATUS] VHF/UHF activity data refreshed");
+      } else {
+        bandLogf("[BANDOPEN][VHF] cycle failed; cached values retained");
+      }
+    }
     if (wifiConnected_ && (!lastMufAttemptMs_ || now - lastMufAttemptMs_ >= kRefreshIntervalMs)) {
       lastMufAttemptMs_ = now;
       float muf = 0.0f;
@@ -245,6 +314,12 @@ void BandOpeningService::taskLoop() {
         // Preserve the independently refreshed FM-DX value when the HF feed
         // snapshot is replaced; the two endpoints have different cadences.
         const Snapshot latest = snapshot();
+        // VHF activity has its own source and refresh cadence; preserve it
+        // when the HF/solar snapshot is replaced.
+        fresh.rows[26] = latest.rows[26];
+        fresh.rows[27] = latest.rows[27];
+        fresh.vhf2mUpdatedAtMs = latest.vhf2mUpdatedAtMs;
+        fresh.vhf70cmUpdatedAtMs = latest.vhf70cmUpdatedAtMs;
         fresh.fmMufMHz = latest.fmMufMHz;
         fresh.fmMufValid = latest.fmMufValid;
         fresh.fmMufStale = latest.fmMufStale;
@@ -345,6 +420,67 @@ bool BandOpeningService::fetchFmMuf(float& value) {
   return true;
 }
 
+bool BandOpeningService::fetchVhfConditions(Snapshot& result) {
+  using Status = BandOpeningService::Status;
+  const uint32_t startedAt = millis();
+  bool anyUpdated = false;
+  float europeEsMufMHz = 0.0f;
+  JsonDocument doc;
+
+  const String propagationUrl = String(kVhfApiBase) + "propagation";
+  const bool propagationOk = fetchJsonDocument(propagationUrl.c_str(), doc, "PROP");
+  if (propagationOk) {
+    europeEsMufMHz = doc["europe"]["highest"]["esMuf"] | 0.0f;
+    bandLogf("[BANDOPEN][VHF][PROP] Europe highest Es MUF=%.1f MHz",
+      europeEsMufMHz);
+  }
+
+  // The service asks for a six-hour spot window. A spot proves reported
+  // activity, not that the whole band is closed when no spot is present.
+  vTaskDelay(pdMS_TO_TICKS(1100));
+  const String twoMeterUrl = String(kVhfApiBase) + "spots?band=144&hours=6&limit=100";
+  const bool twoMeterOk = fetchJsonDocument(twoMeterUrl.c_str(), doc, "144");
+  if (twoMeterOk || propagationOk) {
+    size_t spots = twoMeterOk ? doc["spots"].size() : 0;
+    Status status = Status::Unknown;
+    if (europeEsMufMHz >= 144.0f || spots >= 3) status = Status::Good;
+    else if (spots > 0) status = Status::Fair;
+    // No spots and no 2m Es opening means unknown, never a false "closed".
+    result.rows[26].day = status;
+    result.rows[26].night = status;
+    result.vhf2mUpdatedAtMs = millis();
+    anyUpdated = true;
+    bandLogf("[BANDOPEN][VHF][144] spots=%u es_muf=%.1f status=%s",
+      static_cast<unsigned>(spots), europeEsMufMHz, statusText(status));
+  } else {
+    bandLogf("[BANDOPEN][VHF][144] no usable source response; previous value retained");
+  }
+
+  vTaskDelay(pdMS_TO_TICKS(1100));
+  const String seventyCmUrl = String(kVhfApiBase) + "spots?band=432&hours=6&limit=100";
+  const bool seventyCmOk = fetchJsonDocument(seventyCmUrl.c_str(), doc, "432");
+  if (seventyCmOk) {
+    const size_t spots = doc["spots"].size();
+    Status status = Status::Unknown;
+    if (spots >= 3) status = Status::Good;
+    else if (spots > 0) status = Status::Fair;
+    // The public feed has activity spots, not a reliable "band closed" flag.
+    result.rows[27].day = status;
+    result.rows[27].night = status;
+    result.vhf70cmUpdatedAtMs = millis();
+    anyUpdated = true;
+    bandLogf("[BANDOPEN][VHF][432] spots=%u status=%s",
+      static_cast<unsigned>(spots), statusText(status));
+  } else {
+    bandLogf("[BANDOPEN][VHF][432] no usable source response; previous value retained");
+  }
+
+  bandLogf("[BANDOPEN][VHF] cycle result=%s elapsed_ms=%lu",
+    anyUpdated ? "UPDATED" : "FAILED",
+    static_cast<unsigned long>(millis() - startedAt));
+  return anyUpdated;
+}
+
 bool BandOpeningService::fetchConditions(Snapshot& result) {
   const uint32_t startedAt = millis();
   bandLogf("[BANDOPEN][HF] HTTPS begin url=MapForHAM wifi=%d heap=%u",
@@ -418,6 +554,38 @@ bool BandOpeningService::fetchConditions(Snapshot& result) {
   }
   bandLogf("[BANDOPEN][HF] bands_detail entries=%u",
     static_cast<unsigned>(details.size()));
+
+  // Map For HAM also publishes four wider HF groups. Use those published
+  // day/night estimates for the SWL broadcast bands that have no individual
+  // band_detail entry. The UI marks these rows with "~" to distinguish them.
+  const JsonArrayConst groups = doc["bands"].as<JsonArrayConst>();
+  const auto groupStatus = [&groups](const char* groupName, bool day) -> Status {
+    for (JsonObjectConst item : groups) {
+      const char* name = item["name"] | "";
+      if (strcmp(name, groupName) == 0)
+        return parseStatus(day ? item["day"] : item["night"]);
+    }
+    return Status::Unknown;
+  };
+  const auto setSwlEstimate = [&result, &groupStatus](uint8_t row,
+      const char* groupName) {
+    result.rows[row].day = groupStatus(groupName, true);
+    result.rows[row].night = groupStatus(groupName, false);
+    bandLogf("[BANDOPEN][HF][ESTIMATE] %s via %s day=%s night=%s",
+      kBands[row].name, groupName, statusText(result.rows[row].day),
+      statusText(result.rows[row].night));
+  };
+  setSwlEstimate(5, "80m-40m");   // 90m
+  setSwlEstimate(7, "80m-40m");   // 75m
+  setSwlEstimate(9, "80m-40m");   // 49m
+  setSwlEstimate(11, "80m-40m");  // 41m
+  setSwlEstimate(12, "30m-20m"); // 31m
+  setSwlEstimate(14, "30m-20m"); // 25m
+  setSwlEstimate(15, "30m-20m"); // 22m
+  setSwlEstimate(17, "17m-15m"); // 19m
+  setSwlEstimate(19, "17m-15m"); // 16m
+  setSwlEstimate(20, "17m-15m"); // 15m broadcast
+  setSwlEstimate(22, "12m-10m"); // 13m
 
   uint8_t matchedBands = 0;
   for (uint8_t i = 0; i < kBandCount; ++i) {

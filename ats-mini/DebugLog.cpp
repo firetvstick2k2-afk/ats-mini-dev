@@ -136,7 +136,8 @@ void atsDebugBegin() {
   // All diagnostic records use the bounded RAM queue below.
   Serial.setTxTimeoutMs(0);
   esp_log_set_vprintf(atsDebugVprintf);
-  esp_log_level_set("*", ESP_LOG_VERBOSE);
+  // Keep noisy ESP-IDF verbose output disabled until USB-LOG is enabled in Settings.
+  esp_log_level_set("*", ESP_LOG_WARN);
 
   const esp_reset_reason_t reason = esp_reset_reason();
   atsDebugLogf("========== ATS MINI USB DIAGNOSTICS ==========");
@@ -153,7 +154,7 @@ void atsDebugBegin() {
   atsDebugLogf("[BOOT][TASK] setup_stack_high_water=%u task_count=%u",
                static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),
                static_cast<unsigned>(uxTaskGetNumberOfTasks()));
-  atsDebugLogf("[BOOT] ESP-IDF verbose logging enabled; USB TX timeout=0 ms; RAM log queue=%u records",
+  atsDebugLogf("[BOOT] ESP-IDF verbose logging deferred until USB-LOG is enabled; USB TX timeout=0 ms; RAM log queue=%u records",
                static_cast<unsigned>(kLogRecordCount));
 }
 
@@ -169,6 +170,9 @@ void atsDebugSettingsReady(bool enabled) {
     gReportedDroppedRecords = 0;
   }
   portEXIT_CRITICAL(&gLogMux);
+
+  // Verbose I2C/ESP-IDF traffic is opt-in and follows the live setting.
+  esp_log_level_set("*", enabled ? ESP_LOG_VERBOSE : ESP_LOG_WARN);
   if (enabled) atsDebugLogf("[LOG] USB diagnostics enabled by Settings");
 }
 
@@ -228,7 +232,7 @@ void atsDebugTick() {
 }
 
 void atsDebugFlushTick() {
-  if (!gSettingsReady || !usbHostPresent()) return;
+  if (!gSettingsReady || !webDiagEnabled || !usbHostPresent()) return;
 
   int writable = Serial.availableForWrite();
   if (writable <= 0) return;

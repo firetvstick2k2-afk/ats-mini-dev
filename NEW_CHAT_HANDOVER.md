@@ -805,3 +805,14 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 - Kleine Statusmeldungen, technische Hinweise und nebensächliche Texte innerhalb einzelner Funktionen sind nachrangig; der Schwerpunkt liegt auf der Auffindbarkeit und Verständlichkeit der Menüs.
 - Diese Prüfung ist verbindlicher Teil der Abschlusskontrolle und muss bei passenden Änderungen auch in zukünftigen Handoffs stehen.
 
+
+
+## USB-Diagnoselog – weniger Treiberrauschen, mehr verwertbare Firmwaredetails (2026-11-23)
+
+- `ats-mini/DebugLog.cpp`: Der Schalter **USB-LOG** aktiviert weiterhin die strukturierten Firmware-Diagnosen über `atsDebugLogf()`, schaltet aber nicht mehr die globalen ESP-IDF-Ausgaben auf `VERBOSE`.
+- ESP-IDF bleibt in beiden Modi auf `WARN`: Warnungen und Fehler bleiben sichtbar, während INFO/DEBUG/VERBOSE-Treibertransaktionen (insbesondere die umfangreichen SI4735/I²C-Zugriffe) den USB-Log nicht mehr überfluten.
+- Die detaillierten ATS-Meldungen bleiben erhalten, darunter die bereits vorhandenen `[BANDOPEN][HF]`, `[BANDOPEN][HF][BAND]` und `[BANDOPEN][FM_MUF]` Diagnosezeilen mit HTTP-Status, Antwortgröße, JSON-Auswertung, Messwerten und Fehlerursachen.
+- Allgemeine System-Health-Zusammenfassung nur noch einmal pro 60 Sekunden statt alle 10 Sekunden. Einzelne kurze Loop-Verzögerungen werden nicht mehr als separate Zeilen ausgegeben; Verzögerungen über 500 ms fließen in die nächste Health-Zusammenfassung ein.
+- Standard-USB-Log bleibt unabhängig vom USB-LOG-Schalter unverändert aktiv. USB-LOG ist für die nächste Bandmonitor-Diagnose einzuschalten, damit die detaillierten HF-/FM-MUF-Ausgaben sichtbar werden.
+- Commit: `1f4e4d64915765b6b4095cedeb8bf3c6b8d7188b`.
+- **Prüfstatus:** Quelländerung committed; kein Build, kein Actions-Lauf und kein Hardwaretest gestartet. ESP-IDF-/I²C-Rauschen ist anhand der geänderten Log-Level-Konfiguration logisch unterdrückt, Compiler- und Geräteprüfung stehen noch aus.

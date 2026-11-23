@@ -3,6 +3,7 @@
 #include "Themes.h"
 #include "Utils.h"
 #include "Menu.h"
+#include "DebugLog.h"
 #include "Memories.h"
 #include "Draw.h"
 #include "Splash.h"
@@ -119,13 +120,10 @@ static const char *WEB_DIAG_PATH = "/web-diagnostics.log";
 void webDiagLog(const char *event)
 {
   if(!event || !webDiagEnabled) return;
-  if(LittleFS.exists(WEB_DIAG_PATH)) { File oldFile = LittleFS.open(WEB_DIAG_PATH, "r"); size_t oldSize = oldFile ? oldFile.size() : 0; if(oldFile) oldFile.close(); if(oldSize > 49152) LittleFS.remove(WEB_DIAG_PATH); }
-  File file = LittleFS.open(WEB_DIAG_PATH, "a");
-  if(!file) return;
-  file.printf("%lu ms | %s | phase=%u freq=%u mode=%u band=%d heap=%u\n", (unsigned long)millis(), event, (unsigned)webTunePhase, (unsigned)currentFrequency, (unsigned)currentMode, bandIdx, (unsigned)ESP.getFreeHeap());
-  file.flush(); file.close();
+  // The Settings toggle now controls the USB CDC diagnostic stream.
+  // Do not write diagnostic records to LittleFS.
+  atsDebugLogf("[DIAG] %s", event);
 }
-
 
 static String webPage(const char *body, const char *title, std::initializer_list<PageValue> values,
                       std::initializer_list<PageFragment> fragments = {});

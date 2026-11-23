@@ -5,6 +5,7 @@
 #include "Memories.h"
 #include "Draw.h"
 #include "Remote.h"
+#include "DebugLog.h"
 
 static RemoteState remoteSerialState;
 
@@ -499,9 +500,11 @@ int remoteDoCommand(Stream* stream, RemoteState* state, char key)
       event |= REMOTE_PREFS;
       break;
     case 'O':
+      if(stream == &Serial) atsDebugLogf("[USB][REMOTE] sleep command received");
       sleepOn(true);
       break;
     case 'o':
+      if(stream == &Serial) atsDebugLogf("[USB][REMOTE] wake command received");
       sleepOn(false);
       break;
     case 'I':
@@ -558,8 +561,19 @@ static int serialLoop(Stream* stream, RemoteState* state, uint8_t usbMode)
 
   remoteTickTime(stream, state);
 
-  if (stream->available())
-    return remoteDoCommand(stream, state, stream->read());
+  const int pending = stream->available();
+  if (pending > 0)
+  {
+    const int received = stream->read();
+    if(stream == &Serial && received >= 0)
+    {
+      const unsigned char byteValue = static_cast<unsigned char>(received);
+      const char printable = (byteValue >= 32 && byteValue <= 126) ? static_cast<char>(byteValue) : '.';
+      atsDebugLogf("[USB][RX] byte=0x%02X char='%c' pending_before_read=%d",
+                   (unsigned)byteValue, printable, pending);
+    }
+    if(received >= 0) return remoteDoCommand(stream, state, static_cast<char>(received));
+  }
   return 0;
 }
 

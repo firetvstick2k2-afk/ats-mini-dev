@@ -22,13 +22,13 @@ bool AudioCaptureService::begin() {
   analogReadResolution(12);
   analogSetPinAttenuation(kPin, ADC_11db);
   pinMode(kPin, INPUT);
-  Serial.println("[AUDIO] creating capture task stack=4096 core=0");
+  atsDebugLogf("[AUDIO] creating capture task stack=4096 core=0");
   const BaseType_t taskResult = xTaskCreatePinnedToCore(taskEntry, "audio-capture", 4096, this, 3, nullptr, 0);
-  Serial.printf("[AUDIO] capture task result=%ld heap=%u\n",
+  atsDebugLogf("[AUDIO] capture task result=%ld heap=%u\n",
                 static_cast<long>(taskResult), static_cast<unsigned>(ESP.getFreeHeap()));
   if (taskResult != pdPASS) return false;
   initialized_ = true;
-  Serial.println("[AUDIO] begin done");
+  atsDebugLogf("[AUDIO] begin done");
   return true;
 #endif
 }

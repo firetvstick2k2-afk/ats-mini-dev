@@ -1055,6 +1055,7 @@ bool doSideBar(uint16_t cmd, int16_t enc, int16_t enca)
   {
     case CMD_MENU:       doMenu(scrollDirection * enc);break;
     case CMD_DECODER_MENU: decoderMenuIdx = wrap_range(decoderMenuIdx, scrollDirection * enc, 0, LAST_ITEM(decoderMenu)); break;
+    case CMD_DECODER_FREQUENCIES: decoderFrequencyRotate(scrollDirection * enc); break;
     case CMD_SPECTRUM_MENU: spectrumMenuIdx = wrap_range(spectrumMenuIdx, scrollDirection * enc, 0, LAST_ITEM(spectrumMenu)); break;
     case CMD_MODE:       doMode(scrollDirection * enc);break;
     case CMD_STEP:       doStep(scrollDirection * enc);break;
@@ -2116,10 +2117,11 @@ void drawDecoderFrequencyMenu()
   }
 
   const auto &category = kDecoderFrequencyCategories[decoderCategoryIndex];
-  char storage[kDecoderFrequencyPresetCount][40] = {};
-  char valueStorage[kDecoderFrequencyPresetCount][20] = {};
-  const char* labels[kDecoderFrequencyPresetCount] = {};
-  const char* values[kDecoderFrequencyPresetCount] = {};
+  // Keep the large preset display buffers off the loopTask stack.
+  static char storage[kDecoderFrequencyPresetCount][40];
+  static char valueStorage[kDecoderFrequencyPresetCount][20];
+  static const char* labels[kDecoderFrequencyPresetCount];
+  static const char* values[kDecoderFrequencyPresetCount];
   for(uint8_t i = 0; i < category.presetCount; ++i) {
     const uint8_t presetIndex = category.firstPreset + i;
     const DecoderFrequencyPreset &preset = kDecoderFrequencyPresets[presetIndex];

@@ -40,6 +40,7 @@ uint32_t gReportedDroppedRecords = 0;
 uint32_t gNextSequence = 1;
 bool gUsbStateKnown = false;
 bool gLastUsbPlugged = false;
+volatile bool gSettingsReady = false;
 
 const char* resetReasonName(esp_reset_reason_t reason) {
   switch (reason) {
@@ -88,7 +89,7 @@ void queueText(const char* text, size_t length) {
 }
 
 void queueBody(const char* body) {
-  if (!body || !webDiagEnabled) return;
+  if (!body || (gSettingsReady && !webDiagEnabled)) return;
   char line[kLogLineBytes];
   const int written = snprintf(line, sizeof(line), "[%10lu ms] %s\n",
                                 static_cast<unsigned long>(millis()), body);
@@ -156,6 +157,19 @@ void atsDebugBegin() {
                static_cast<unsigned>(kLogRecordCount));
 }
 
+void atsDebugSettingsReady(bool enabled) {
+  portENTER_CRITICAL(&gLogMux);
+  gSettingsReady = true;
+  if (!enabled) {
+    gHead = 0;
+    gTail = 0;
+    gCount = 0;
+    gTailOffset = 0;
+  }
+  portEXIT_CRITICAL(&gLogMux);
+  if (enabled) atsDebugLogf("[LOG] USB diagnostics enabled by Settings");
+}
+
 void atsDebugTick() {
   static uint32_t lastLoopStartMs = 0;
   static uint32_t lastHealthReportMs = 0;
@@ -203,7 +217,7 @@ void atsDebugTick() {
 }
 
 void atsDebugFlushTick() {
-  if (!usbHostPresent()) return;
+  if (!gSettingsReady || !usbHostPresent()) return;
 
   int writable = Serial.availableForWrite();
   if (writable <= 0) return;

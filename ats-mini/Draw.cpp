@@ -1077,8 +1077,7 @@ static void drawBandOpeningScreen(const BandOpeningService::Snapshot* snapshot, 
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
   spr.setTextColor(CYAN,DARK);
   spr.drawString("HF BANDOEFFNUNGS-MONITOR",10,7);
-  char pageText[16]; snprintf(pageText,sizeof(pageText),"%u/%u",static_cast<unsigned>(page+1),static_cast<unsigned>(BandOpeningService::kPageCount));
-  spr.setFont(&lgfx::fonts::Font2); spr.setTextColor(WHITE,DARK); spr.drawRightString(pageText,spr.width()-10,10);
+  // Keep the title clear; the page counter is placed in the bottom status row.
   spr.drawFastHLine(9,27,spr.width()-18,BLUE);
 
   // Show a dedicated connection/data wait screen instead of 29 misleading grey rows.
@@ -1150,7 +1149,10 @@ static void drawBandOpeningScreen(const BandOpeningService::Snapshot* snapshot, 
   if(sscanf(snapshot->sourceUpdated,"%4d-%2d-%2dT%2d:%2d",&year,&month,&day,&hour,&minute)==5)
     snprintf(stamp,sizeof(stamp),"Stand: %02d.%02d.%04d %02d:%02d UTC",day,month,year,hour,minute);
   spr.drawString(stamp,10,150);
-  if(snapshot->stale) spr.drawRightString("STALE",spr.width()-10,150);
+  char pageText[16]; snprintf(pageText,sizeof(pageText),"%u/%u",static_cast<unsigned>(page+1),static_cast<unsigned>(BandOpeningService::kPageCount));
+  spr.setTextDatum(TR_DATUM); spr.setFont(&lgfx::fonts::Font0); spr.setTextColor(WHITE,DARK);
+  if(snapshot->stale) spr.drawString("STALE",spr.width()-42,150);
+  spr.drawRightString(pageText,spr.width()-10,150);
 }
 
 //

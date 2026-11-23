@@ -136,8 +136,9 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_MOON_CALENDAR 21
 #define MENU_FM_DX       22
 #define MENU_DECODER_MENU 23
-#define MENU_SETTINGS    24
-#define MENU_BACK        25
+#define MENU_BAND_OPENING 24
+#define MENU_SETTINGS    25
+#define MENU_BACK        26
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -170,7 +171,7 @@ static const char *menu[]
   "STEPS", "SUCHE", "SCANNEN", "SPEICHER", "RAUSCHSPERRE",
   "BANDBREITE", "FREQUENZ-LINE", "AGC/DÄMPFUNG", "AUTO-LAUTSTÄRKE",
   "SOFT-MUTE", "DUAL RX", "VFO A/B", "VHF SPEKTRUM",
-  "ALL BAND SPEKTRUM", "NACHRICHTEN", "WETTERBERICHT", "MONDKALENDER", "FM DX", "DECODER", "EINSTELLUNGEN", "ZURÜCK",
+  "ALL BAND SPEKTRUM", "NACHRICHTEN", "WETTERBERICHT", "MONDKALENDER", "FM DX", "DECODER", "BANDÖFFNUNGS-MONITOR", "EINSTELLUNGEN", "ZURÜCK",
 };
 
 #define MENU_BRIGHTNESS   0
@@ -984,6 +985,7 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_MOON_CALENDAR: currentCmd = CMD_MOON_CALENDAR; break;
     case MENU_FM_DX: fmDxUiOpen(); break;
     case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
+    case MENU_BAND_OPENING: currentCmd = CMD_BAND_OPENING; break;
     case MENU_BACK: currentCmd = CMD_NONE; break;
   }
 }

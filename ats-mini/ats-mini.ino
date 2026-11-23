@@ -26,6 +26,7 @@
 #include "WeatherService.h"
 #include "NewsService.h"
 #include "MoonCalendar.h"
+#include "BandOpeningService.h"
 #include <WiFi.h>
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
@@ -116,6 +117,7 @@ uint8_t  currentMode = FM;
 uint8_t weatherPage = 0;
 uint8_t newsCurrentIndex = 0;
 uint8_t newsCurrentPage = 0;
+uint8_t bandOpeningPage = 0;
 volatile uint8_t weatherUiState = WEATHER_UI_IDLE;
 volatile uint8_t moonUiState = MOON_UI_IDLE;
 int16_t  currentBFO  = 0;
@@ -700,6 +702,8 @@ void loop()
   static bool weatherWifiCleanupPending = false;
   static bool newsSessionActive = false;
   static bool newsWifiCleanupPending = false;
+  static bool bandOpeningSessionActive = false;
+  static bool bandOpeningWifiCleanupPending = false;
 
   if(currentCmd == CMD_WEATHER && !weatherSessionActive)
   {
@@ -725,6 +729,25 @@ void loop()
     newsSessionActive = false;
     newsWifiCleanupPending = true;
   }
+  const bool bandOpeningOpen = currentCmd == CMD_BAND_OPENING;
+  if(bandOpeningOpen && !bandOpeningSessionActive)
+  {
+    bandOpeningSessionActive = true;
+    bandOpeningPage = 0;
+    bandOpeningService.begin();
+    Serial.println("[BANDOPEN][UI] monitor opened; requesting Wi-Fi");
+    netWeatherBegin();
+  }
+  if(!bandOpeningOpen && bandOpeningSessionActive)
+  {
+    bandOpeningSessionActive = false;
+    bandOpeningWifiCleanupPending = true;
+    Serial.println("[BANDOPEN][UI] monitor closed; stopping new requests");
+  }
+  bool bandOpeningConnected = WiFi.status() == WL_CONNECTED;
+  if(bandOpeningSessionActive) bandOpeningConnected = netWeatherPoll();
+  bandOpeningService.update(bandOpeningSessionActive && bandOpeningConnected);
+
   bool newsConnected = WiFi.status() == WL_CONNECTED;
   if(newsSessionActive && newsService.hasEnabledFeeds()) newsConnected = netWeatherPoll();
   newsService.update(newsConnected, newsSessionActive && newsService.hasEnabledFeeds());
@@ -805,14 +828,15 @@ void loop()
     }
   }
 
-  if(!weatherSessionActive && !moonWifiSessionActive && !newsSessionActive &&
-     (weatherWifiCleanupPending || moonWifiCleanupPending || newsWifiCleanupPending) &&
-     !weatherService.snapshot().fetching && !newsService.isFetching())
+  if(!weatherSessionActive && !moonWifiSessionActive && !newsSessionActive && !bandOpeningSessionActive &&
+     (weatherWifiCleanupPending || moonWifiCleanupPending || newsWifiCleanupPending || bandOpeningWifiCleanupPending) &&
+     !weatherService.snapshot().fetching && !newsService.isFetching() && !bandOpeningService.snapshot().fetching)
   {
     netWeatherEnd();
     weatherWifiCleanupPending = false;
     moonWifiCleanupPending = false;
     newsWifiCleanupPending = false;
+    bandOpeningWifiCleanupPending = false;
   }
 
   static bool lastNewsDrawFetching = false;
@@ -846,6 +870,10 @@ void loop()
   static uint32_t lastWeatherDrawUpdate = UINT32_MAX;
   static bool lastWeatherDrawFetching = false;
   static bool lastWeatherDrawValid = false;
+  static uint32_t lastBandOpeningDrawUpdate = UINT32_MAX;
+  static bool lastBandOpeningDrawFetching = false;
+  static bool lastBandOpeningDrawValid = false;
+  static bool lastBandOpeningDrawStale = true;
   static uint8_t lastWeatherUiState = 0xFF;
   if(currentCmd == CMD_WEATHER)
   {
@@ -859,6 +887,20 @@ void loop()
       lastWeatherDrawFetching = weatherState.fetching;
       lastWeatherDrawValid = weatherState.valid;
       lastWeatherUiState = weatherUiState;
+      needRedraw = true;
+    }
+  }
+
+  if(currentCmd == CMD_BAND_OPENING)
+  {
+    const BandOpeningService::Snapshot state = bandOpeningService.snapshot();
+    if(state.updatedAtMs != lastBandOpeningDrawUpdate || state.fetching != lastBandOpeningDrawFetching ||
+       state.valid != lastBandOpeningDrawValid || state.stale != lastBandOpeningDrawStale)
+    {
+      lastBandOpeningDrawUpdate = state.updatedAtMs;
+      lastBandOpeningDrawFetching = state.fetching;
+      lastBandOpeningDrawValid = state.valid;
+      lastBandOpeningDrawStale = state.stale;
       needRedraw = true;
     }
   }
@@ -883,6 +925,14 @@ void loop()
       else if(next >= pages) { newsCurrentIndex = (newsCurrentIndex + 1) % count; newsCurrentPage = 0; }
       else newsCurrentPage = (uint8_t)next;
     }
+    needRedraw = true; elapsedSleep = elapsedCommand = currentTime; encCount = encCountAccel = 0;
+  }
+
+  if(currentCmd == CMD_BAND_OPENING && encCount)
+  {
+    int next = static_cast<int>(bandOpeningPage) + encCount;
+    while(next < 0) next += BandOpeningService::kPageCount;
+    bandOpeningPage = static_cast<uint8_t>(next % BandOpeningService::kPageCount);
     needRedraw = true; elapsedSleep = elapsedCommand = currentTime; encCount = encCountAccel = 0;
   }
 
@@ -1188,6 +1238,13 @@ void loop()
         currentCmd = CMD_NONE;
       needRedraw = true;
     }
+    else if(pb1st.isLongPressed && currentCmd == CMD_BAND_OPENING && !decoderMenuLongPressHandled)
+    {
+      decoderMenuLongPressHandled = true;
+      currentCmd = CMD_NONE;
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+    }
     else if(pb1st.isLongPressed && currentCmd == CMD_NEWS && !decoderMenuLongPressHandled)
     {
       decoderMenuLongPressHandled = true;
@@ -1255,6 +1312,13 @@ void loop()
     }
     // The native Spectrum keypad handles its own encoder clicks below.
     // Do not let the generic click handler clear CMD_SPECTRUM_INPUT first.
+    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_BAND_OPENING)
+    {
+      bandOpeningService.requestRefresh();
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+      pb1st.wasClicked = pb1st.wasShortPressed = false;
+    }
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_NEWS)
     {
       const uint8_t count = newsService.itemCount();

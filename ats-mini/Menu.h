@@ -67,6 +67,7 @@
 #define CMD_NEWS 0x4700 // RSS news reader
 #define CMD_NAVTEX 0x4800 // NAVTEX SITOR-B decoder
 #define CMD_PSK31  0x4900 // PSK31 BPSK text decoder
+#define CMD_BAND_OPENING 0x4A00 // HF band opening monitor
 
 
 

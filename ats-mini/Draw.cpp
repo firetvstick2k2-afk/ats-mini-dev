@@ -6,6 +6,8 @@
 #include "WeatherService.h"
 #include "NewsService.h"
 #include "MoonCalendar.h"
+#include "BandOpeningService.h"
+extern uint8_t bandOpeningPage;
 #include "BleMode.h"
 #include "Draw.h"
 #include "src/ftx/FtxUi.h"
@@ -1066,6 +1068,92 @@ static void drawWeatherScreen()
   spr.drawString("Drehen/Klick: Seite  |  Lang: Zurueck",12,155);
 }
 
+template <typename Canvas>
+static void drawBandOpeningScreen(const BandOpeningService::Snapshot* snapshot, uint8_t page) {
+  constexpr uint16_t BLUE=0x001F, CYAN=0x07FF, GREEN=0x07E0;
+  constexpr uint16_t YELLOW=0xFFE0, RED=0xF800, GREY=0x8410, WHITE=0xFFFF, DARK=0x0000;
+  spr.fillScreen(DARK);
+  spr.drawRoundRect(3,3,spr.width()-6,spr.height()-6,7,BLUE);
+  spr.setTextDatum(TL_DATUM);
+  spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+  spr.setTextColor(CYAN,DARK);
+  spr.drawString("HF BANDOEFFNUNGS-MONITOR",10,7);
+  char pageText[16]; snprintf(pageText,sizeof(pageText),"%u/%u",static_cast<unsigned>(page+1),static_cast<unsigned>(BandOpeningService::kPageCount));
+  spr.setFont(&lgfx::fonts::Font2); spr.setTextColor(WHITE,DARK); spr.drawRightString(pageText,spr.width()-10,10);
+  spr.drawFastHLine(9,27,spr.width()-18,BLUE);
+
+  // Show a dedicated connection/data wait screen instead of 29 misleading grey rows.
+  if (!snapshot || !snapshot->valid) {
+    spr.setTextDatum(MC_DATUM);
+    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    if (!snapshot || snapshot->waitingForWifi) {
+      spr.setTextColor(YELLOW,DARK);
+      spr.drawCenterString("WARTE AUF WLAN",spr.width()/2,67);
+      spr.setFont(&lgfx::fonts::Font2); spr.setTextColor(WHITE,DARK);
+      spr.drawCenterString("Verbinde mit gespeichertem Netzwerk",spr.width()/2,94);
+      spr.drawCenterString("Die Abfrage startet automatisch",spr.width()/2,114);
+    } else if (snapshot->fetching) {
+      spr.setTextColor(GREEN,DARK);
+      spr.drawCenterString("WLAN VERBUNDEN",spr.width()/2,67);
+      spr.setFont(&lgfx::fonts::Font2); spr.setTextColor(WHITE,DARK);
+      spr.drawCenterString("Lade HF-Banddaten ...",spr.width()/2,96);
+    } else if (snapshot->fetchFailed) {
+      spr.setTextColor(RED,DARK);
+      spr.drawCenterString("HF-DATEN NICHT ERHALTEN",spr.width()/2,67);
+      spr.setFont(&lgfx::fonts::Font2); spr.setTextColor(WHITE,DARK);
+      spr.drawCenterString("Neuer Versuch in 5 Minuten",spr.width()/2,96);
+    } else {
+      spr.setTextColor(YELLOW,DARK);
+      spr.drawCenterString("WLAN VERBUNDEN",spr.width()/2,67);
+      spr.setFont(&lgfx::fonts::Font2); spr.setTextColor(WHITE,DARK);
+      spr.drawCenterString("Bereite HF-Abfrage vor ...",spr.width()/2,96);
+    }
+    spr.drawFastHLine(9,145,spr.width()-18,BLUE);
+    spr.setFont(&lgfx::fonts::Font0); spr.setTextColor(GREY,DARK);
+    spr.drawCenterString("Bitte warten",spr.width()/2,153);
+    return;
+  }
+
+  const uint8_t first=static_cast<uint8_t>(page*BandOpeningService::kBandsPerPage);
+  for(uint8_t slot=0;slot<BandOpeningService::kBandsPerPage;++slot) {
+    const uint8_t index=static_cast<uint8_t>(first+slot);
+    if(index>=BandOpeningService::kBandCount) break;
+    const auto& band=BandOpeningService::band(index);
+    const int y=39+slot*53;
+    const auto row=snapshot->rows[index];
+    auto overall=row.day;
+    if(overall==BandOpeningService::Status::Unknown) overall=row.night;
+    else if(row.night!=BandOpeningService::Status::Unknown && static_cast<uint8_t>(row.night)<static_cast<uint8_t>(overall)) overall=row.night;
+    uint16_t dot=GREY;
+    if(overall==BandOpeningService::Status::Poor) dot=RED;
+    else if(overall==BandOpeningService::Status::Fair) dot=YELLOW;
+    else if(overall==BandOpeningService::Status::Good) dot=GREEN;
+    spr.fillCircle(24,y+17,13,dot); spr.drawCircle(24,y+17,14,WHITE);
+    spr.setTextDatum(TL_DATUM); spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    spr.setTextColor(WHITE,DARK); spr.drawString(band.name,49,y+1);
+    spr.setFont(&lgfx::fonts::Font2); spr.setTextColor(CYAN,DARK);
+    char range[40];
+    if(band.minimumKHz>=1000)
+      snprintf(range,sizeof(range),"%.3f - %.3f MHz",band.minimumKHz/1000.0f,band.maximumKHz/1000.0f);
+    else snprintf(range,sizeof(range),"%lu - %lu kHz",static_cast<unsigned long>(band.minimumKHz),static_cast<unsigned long>(band.maximumKHz));
+    spr.drawString(range,49,y+23);
+    spr.setTextDatum(TR_DATUM); spr.setTextColor(GREY,DARK);
+    if(index==BandOpeningService::kBandCount-1 && snapshot->fmMufValid && !snapshot->fmMufStale) {
+      char mufText[24]; snprintf(mufText,sizeof(mufText),"MUF %.1f MHz",snapshot->fmMufMHz);
+      spr.drawString(mufText,spr.width()-10,y+23);
+    } else spr.drawString(band.type,spr.width()-10,y+23);
+    spr.drawFastHLine(49,y+48,spr.width()-61,0x2104);
+  }
+  spr.drawFastHLine(9,145,spr.width()-18,BLUE);
+  spr.setTextDatum(TL_DATUM); spr.setFont(&lgfx::fonts::Font0); spr.setTextColor(GREY,DARK);
+  int year=0,month=0,day=0,hour=0,minute=0;
+  char stamp[32] = "Zeitstempel unbekannt";
+  if(sscanf(snapshot->sourceUpdated,"%4d-%2d-%2dT%2d:%2d",&year,&month,&day,&hour,&minute)==5)
+    snprintf(stamp,sizeof(stamp),"Stand: %02d.%02d.%04d %02d:%02d UTC",day,month,year,hour,minute);
+  spr.drawString(stamp,10,150);
+  if(snapshot->stale) spr.drawRightString("STALE",spr.width()-10,150);
+}
+
 //
  // Draw screen according to given command
 //
@@ -1078,6 +1166,14 @@ void drawScreen()
   {
     drawFullScreenMenu(currentCmd);
     spr.pushSprite(0, 0);
+    return;
+  }
+
+  if(currentCmd == CMD_BAND_OPENING)
+  {
+    const BandOpeningService::Snapshot bandState = bandOpeningService.snapshot();
+    drawBandOpeningScreen(&bandState, bandOpeningPage);
+    spr.pushSprite(0,0);
     return;
   }
 

@@ -1124,7 +1124,6 @@ void loop()
       dualRxLongPressHandled = true;
       // Long press only dims/wakes the display; Dual RX keeps scanning in the background.
       atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=dual_rx_encoder_long_press");
-      atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=encoder_long_press cmd=%u", (unsigned)currentCmd);
       sleepOn(!sleepOn());
       elapsedSleep = elapsedCommand = currentTime = millis();
       pb1st.wasClicked = false;
@@ -1142,7 +1141,7 @@ void loop()
       else if(dualRxSetupStage == 4)
       {
         // A short click stops the scan and wakes the display if it was dimmed.
-        if(sleepOn()) sleepOn(false);
+        if(sleepOn()) { atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=dual_rx_short_click_wake"); sleepOn(false); }
         dualRxStop();
       }
       needRedraw = true;
@@ -1380,6 +1379,7 @@ void loop()
     }
     else if(pb1st.isLongPressed && !decoderMenuLongPressHandled)
     {
+      atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=encoder_long_press cmd=%u", (unsigned)currentCmd);
       sleepOn(!sleepOn());
       elapsedSleep = elapsedCommand = currentTime = millis();
     }

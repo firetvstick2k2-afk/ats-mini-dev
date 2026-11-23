@@ -114,8 +114,8 @@ static int visibleBandIndexAtOffset(int offset)
 }
 
 #define MENU_VOLUME       0
-#define MENU_KEYPAD       1
-#define MENU_PROGRAMMES   2
+#define MENU_PROGRAMMES   1
+#define MENU_KEYPAD       2
 #define MENU_BAND         3
 #define MENU_MODE         4
 #define MENU_BFO          5
@@ -165,7 +165,7 @@ static const char *spectrumMenu[] = { "VHF SPEKTRUM", "Gesamtes Bandspektrum" };
 
 static const char *menu[]
 {
-  "LAUTSTÄRKE", "KEYPAD", "PROGRAMME", "BAND", "MODULATION", "BFO",
+  "LAUTSTÄRKE", "PROGRAMME", "KEYPAD", "BAND", "MODULATION", "BFO",
   "STEPS", "SUCHE", "SCANNEN", "SPEICHER", "RAUSCHSPERRE",
   "BANDBREITE", "FREQUENZ-LINE", "AGC/DÄMPFUNG", "AUTO-LAUTSTÄRKE",
   "SOFT-MUTE", "DUAL RX", "VFO A/B", "VHF SPEKTRUM",

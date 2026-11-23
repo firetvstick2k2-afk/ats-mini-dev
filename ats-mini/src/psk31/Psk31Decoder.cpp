@@ -6,6 +6,9 @@ namespace {
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kFilterAlpha = 0.18f;
 constexpr float kSignalThreshold = 10.0f;
+constexpr uint8_t kTimingDecimation = 8;
+constexpr uint8_t kTimingSamplesPerSymbol = 16;
+constexpr float kTimingLoopGain = 0.2f;
 // PSK31 standard Varicode, ASCII 0..127 (ARRL PSK31 specification).
 const char* const kVaricode[128] = {
  "1010101011","1011011011","1011101101","1101110111","1011101011","1101011111","1011101111","1011111101",
@@ -42,6 +45,9 @@ void Psk31Decoder::reset() {
   iFilter_ = qFilter_ = symbolI_ = symbolQ_ = 0.0f;
   previousI_ = previousQ_ = 0.0f;
   samplesInSymbol_ = 0;
+  timingDecimation_ = 0;
+  timingClock_ = 0.0f;
+  memset(timingEnvelope_, 0, sizeof(timingEnvelope_));
   varicode_ = 0; varicodeBits_ = 0; zeroRun_ = 0;
   havePrevious_ = false; signal_ = false;
   const float phaseStep = 2.0f * kPi * toneHz_ / static_cast<float>(kSampleRate);
@@ -108,15 +114,46 @@ bool Psk31Decoder::pushSample(int16_t sample, char& decoded) {
   symbolQ_ += qFilter_;
   if (++samplesInSymbol_ < static_cast<uint16_t>(kSampleRate / kBaud)) return false;
 
+  const float magnitude = sqrtf(iFilter_ * iFilter_ + qFilter_ * qFilter_);
+  if (++timingDecimation_ < kTimingDecimation) return false;
+  timingDecimation_ = 0;
+
+  // Recover the 31.25-baud symbol clock from the PSK31 envelope. The
+  // rectified envelope has a baud-rate component at phase reversals.
+  const uint8_t envelopeIndex = static_cast<uint8_t>(timingClock_);
+  timingEnvelope_[envelopeIndex] =
+      0.8f * timingEnvelope_[envelopeIndex] + kTimingLoopGain * magnitude;
+  float timingError = 0.0f;
+  float timingAmplitude = 0.0f;
+  for (uint8_t i = 0; i < kTimingSamplesPerSymbol / 2; ++i) {
+    timingError += timingEnvelope_[i] -
+                   timingEnvelope_[i + kTimingSamplesPerSymbol / 2];
+    timingAmplitude += timingEnvelope_[i] +
+                       timingEnvelope_[i + kTimingSamplesPerSymbol / 2];
+  }
+  if (timingAmplitude > 1.0f) timingError /= timingAmplitude;
+  else timingError = 0.0f;
+
+  // Early/late correction: positive and negative errors pull the local
+  // clock in opposite directions, while the nominal rate stays at 16
+  // envelope samples per symbol (8 ADC samples per envelope sample).
+  timingClock_ -= timingError / 5.0f;
+  timingClock_ += 1.0f;
+  if (timingClock_ < 0.0f) timingClock_ += kTimingSamplesPerSymbol;
+  if (timingClock_ < kTimingSamplesPerSymbol) return false;
+  timingClock_ -= kTimingSamplesPerSymbol;
+
   const float currentI = symbolI_ / static_cast<float>(samplesInSymbol_);
   const float currentQ = symbolQ_ / static_cast<float>(samplesInSymbol_);
-  const float magnitude = sqrtf(currentI * currentI + currentQ * currentQ);
-  signal_ = magnitude >= kSignalThreshold;
+  const float symbolMagnitude = sqrtf(currentI * currentI + currentQ * currentQ);
+  signal_ = symbolMagnitude >= kSignalThreshold;
   symbolI_ = symbolQ_ = 0.0f;
   samplesInSymbol_ = 0;
   if (!signal_) {
     havePrevious_ = false;
     varicode_ = 0; varicodeBits_ = 0; zeroRun_ = 0;
+    memset(timingEnvelope_, 0, sizeof(timingEnvelope_));
+    timingClock_ = 0.0f;
     return false;
   }
   if (!havePrevious_) {

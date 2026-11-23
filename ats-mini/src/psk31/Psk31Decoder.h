@@ -22,6 +22,9 @@ private:
   float symbolI_ = 0.0f, symbolQ_ = 0.0f;
   float previousI_ = 0.0f, previousQ_ = 0.0f;
   uint16_t samplesInSymbol_ = 0;
+  float timingEnvelope_[16]{};
+  float timingClock_ = 0.0f;
+  uint8_t timingDecimation_ = 0;
   uint16_t varicode_ = 0;
   uint8_t varicodeBits_ = 0;
   uint8_t zeroRun_ = 0;

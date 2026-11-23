@@ -133,6 +133,7 @@ ButtonTracker pb1 = ButtonTracker();
 LGFX tft;
 LGFX_Sprite spr(&tft);
 SI4735_fixed rx;
+BandOpeningService bandOpeningService;
 
 // ============================================================================
 // SKIZZEN-WASSERFALL (ECO-MODE) CONFIG & HELPERS (ORIGINAL BEHALTEN)

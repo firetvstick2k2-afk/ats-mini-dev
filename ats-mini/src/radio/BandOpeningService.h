@@ -52,3 +52,5 @@ private:
   mutable portMUX_TYPE snapshotMux_ = portMUX_INITIALIZER_UNLOCKED;
   Snapshot snapshot_{};
 };
+
+extern BandOpeningService bandOpeningService;

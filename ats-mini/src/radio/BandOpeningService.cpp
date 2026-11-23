@@ -58,7 +58,7 @@ const BandOpeningService::Band kBands[BandOpeningService::kBandCount] = {
   {"15m Band (AFU)", "AFU", 21000, 21500, 15},
   {"13m Band", "SWL", 21500, 21900, 0},
   {"12m Band", "AFU", 24800, 25000, 12},
-  {"11m Band", "CB", 25600, 26100, 0},
+  {"11m Band", "CB ~", 25600, 26100, 0},
   {"10m Band", "AFU", 28000, 29700, 10},
   {"2m Band", "AFU", 144000, 146000, 0},
   {"70cm Band", "AFU", 430000, 440000, 0},
@@ -439,7 +439,22 @@ bool BandOpeningService::fetchConditions(Snapshot& result) {
       kBands[i].name, static_cast<unsigned>(meters), foundBand ? 1U : 0U,
       statusText(result.rows[i].day), statusText(result.rows[i].night));
   }
-  // At least one known amateur band must have a usable assessment.
+  // 11m CB is not supplied as a direct Map For HAM assessment.
+  // Estimate it from the adjacent 10m and 12m amateur-band assessments.
+  // If both neighbours agree, use that status; if they differ, stay cautious
+  // and use Fair. If either neighbour is unknown, keep 11m unknown.
+  const auto estimateBetween = [](Status lower, Status upper) -> Status {
+    if (lower == Status::Unknown || upper == Status::Unknown)
+      return Status::Unknown;
+    return lower == upper ? lower : Status::Fair;
+  };
+  result.rows[24].day = estimateBetween(result.rows[25].day, result.rows[23].day);
+  result.rows[24].night = estimateBetween(result.rows[25].night, result.rows[23].night);
+  bandLogf("[BANDOPEN][HF][ESTIMATE] 11m CB from 10m+12m day=%s night=%s",
+    statusText(result.rows[24].day), statusText(result.rows[24].night));
+
+  // At least one directly rated amateur band must have a usable assessment.
+  // The derived 11m estimate must not make an otherwise empty feed valid.
   const bool any = matchedBands > 0;
   bandLogf("[BANDOPEN][HF] parsed=%u/10 source_updated=%s total_elapsed_ms=%lu result=%s",
     static_cast<unsigned>(matchedBands), updated, static_cast<unsigned long>(millis() - startedAt),

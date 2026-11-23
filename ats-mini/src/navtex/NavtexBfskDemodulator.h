@@ -146,7 +146,7 @@ private:
     markOscQ_ = nextMarkQ;
 
     const float nextSpaceI = spaceOscI_ * spaceCosStep_ - spaceOscQ_ * spaceSinStep_;
-    const float nextSpaceQ = spaceOscI_ * spaceCosStep_ + spaceOscQ_ * spaceSinStep_;
+    const float nextSpaceQ = spaceOscI_ * spaceSinStep_ + spaceOscQ_ * spaceCosStep_;
     spaceOscI_ = nextSpaceI;
     spaceOscQ_ = nextSpaceQ;
 

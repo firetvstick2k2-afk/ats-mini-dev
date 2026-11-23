@@ -19,7 +19,7 @@ The logger is intended for a phone acting as USB host, including a Samsung Galax
 - USB CDC TX timeout is set to zero so serial output cannot wait indefinitely for a disconnected or non-reading terminal.
 - Diagnostic producers enqueue fixed-size records in a bounded 48-record RAM queue.
 - The main radio loop drains the queue in small chunks only when USB has room; no additional FreeRTOS logging worker is created.
-- If the queue fills while the phone is disconnected or not reading, the oldest records are overwritten and an overflow counter is reported when output resumes.
+- If the queue fills while the phone is disconnected or not reading, the oldest records are overwritten and an overflow counter is reported when output resumes.\n- `usb_host` reports the USB bus/host link, not necessarily whether the terminal app is currently open; `usb_tx_free` and `log_queue` help identify a terminal that has stopped reading while the cable remains connected.
 - The queue is RAM-only. A full power loss/reset clears buffered records; reset cause and boot memory information are logged after the saved Settings state is loaded.
 - Use `atsDebugLogf("...")` for new diagnostic events. Do not add blocking serial writes, file writes, or high-rate per-sample logging to time-critical radio/audio paths.
 

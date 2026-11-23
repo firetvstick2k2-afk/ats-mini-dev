@@ -279,6 +279,10 @@ bool BandOpeningService::fetchFmMuf(float& value) {
     Serial.println("[BANDOPEN][FM_MUF] response body empty/oversize/HTML");
     return false;
   }
+  // Keep the complete short upstream payload in the USB log. The endpoint
+  // currently returns HTTP 200, but the expected JSON field is not being
+  // accepted; logging the exact payload avoids guessing its schema.
+  bandLogf("[BANDOPEN][FM_MUF] payload=%s", body.c_str());
   JsonDocument doc;
   const DeserializationError parseError = deserializeJson(doc, body);
   if (parseError) {
@@ -286,10 +290,27 @@ bool BandOpeningService::fetchFmMuf(float& value) {
     return false;
   }
   JsonVariantConst field = doc["europe"]["max_frequency"];
-  if (!field.is<const char*>() && !field.is<float>() && !field.is<double>() && !field.is<int>()) return false;
+  if (field.isUnbound() || field.isNull()) {
+    Serial.println("[BANDOPEN][FM_MUF] JSON field europe.max_frequency missing/null");
+    return false;
+  }
+  if (!field.is<const char*>() && !field.is<float>() && !field.is<double>() && !field.is<int>()) {
+    bandLogf("[BANDOPEN][FM_MUF] JSON field type unsupported: string=%u number=%u",
+      field.is<const char*>() ? 1U : 0U,
+      (field.is<float>() || field.is<double>() || field.is<int>()) ? 1U : 0U);
+    return false;
+  }
   const char* text = field.is<const char*>() ? field.as<const char*>() : nullptr;
-  if (field.is<const char*>() && (!text || strcmp(text, "No data") == 0)) return false;
-  const float parsed = text ? strtof(text, nullptr) : field.as<float>();
+  if (field.is<const char*>() && (!text || !text[0] || strcmp(text, "No data") == 0)) {
+    bandLogf("[BANDOPEN][FM_MUF] JSON field contains no usable data: %s", text ? text : "(null)");
+    return false;
+  }
+  char* parseEnd = nullptr;
+  const float parsed = text ? strtof(text, &parseEnd) : field.as<float>();
+  if (text && (parseEnd == text || (parseEnd && *parseEnd != '\\0'))) {
+    bandLogf("[BANDOPEN][FM_MUF] numeric conversion failed: %s", text);
+    return false;
+  }
   if (!isfinite(parsed) || parsed < 30.0f || parsed > 300.0f) {
     bandLogf("[BANDOPEN][FM_MUF] value rejected parsed=%.2f", parsed);
     return false;

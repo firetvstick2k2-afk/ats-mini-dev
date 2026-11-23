@@ -1109,6 +1109,9 @@ static void drawBandOpeningScreen(const BandOpeningService::Snapshot* snapshot, 
     spr.drawFastHLine(9,145,spr.width()-18,BLUE);
     spr.setFont(&lgfx::fonts::Font0); spr.setTextColor(GREY,DARK);
     spr.drawCenterString("Bitte warten",spr.width()/2,153);
+    char waitingPageText[16]; snprintf(waitingPageText,sizeof(waitingPageText),"%u/%u",static_cast<unsigned>(page+1),static_cast<unsigned>(BandOpeningService::kPageCount));
+    spr.setTextDatum(TR_DATUM); spr.setTextColor(WHITE,DARK);
+    spr.drawRightString(waitingPageText,spr.width()-10,153);
     return;
   }
 
@@ -1151,7 +1154,7 @@ static void drawBandOpeningScreen(const BandOpeningService::Snapshot* snapshot, 
   spr.drawString(stamp,10,150);
   char pageText[16]; snprintf(pageText,sizeof(pageText),"%u/%u",static_cast<unsigned>(page+1),static_cast<unsigned>(BandOpeningService::kPageCount));
   spr.setTextDatum(TR_DATUM); spr.setFont(&lgfx::fonts::Font0); spr.setTextColor(WHITE,DARK);
-  if(snapshot->stale) spr.drawString("STALE",spr.width()-42,150);
+  if(snapshot->stale) spr.drawString("STALE",spr.width()-65,150);
   spr.drawRightString(pageText,spr.width()-10,150);
 }
 

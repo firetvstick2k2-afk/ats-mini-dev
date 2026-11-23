@@ -1662,3 +1662,15 @@ Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherch
 - Die Ableitung ist ausdrücklich ein persönlicher Indikator für mögliche FM-DX-Bedingungen, keine direkte Messung der UKW-Rundfunk-MUF und keine Empfangsgarantie.
 - Source-only; kein Compile, kein GitHub Actions Build, kein Flash und kein Hardwaretest. Nächster manueller OSPI-DE-Build ist #69; nur auf ausdrückliche Aufforderung starten.
 
+
+
+## LW/MW-Bewertung über WSPR Live (2026-11-24)
+
+- Ergänzt wurde eine eigenständige WSPR-Live-Abfrage für ausschließlich die ersten vier Monitorzeilen (LW, MW1, MW2, MW3). 2 m, 70 cm und UKW/FM werden durch diese Änderung nicht verändert.
+- Quelle: `https://db1.wspr.live/`, read-only ClickHouse HTTP-Schnittstelle, eine aggregierte Abfrage für WSPR-Band `-1` (LF, 136 kHz) und Band `0` (MF, 474,2 kHz). Abfragefenster: letzte sechs Stunden; Empfangsstationen geografisch auf Europa begrenzt (35–72° N, 15° W–35° E).
+- LW übernimmt den LF-Status. MW1/MW2/MW3 übernehmen denselben MF-Status. Alle vier Zeilen sind mit `LF ~` bzw. `MF ~` als Schätzungen gekennzeichnet; es handelt sich nicht um direkte Messungen der Rundfunkbänder.
+- Bewertung: GOOD bei mindestens drei unterschiedlichen Empfangsstationen und einer maximalen Empfangsdistanz von mindestens 500 km; FAIR bei mindestens einer Meldung; UNKNOWN bei keiner Meldung. Tag und Nacht zeigen denselben aktuellen rollierenden Aktivitätsstatus, keine getrennte Tages-/Nachtprognose.
+- Aktualisierung alle 15 Minuten; WSPR-Werte verfallen nach sechs Stunden ohne erfolgreiche Aktualisierung. Die WSPR-Zeitmarke und Zeilen 0–3 werden unabhängig vom Map-for-HAM-HF-Snapshot erhalten.
+- Die Abfrage ist auf wenige Spalten, zwei Bänder und sechs Stunden begrenzt. WSPR Live dokumentiert eine öffentliche Read-only-API und bittet um faire Nutzung; die Nutzungsbedingungen erlauben eigene Projekte nur, wenn Ergebnisse für alle kostenlos zugänglich sind, und schließen kommerzielle/profit-orientierte Nutzung aus. Quelle: https://wspr.live/ (Datenbankdokumentation und Disclaimer).
+- Diagnosepräfix: `[BANDOPEN][WSPR]`; es protokolliert LF/MF-Meldungen, unterschiedliche RX-Stationen, maximale Distanz und abgeleiteten Status.
+- **Prüfstatus:** Quelltextänderungen committed; kein Build, kein GitHub Actions-Lauf, kein Flash und kein Hardwaretest durchgeführt. API-Antwortformat und reale LF/MF-Meldungsdichte müssen beim nächsten manuellen Build über USB-Log überprüft werden. Build #69 bleibt der nächste manuelle Build; Actions nicht ohne ausdrückliche Aufforderung starten.

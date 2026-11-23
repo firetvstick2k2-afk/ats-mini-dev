@@ -3,6 +3,7 @@
 > **Aktueller Stand 2026-11-23:** Die ausführliche, maßgebliche Projektdokumentation ist `DEVELOPMENT_HANDOFF.md`. Diese Kurz-Übergabe ist nur ein Einstieg; bei Abweichungen gilt immer der aktuelle Stand in `DEVELOPMENT_HANDOFF.md`.
 
 ## Aktuelle Repository- und Quellenregel (2026-11-23)
+- **Branch-Regel ohne Ausnahme:** Im Ziel-Repository sind ausschließlich `main` und `development` erlaubt. Niemals weitere Branches erstellen (auch keine temporären Feature-/Fix-/Test-/Backup-/Release-Branches). Alle Arbeiten direkt auf `development`; `main` bleibt unangetastet.
 - Ziel: `firetvstick2k2-afk/ats-mini-dev`, ausschließlich Branch `development`; `main` bleibt unangetastet.
 - Primäres Quellprojekt für Ports: `firetvstick2k2-afk/Mini_OS`; bekannten Port-Quellbranch `dev/first-build-preparation` je Feature erneut prüfen.
 - Zusätzlicher Recherche-/Projektkatalog: `esp32-si4732/awesome-ats-mini`; weitere geeignete öffentliche GitHub-Quellen sind ausdrücklich erlaubt.

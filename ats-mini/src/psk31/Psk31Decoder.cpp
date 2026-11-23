@@ -11,6 +11,7 @@ constexpr uint8_t kTimingSamplesPerSymbol = 16;
 constexpr float kTimingLoopGain = 0.2f;
 constexpr float kAfcGain = 0.08f;
 constexpr float kAfcLimitHz = 10.0f;
+constexpr uint8_t kMaxVaricodeBits = 10;
 // PSK31 standard Varicode, ASCII 0..127 (ARRL PSK31 specification).
 const char* const kVaricode[128] = {
  "1010101011","1011011011","1011101101","1101110111","1011101011","1101011111","1011101111","1011111101",
@@ -52,15 +53,22 @@ void Psk31Decoder::reset() {
   memset(timingEnvelope_, 0, sizeof(timingEnvelope_));
   varicode_ = 0; varicodeBits_ = 0; zeroRun_ = 0;
   havePrevious_ = false; signal_ = false;
+  discardingCode_ = false;
   const float phaseStep = 2.0f * kPi * toneHz_ / static_cast<float>(kSampleRate);
   stepCos_ = cosf(phaseStep);
   stepSin_ = sinf(phaseStep);
 }
 
 void Psk31Decoder::appendBit(uint8_t bit) {
-  if (varicodeBits_ >= 12) {
+  // All standard PSK31 Varicode words are at most ten bits long. A long
+  // run of unframed idle '1' bits must be discarded until the next 00
+  // separator, rather than repeatedly wrapping into false characters.
+  if (discardingCode_) return;
+  if (varicodeBits_ >= kMaxVaricodeBits) {
     varicode_ = 0;
     varicodeBits_ = 0;
+    discardingCode_ = true;
+    return;
   }
   varicode_ = static_cast<uint16_t>((varicode_ << 1) | (bit & 1U));
   ++varicodeBits_;
@@ -86,17 +94,34 @@ bool Psk31Decoder::decodeVaricode(char& decoded) const {
 
 void Psk31Decoder::pushBit(bool bit, char& decoded, bool& produced) {
   produced = false;
+
   if (!bit) {
-    if (zeroRun_ < 3) ++zeroRun_;
+    if (zeroRun_ == 0) {
+      zeroRun_ = 1;
+      return;
+    }
+
+    if (zeroRun_ == 1) {
+      // PSK31 Varicode words start and end with '1' and never contain
+      // "00". The second zero therefore completes the separator. Decode
+      // here, not on the next '1', so the final character is not lost when
+      // the transmitter returns to its idle carrier.
+      if (!discardingCode_) produced = decodeVaricode(decoded);
+      varicode_ = 0;
+      varicodeBits_ = 0;
+      discardingCode_ = false;
+      zeroRun_ = 2;
+      return;
+    }
+
+    // Further zeros are idle fill after the separator.
+    zeroRun_ = 2;
     return;
   }
-  if (zeroRun_ >= 2) {
-    produced = decodeVaricode(decoded);
-    varicode_ = 0;
-    varicodeBits_ = 0;
-  } else if (zeroRun_ == 1) {
-    appendBit(0);
-  }
+
+  // A single zero followed by a one is data. Two or more zeros have
+  // already closed the previous word and must not enter the next one.
+  if (zeroRun_ == 1 && !discardingCode_) appendBit(0);
   zeroRun_ = 0;
   appendBit(1);
 }

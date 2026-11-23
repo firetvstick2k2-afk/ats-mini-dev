@@ -1,0 +1,1 @@
+PSK31 BPSK31 receive has been added as a standalone decoder using the shared 4 kHz audio capture service. The receiver includes Varicode text output, pause/resume, clear and reset controls. Initial on-air validation of timing and weak-signal performance is still required.

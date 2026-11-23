@@ -32,6 +32,7 @@
 #include "src/cw/CwUi.h"
 #include "src/js8/Js8Ui.h"
 #include "src/navtex/NavtexUi.h"
+#include "src/psk31/Psk31Ui.h"
 #include "src/radio/FmDxController.h"
 #include "src/radio/FmDxUi.h"
 #include "StationLogoClient.h"
@@ -923,6 +924,16 @@ void loop()
     elapsedSleep = elapsedCommand = currentTime = millis();
   }
 
+  // Handle PSK31 exit immediately after sampling the physical button.
+  if(currentCmd == CMD_PSK31 && pb1st.isLongPressed && !decoderMenuLongPressHandled)
+  {
+    decoderMenuLongPressHandled = true;
+    pb1st.wasClicked = pb1st.wasShortPressed = false;
+    psk31UiExit();
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime = millis();
+  }
+
   // Handle RTTY exit immediately after sampling the physical button. Keep this
   // ahead of encoder/remote input processing so a long hold cannot be consumed
   // by another input path before the decoder gets a chance to close cleanly.
@@ -1021,6 +1032,14 @@ void loop()
   if(currentCmd == CMD_FM_DX && encCount)
   {
     fmDxUiRotate(encCount);
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime;
+    encCount = encCountAccel = 0;
+  }
+
+  if(currentCmd == CMD_PSK31 && encCount)
+  {
+    psk31UiRotate(encCount);
     needRedraw = true;
     elapsedSleep = elapsedCommand = currentTime;
     encCount = encCountAccel = 0;
@@ -1190,6 +1209,13 @@ void loop()
       needRedraw = true;
       elapsedSleep = elapsedCommand = currentTime = millis();
     }
+    else if(pb1st.isLongPressed && currentCmd == CMD_PSK31 && !decoderMenuLongPressHandled)
+    {
+      decoderMenuLongPressHandled = true;
+      psk31UiExit();
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+    }
     else if(pb1st.isLongPressed && currentCmd == CMD_NAVTEX && !decoderMenuLongPressHandled)
     {
       decoderMenuLongPressHandled = true;
@@ -1255,6 +1281,13 @@ void loop()
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_FM_DX)
     {
       fmDxUiClick();
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+      pb1st.wasClicked = pb1st.wasShortPressed = false;
+    }
+    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_PSK31)
+    {
+      psk31UiClick();
       needRedraw = true;
       elapsedSleep = elapsedCommand = currentTime = millis();
       pb1st.wasClicked = pb1st.wasShortPressed = false;
@@ -1405,6 +1438,8 @@ void loop()
 
   if(currentCmd == CMD_FM_DX && fmDxUiTick(currentTime))
     needRedraw = true;
+  if(currentCmd == CMD_PSK31 && psk31UiTick(currentTime))
+    needRedraw = true;
   if(currentCmd == CMD_NAVTEX && navtexUiTick(currentTime))
     needRedraw = true;
   if(currentCmd == CMD_FTX_DECODER && ftxUiTick(currentTime))
@@ -1421,7 +1456,7 @@ void loop()
 
   if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
   {
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_NAVTEX && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_JS8_MONITOR && currentCmd != CMD_FM_DX && currentCmd != CMD_WEATHER && currentCmd != CMD_MOON_CALENDAR && currentCmd != CMD_NEWS)
+    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_PSK31 && currentCmd != CMD_NAVTEX && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_JS8_MONITOR && currentCmd != CMD_FM_DX && currentCmd != CMD_WEATHER && currentCmd != CMD_MOON_CALENDAR && currentCmd != CMD_NEWS)
     {
       currentCmd = CMD_NONE;
       needRedraw = true;

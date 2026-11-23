@@ -1,3 +1,11 @@
+## PSK31 BPSK RX — initial integration (2026-11-23)
+
+- Development priority: **PSK31 → WWV → HF-DSC → NCDXF/IARU**.
+- PSK31 is being added as a standalone BPSK31 receive module under `ats-mini/src/psk31/`, using the existing shared `AudioCaptureService` subscriber interface (4 kHz / GPIO11). It does not create another ADC reader.
+- **Isolation requirement:** do not modify FT8/FT4 decoder DSP, services, timing, synchronization, logging or UI behavior. Their implementation files are intentionally excluded from this feature. The only shared application changes are the new decoder command/menu registration and dispatch.
+- Initial receiver design: fixed 1000 Hz audio down-conversion, 31.25 baud differential BPSK decisions, PSK31 Varicode framing on `00`, bounded text storage, pause/resume and clear/reset controls.
+- The new path still requires a user build and real on-air validation for tuning tolerance, symbol timing, weak-signal behavior and text accuracy. No build, GitHub Actions run or flash is to be started by the assistant.
+
 # ATS Mini Development Handoff
 
 ## RSS-Nachrichtenansicht – Textüberlauf und Trennlinie (2026-11-22)

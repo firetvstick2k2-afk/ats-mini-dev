@@ -21,6 +21,7 @@
 #include "src/cw/CwUi.h"
 #include "src/js8/Js8Ui.h"
 #include "src/navtex/NavtexUi.h"
+#include "src/psk31/Psk31Ui.h"
 #include "src/radio/FmDxController.h"
 #include "src/radio/FmDxUi.h"
 #include "Storage.h"
@@ -154,7 +155,7 @@ static const char *decoderCategoryLabels[] = {
 };
 static uint8_t decoderCategoryIndex = 0;
 static uint8_t decoderMenuIdx = 0;
-static const char *decoderMenu[] = { "BACK", "DECODER FREQUENCIES", "CW DECODER", "RTTY DECODER", "FT8 / FT4", "JS8 RX MONITOR", "NAVTEX" };
+static const char *decoderMenu[] = { "BACK", "DECODER FREQUENCIES", "CW DECODER", "RTTY DECODER", "FT8 / FT4", "JS8 RX MONITOR", "NAVTEX", "PSK31 BPSK" };
 static uint8_t decoderPresetIndex = 0;
 static bool decoderPresetView = false;
 static uint32_t decoderSelectionChangedAt = 0;
@@ -983,6 +984,7 @@ static void clickDecoderMenu(int idx)
     case 4: if(ftxUiOpen(FtxMode::FT8)) currentCmd = CMD_FTX_DECODER; break;
     case 5: if(js8UiOpen()) currentCmd = CMD_JS8_MONITOR; break;
     case 6: if(navtexUiOpen()) currentCmd = CMD_NAVTEX; break;
+    case 7: if(psk31UiOpen()) currentCmd = CMD_PSK31; break;
     default: currentCmd = CMD_MENU; break;
   }
 }

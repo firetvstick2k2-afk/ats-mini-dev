@@ -186,8 +186,17 @@ void WeatherService::taskLoop() {
     static_cast<unsigned>(ESP.getMinFreeHeap()),
     static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
   bool waitingLogged = false;
+  uint32_t lastMemoryReportMs = millis();
   for (;;) {
     const uint32_t now = millis();
+    if ((uint32_t)(now - lastMemoryReportMs) >= 60000UL) {
+      lastMemoryReportMs = now;
+      weatherLog("[WEATHER][MEM] stage=periodic free_heap=%u max_block=%u min_free=%u task_stack_high_water=%u",
+        static_cast<unsigned>(ESP.getFreeHeap()),
+        static_cast<unsigned>(ESP.getMaxAllocHeap()),
+        static_cast<unsigned>(ESP.getMinFreeHeap()),
+        static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
+    }
     const bool due = weatherEnabled_ && (refreshRequested_ || !lastAttemptMs_ || now - lastAttemptMs_ >= kRefreshIntervalMs);
     if (strlen(postalCode_) != 5 && !waitingLogged) {
       weatherLog("%s", "[WEATHER] waiting: no valid postal code configured");

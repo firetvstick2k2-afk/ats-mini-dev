@@ -1,4 +1,5 @@
 #include "AudioCaptureService.h"
+#include "../../DebugLog.h"
 
 #include <esp_timer.h>
 #include <sys/time.h>
@@ -9,10 +10,10 @@ bool AudioCaptureService::begin() {
   return false; // GPIO11 is the LILYGO SPI MOSI pin, not the ATS Mini audio input.
 #else
   if (initialized_) {
-    Serial.println("[AUDIO] begin: capture task already initialized");
+    atsDebugLogf("[AUDIO] begin: capture task already initialized");
     return true;
   }
-  Serial.printf("[AUDIO] begin GPIO=%u rate=%u heap=%u stack=%u\n",
+  atsDebugLogf("[AUDIO] begin GPIO=%u rate=%u heap=%u stack=%u\n",
                 static_cast<unsigned>(kPin), static_cast<unsigned>(kSampleRate),
                 static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));

@@ -1139,10 +1139,7 @@ static void drawBandOpeningScreen(const BandOpeningService::Snapshot* snapshot, 
     else snprintf(range,sizeof(range),"%lu - %lu kHz",static_cast<unsigned long>(band.minimumKHz),static_cast<unsigned long>(band.maximumKHz));
     spr.drawString(range,49,y+23);
     spr.setTextDatum(TR_DATUM); spr.setTextColor(GREY,DARK);
-    if(index==BandOpeningService::kBandCount-1 && snapshot->fmMufValid && !snapshot->fmMufStale) {
-      char mufText[24]; snprintf(mufText,sizeof(mufText),"MUF %.1f MHz",snapshot->fmMufMHz);
-      spr.drawString(mufText,spr.width()-10,y+23);
-    } else spr.drawString(band.type,spr.width()-10,y+23);
+    spr.drawString(band.type,spr.width()-10,y+23);
     spr.drawFastHLine(49,y+48,spr.width()-61,0x2104);
   }
   spr.drawFastHLine(9,145,spr.width()-18,BLUE);

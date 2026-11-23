@@ -230,16 +230,15 @@ void drawNavtexPage() {
 
   const bool synced = receiverService.synchronized();
   const uint16_t statusColor = synced ? 0x07E0 : 0xFFE0;
-  spr.setTextDatum(TL_DATUM);
+  // Keep both header groups on one baseline and at the same font size.
+  spr.setFont(FONT_SMALL);
   spr.setTextColor(statusColor);
-  spr.setFont(FONT_DEFAULT);
-  spr.drawString("SITOR-B / 100 BAUD", 8, 31);
+  spr.setTextDatum(TL_DATUM);
+  spr.drawString("SITOR-B / 100 BAUD", 8, 33);
   char status[40] = {};
   snprintf(status, sizeof(status), "%s  AUDIO %u", synced ? "SYNC" : "SEARCH",
            static_cast<unsigned>(receiverService.audioLevel()));
   spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(statusColor);
-  spr.setFont(FONT_SMALL);
   spr.drawString(status, 312, 33);
 
   // Keep the multi-kilobyte message snapshot out of the Arduino loopTask stack.
@@ -272,17 +271,24 @@ void drawNavtexPage() {
     const auto testStatus = receiverService.selfTestStatus();
     if (testStatus == NavtexReceiverService::SelfTestStatus::Running) {
       spr.setTextColor(0xFFE0);
+      spr.setTextDatum(MC_DATUM);
+      spr.setFont(FONT_SMALL);
       spr.drawString("NAVTEX SELF-TEST RUNNING", 160, 88);
     } else if (testStatus == NavtexReceiverService::SelfTestStatus::Failed) {
       char testLine[40] = {};
       snprintf(testLine, sizeof(testLine), "SELF-TEST FAILED  PHASING ERR:%u",
                static_cast<unsigned>(receiverService.selfTestPhasingErrors()));
       spr.setTextColor(0xF800);
-      spr.drawString(testLine, 160, 88, FONT_SMALL);
+      spr.setTextDatum(MC_DATUM);
+      spr.setFont(FONT_SMALL);
+      spr.drawString(testLine, 160, 88);
       spr.setTextColor(0x7BEF);
-      spr.drawString("Check decoder diagnostics", 160, 108, FONT_SMALL);
+      spr.drawString("Check decoder diagnostics", 160, 108);
     } else {
+      // This message is centered; TL_DATUM here caused its left half to be clipped.
       spr.setTextColor(0x7BEF);
+      spr.setTextDatum(MC_DATUM);
+      spr.setFont(FONT_SMALL);
       spr.drawString(receiverService.active() ? "Waiting for NAVTEX message..." : "Receiver stopped", 160, 90);
     }
   }

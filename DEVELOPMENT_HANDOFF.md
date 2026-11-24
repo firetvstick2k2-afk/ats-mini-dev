@@ -1743,3 +1743,15 @@ Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherch
 - Änderung committed auf `development`: `0d9b8941d5fee27fc6f7d12b2355c4db8faa1c3a`.
 - Der vorhandene WLAN-Modus-Menüeintrag wurde in diesem Commit noch nicht funktional erweitert; ein separates WLAN-Info-Menü ist weiterhin offen.
 - Kein Build, kein GitHub-Actions-Lauf, kein Compile, kein Flash und kein Hardwaretest gestartet. Der Nutzer startet den nächsten Build manuell.
+
+## 2026-11-24 — JS8 GPL component milestone
+
+- Repository visibility was changed by the owner to **private**. Continue working only on `development`; never modify `main`.
+- The owner explicitly approved using the JS8Call GPLv3 implementation for the JS8 receive decoder and keeping the repository private during development. This supersedes the earlier clean-room-only preference in older notes.
+- Added `ats-mini/src/js8/Js8Ldpc.h/.cpp`: an isolated JS8 LDPC(174,87), payload CRC-12 and 12-character unpacking core adapted from JS8Call `JS8.cpp`.
+- Added the GPLv3 license text at `ats-mini/src/js8/COPYING`, provenance at `ats-mini/src/js8/NOTICE.md`, and host regression source at `tests/js8_ldpc_test.cpp`.
+- The new core is **not connected to live audio yet**. The new host test has been added but has **not yet been executed**. No firmware build was run after these changes.
+- GitHub Actions Build #84 succeeded on the earlier commit `b84d00b`; it does **not** validate the new JS8 files.
+- No changes were made to FT8/FT4, Flight Radar, WLAN, or the existing capture path. FT8/FT4 remains hands-off.
+- Before any external distribution, review the combined-firmware GPLv3 implications and satisfy the applicable source and installation-information requirements.
+- Next: validate the new host test/build, then implement NORMAL 8-FSK soft demodulation and connect its 174 LLRs to this decoder. Keep DSP work out of the ADC callback and use the existing shared capture service.

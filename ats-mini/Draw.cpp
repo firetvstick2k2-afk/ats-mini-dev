@@ -21,6 +21,7 @@ extern uint8_t bandOpeningPage;
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
 #include <math.h>
+#include <WiFi.h>
 
 // Layout-Prototypen
 void drawLayoutSmeter();
@@ -109,25 +110,133 @@ bool drawStatus(int x, int y)
   return(false);
 }
 
-// Draw a compact, non-destructive status overlay over the current screen.
-// It is called after the active page has been rendered, so the radio layout
-// or menu remains visible around the message.
+// Fit overlay text to the available pixel width without splitting a UTF-8
+// continuation sequence. The same helper keeps long SSIDs/IP status messages
+// inside their popup frame.
+static void fitOverlayText(const char *source, char *target, size_t capacity, int maxWidth)
+{
+  if(!capacity) return;
+  strlcpy(target, source ? source : "", capacity);
+  if(spr.textWidth(target, FONT_SMALL) <= maxWidth) return;
+
+  size_t length = strlen(target);
+  while(length > 3 && spr.textWidth(target, FONT_SMALL) > maxWidth - 20)
+  {
+    --length;
+    while(length > 0 && (static_cast<uint8_t>(target[length]) & 0xC0) == 0x80)
+      --length;
+    target[length] = '\0';
+  }
+  strlcat(target, "...", capacity);
+}
+
+// Draw a compact, non-destructive status popup over the current screen.
+// Its width follows the actual text, leaving the radio layout/menu visible
+// around all four sides.
 static void drawStatusOverlay()
 {
   if(!statusLines[0][0] && !statusLines[1][0]) return;
 
-  const int x = 10, y = 62, w = 300, h = 46;
-  spr.fillSmoothRoundRect(x, y, w, h, 5, 0x0841);
-  spr.drawRoundRect(x, y, w, h, 5, 0x07FF);
-  spr.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 4, 0x001F);
+  char line1[96], line2[96];
+  const bool twoLines = statusLines[0][0] && statusLines[1][0];
+  fitOverlayText(statusLines[0], line1, sizeof(line1), 272);
+  fitOverlayText(statusLines[1], line2, sizeof(line2), 272);
 
-  spr.setTextDatum(TC_DATUM);
+  int textWidth = spr.textWidth(line1, FONT_SMALL);
+  if(twoLines)
+  {
+    const int secondWidth = spr.textWidth(line2, FONT_SMALL);
+    if(secondWidth > textWidth) textWidth = secondWidth;
+  }
+
+  int w = textWidth + 28;
+  if(w < 168) w = 168;
+  if(w > 300) w = 300;
+  const int h = twoLines ? 56 : 40;
+  const int x = (DISPLAY_WIDTH - w) / 2;
+  const int y = (DISPLAY_HEIGHT - h) / 2;
+
+  spr.fillSmoothRoundRect(x, y, w, h, 6, 0x0841);
+  spr.drawRoundRect(x, y, w, h, 6, 0x07FF);
+  spr.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 5, 0x001F);
+
+  spr.setTextDatum(MC_DATUM);
+  spr.setTextColor(0xFFFF);
+  if(twoLines)
+  {
+    spr.drawString(line1, DISPLAY_WIDTH / 2, y + 9, FONT_SMALL);
+    spr.drawString(line2, DISPLAY_WIDTH / 2, y + 30, FONT_SMALL);
+  }
+  else
+  {
+    const char *line = line1[0] ? line1 : line2;
+    spr.drawString(line, DISPLAY_WIDTH / 2, y + 10, FONT_SMALL);
+  }
+}
+
+// Read-only WLAN information panel. It is drawn over the active radio layout,
+// not as a replacement screen, and never starts/stops or reconfigures Wi-Fi.
+static void drawWiFiInfoOverlay()
+{
+  const wifi_mode_t mode = WiFi.getMode();
+  const bool apActive = mode == WIFI_AP || mode == WIFI_AP_STA;
+  const bool staEnabled = mode == WIFI_STA || mode == WIFI_AP_STA;
+  const bool staConnected = staEnabled && WiFi.status() == WL_CONNECTED;
+  const bool wifiActive = mode != WIFI_MODE_NULL;
+
+  const char *modeText = "OFF";
+  if(mode == WIFI_AP) modeText = "ACCESS POINT";
+  else if(mode == WIFI_STA) modeText = "CLIENT";
+  else if(mode == WIFI_AP_STA) modeText = "AP + CLIENT";
+
+  const char *statusText = "DISABLED";
+  if(staConnected) statusText = apActive ? "CONNECTED / AP ACTIVE" : "CONNECTED";
+  else if(apActive) statusText = "ACCESS POINT READY";
+  else if(staEnabled) statusText = "NOT CONNECTED";
+
+  String ssid = staConnected ? WiFi.SSID() :
+                apActive ? String(RECEIVER_NAME) : String("-");
+  String ip = staConnected ? WiFi.localIP().toString() :
+              apActive ? WiFi.softAPIP().toString() : String("-");
+
+  char lines[6][96];
+  snprintf(lines[0], sizeof(lines[0]), "MODE: %s", modeText);
+  snprintf(lines[1], sizeof(lines[1]), "STATUS: %s", statusText);
+  snprintf(lines[2], sizeof(lines[2]), "SSID: %s", ssid.c_str());
+  snprintf(lines[3], sizeof(lines[3]), "IP: %s", ip.c_str());
+
+  if(apActive)
+    snprintf(lines[4], sizeof(lines[4]), "AP: %s  CLIENTS: %u",
+      WiFi.softAPIP().toString().c_str(),
+      static_cast<unsigned>(WiFi.softAPgetStationNum()));
+  else if(staConnected)
+    snprintf(lines[4], sizeof(lines[4]), "SIGNAL: %d dBm", static_cast<int>(WiFi.RSSI()));
+  else
+    snprintf(lines[4], sizeof(lines[4]), "LINK: -");
+
+  snprintf(lines[5], sizeof(lines[5]), "HOST: %s", wifiActive ? "mini-os.local" : "-");
+
+  const int x = 18, y = 15, w = 284, h = 136;
+  spr.fillSmoothRoundRect(x, y, w, h, 7, 0x0841);
+  spr.drawRoundRect(x, y, w, h, 7, 0x07FF);
+  spr.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 6, 0x001F);
+
+  spr.setTextDatum(TL_DATUM);
   spr.setTextColor(0x07FF);
-  spr.setFont(FONT_DEFAULT);
-  if(statusLines[0][0])
-    spr.drawString(statusLines[0], 160, y + 8, FONT_DEFAULT);
-  if(statusLines[1][0])
-    spr.drawString(statusLines[1], 160, y + 25, FONT_DEFAULT);
+  spr.drawString("WLAN INFORMATION", x + 12, y + 7, FONT_SMALL);
+  spr.drawFastHLine(x + 10, y + 27, w - 20, 0x001F);
+
+  spr.setTextColor(0xFFFF);
+  for(uint8_t i = 0; i < 6; ++i)
+  {
+    char fitted[96];
+    fitOverlayText(lines[i], fitted, sizeof(fitted), w - 26);
+    spr.drawString(fitted, x + 13, y + 32 + i * 16, FONT_SMALL);
+  }
+
+  spr.setTextDatum(MC_DATUM);
+  spr.setTextColor(0x07FF);
+  spr.drawString("CLICK: BACK", DISPLAY_WIDTH / 2, 155, FONT_DEFAULT);
 }
 
 //
@@ -1397,5 +1506,6 @@ void drawScreen()
 
 
   drawStatusOverlay();
+  if(currentCmd == CMD_WIFI_INFO) drawWiFiInfoOverlay();
   spr.pushSprite(0, 0);
 }

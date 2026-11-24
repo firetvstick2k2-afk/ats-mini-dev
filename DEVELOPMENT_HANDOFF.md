@@ -1772,3 +1772,14 @@ Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherch
 - This is a coarse bounded search primitive, not yet a full 15-second rolling-slot scanner. Search bounds/step sizes and thresholds are provisional; CPU cost, noise/interference false positives, timing refinement, and real JS8Call interoperability remain to be measured.
 - No firmware build, GitHub Actions run, hardware test, live AudioCaptureService integration, or full JS8 message decode was performed. FT8/FT4 and LILYGO GPIO11 guard remain untouched.
 - Licensing state: JS8 LDPC/payload component is adapted from GPL-3.0 JS8Call source and includes its license/provenance files. The repository remains private by user decision. Private visibility does not remove GPL obligations if the combined work is later conveyed/distributed; review those obligations before any external distribution.
+
+
+## 2026-11-24 — JS8 NORMAL acquisition refinement
+
+- Current repository: private; development remains exclusively on `development`; `main` is untouched.
+- Extended `ats-mini/src/js8/Js8NormalAcquire.h/.cpp` with bounded local refinement around a coarse JS8 NORMAL sync candidate. Defaults: ±40 samples in 2-sample steps and ±1.25 Hz in 0.625 Hz steps; hard cap 256 candidate evaluations.
+- Added `tests/js8_normal_refine_test.cpp` for a synthetic frame at sample 17 / +1.25 Hz and silence rejection. Test source is added but not executed.
+- This is still only Costas-pilot candidate acquisition. LDPC convergence and JS8 CRC remain mandatory before any decoded message or true lock. No 15-second rolling scanner, live capture integration, firmware build, Actions run, or hardware test yet.
+- FT8/FT4 remains untouched; preserve the LILYGO GPIO11/SPI guard. No Flight Radar or WLAN source was changed.
+- Next: host-test acquisition/refinement, then rolling NORMAL frame scanning and independent reference-signal validation. Do not start firmware builds/Actions unless the user asks.
+- License: user approved the JS8Call GPLv3 implementation in this private repository. Preserve GPL notices; private visibility does not remove obligations if the combined work is later conveyed/distributed.

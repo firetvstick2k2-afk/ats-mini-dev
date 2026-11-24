@@ -1602,7 +1602,7 @@ void loop()
 
   if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
   {
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_PSK31 && currentCmd != CMD_NAVTEX && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_JS8_MONITOR && currentCmd != CMD_FM_DX && currentCmd != CMD_WEATHER && currentCmd != CMD_MOON_CALENDAR && currentCmd != CMD_NEWS && currentCmd != CMD_BAND_OPENING)
+    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_PSK31 && currentCmd != CMD_NAVTEX && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_JS8_MONITOR && currentCmd != CMD_FM_DX && currentCmd != CMD_WEATHER && currentCmd != CMD_MOON_CALENDAR && currentCmd != CMD_NEWS && currentCmd != CMD_BAND_OPENING && currentCmd != CMD_WIFI_INFO)
     {
       currentCmd = CMD_NONE;
       needRedraw = true;

@@ -1,3 +1,17 @@
+## Aktueller Arbeitsstand – WLAN-UI (2026-11-24)
+
+- Ziel-Repository: `firetvstick2k2-afk/ats-mini-dev`, Branch `development`. `main` nicht verändert; keine zusätzlichen Branches.
+- Status-Popups in `ats-mini/Draw.cpp` sind jetzt zentriert, dynamisch breit und kompakter; darunterliegendes Radio-Layout bzw. Menü wird nicht gelöscht und bleibt außen sichtbar.
+- Der bisherige WLAN-Einstellungs-Eintrag heißt nun eindeutig `WLAN-MODUS` (EN: `Wi-Fi Mode`) und behält die bestehende Auswahlfunktion.
+- Neuer separater Eintrag `WLAN-INFO` (EN: `Wi-Fi Info`) zeigt read-only den tatsächlichen Modus, Verbindungsstatus, SSID, IP, AP-IP/Clientzahl oder RSSI sowie `mini-os.local`. Die Anzeige liegt als Overlay über dem aktiven Radio-Layout; Klick führt zurück zu Einstellungen.
+- Der Info-Bildschirm ist vom allgemeinen Menü-Timeout ausgenommen.
+- Geänderte Quellfiles: `ats-mini/Draw.cpp`, `ats-mini/Menu.h`, `ats-mini/Menu_english.cpp.src`, `ats-mini/Menu_german.cpp.src`, `ats-mini/Menu_italian.cpp.src`, `ats-mini/ats-mini.ino`.
+- `statusTick(millis())` ist bereits am Ende von `loop()` vorhanden; die Statusverwaltung und `Network.cpp` blieben unverändert.
+- Kein Build, GitHub Actions, Flash oder Hardwaretest durch den Assistenten. Nutzer baut/testet selbst.
+- Nächster Schritt: OSPI-DE-Build und Hardwaretest der WLAN-Modusauswahl, Status-Popups, Info-Anzeige und Rückkehr per Klick. Keine anderen Layouts/Funktionen anfassen.
+
+---
+
 ## Aktueller Wiederherstellungspunkt – 2026-11-24
 
 - `development` steht wieder auf dem letzten bestätigten Hardwarestand Build #69 (`7825f22feda8d095a542bf819a07f9bf62c23a7c`), danach kam ausschließlich die isolierte About-Anpassung hinzu.

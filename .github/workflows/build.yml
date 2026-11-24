@@ -38,31 +38,28 @@ jobs:
           echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
 
       - name: Cache Arduino packages and libraries
+        continue-on-error: true
         uses: actions/cache@v4
         with:
           path: ~/.arduino15
-          key: arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-${{ hashFiles('ats-mini/sketch.yaml', 'ats-mini/arduino-cli.yaml') }}
+          key: arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-${{ hashFiles('ats-mini/sketch.yaml') }}
           restore-keys: |
             arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-
 
-      - name: Compile OSPI-DE firmware
-        uses: arduino/compile-sketches@v1
+      - name: Install Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
         with:
-          cli-version: 1.4.1
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          sketch-paths: |
-            - ats-mini
-          fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=verbose
-          cli-compile-flags: |
-            - --profile
-            - esp32s3-ospi
-            - --build-property
-            - compiler.cpp.extra_flags=-DCONFIG_ASYNC_TCP_STACK_SIZE=32768 -DUSE_ESP_IDF_LOG
-            - --build-property
-            - compiler.c.extra_flags=-DUSE_ESP_IDF_LOG
-            - --export-binaries
-          enable-deltas-report: false
-          enable-warnings-report: true
+          version: 1.4.1
+
+      - name: Compile OSPI-DE firmware
+        working-directory: ats-mini
+        env:
+          ARDUINO_LIBRARY_ENABLE_UNSAFE_INSTALL: "true"
+        run: |
+          arduino-cli core update-index --config-file arduino-cli.yaml
+          arduino-cli core install esp32:esp32@3.3.12 --config-file arduino-cli.yaml
+          arduino-cli lib install "PU2CLR SI4735@2.1.8" "LovyanGFX@1.2.32" "Async TCP@3.5.0" "ESP Async WebServer@3.12.1" "NTPClient@3.2.1" "ArduinoJson@7.4.2" --config-file arduino-cli.yaml
+          arduino-cli compile --verbose --export-binaries --config-file arduino-cli.yaml --profile esp32s3-ospi --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=verbose --build-path build/esp32.esp32.esp32s3 --build-property "compiler.cpp.extra_flags=-DCONFIG_ASYNC_TCP_STACK_SIZE=32768 -DUSE_ESP_IDF_LOG" --build-property "compiler.c.extra_flags=-DUSE_ESP_IDF_LOG" .
 
       - name: Prepare firmware and debug artifacts
         run: |

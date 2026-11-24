@@ -64,18 +64,23 @@ jobs:
           enable-deltas-report: false
           enable-warnings-report: true
 
-      - name: Prepare single firmware binary
+      - name: Prepare firmware and debug artifacts
         run: |
           mkdir -p artifact
-          test -s ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin
-          cp ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin "artifact/Mini_OS_#${{ github.run_number }}.bin"
+          BUILD_DIR="ats-mini/build/esp32.esp32.esp32s3"
+          test -s "$BUILD_DIR/ats-mini.ino.bin"
+          test -s "$BUILD_DIR/ats-mini.ino.elf"
+          test -s "$BUILD_DIR/ats-mini.ino.map"
+          cp "$BUILD_DIR/ats-mini.ino.bin" "artifact/Mini_OS_#${{ github.run_number }}.bin"
+          cp "$BUILD_DIR/ats-mini.ino.elf" "artifact/Mini_OS_#${{ github.run_number }}.elf"
+          cp "$BUILD_DIR/ats-mini.ino.map" "artifact/Mini_OS_#${{ github.run_number }}.map"
           ls -lh artifact
 
-      - name: Upload firmware artifact
+      - name: Upload firmware and debug artifacts
         uses: actions/upload-artifact@v7
         with:
           name: Mini_OS-build-${{ github.run_number }}-ospi-de
-          path: artifact/Mini_OS_#${{ github.run_number }}.bin
+          path: artifact/*
           archive: false
           if-no-files-found: error
           retention-days: 14
@@ -119,8 +124,8 @@ jobs:
           SLUG: ${{ needs.build.outputs.slug }}
         run: gh release create "$SLUG" --repo "${{ github.repository }}" --target "${{ github.sha }}" --notes-file release-notes.md
 
-      - name: Upload raw firmware binary
+      - name: Upload firmware and debug symbols
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SLUG: ${{ needs.build.outputs.slug }}
-        run: gh release upload "$SLUG" artifact/*.bin --repo "${{ github.repository }}" --clobber
+        run: gh release upload "$SLUG" artifact/* --repo "${{ github.repository }}" --clobber

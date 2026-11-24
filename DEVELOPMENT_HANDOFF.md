@@ -8,8 +8,10 @@
 - Backup-Branch backup/development-2026-11-24 wurde nach dem erfolgreichen Build erstellt und verifiziert. Er zeigt exakt auf Commit b1a3303fc9e42c7af615885f54000efc53ab2e3f.
 - Aktive Arbeitsregel: ausschließlich auf development weiterarbeiten. Das Backup bleibt unangetastet und wird nur als Rückfallebene aufbewahrt. main bleibt ebenfalls unangetastet; nur die ausdrückliche Anweisung „Bitte Main überschreiben“ erlaubt eine Änderung an main.
 - Der Backup-Branch ist eine ausdrücklich genehmigte einmalige Ausnahme zur früheren Regel „nur main und development“. Keine weiteren Branches anlegen.
-- Nächster Schritt des Nutzers (geplant für 2026-11-25): Build #89 auf dem ATS Mini flashen und testen. Anschließend Logging aktivieren und das Log prüfen. Bei einem Absturz oder auffälligem Verhalten die zu Build #89 gehörenden ELF- und MAP-Dateien zusammen mit dem Log sichern und auswerten. Der Assistent hat weder geflasht noch einen Hardwaretest durchgeführt.
-- Beim Log-/Backtrace-Test keine andere Revision flashen und keine ELF/MAP-Dateien eines anderen Builds verwenden. FT8/FT4 bleibt unangetastet.
+- Vereinbarte Testreihenfolge für den nächsten Hardwaretermin: **1. FT8 als allerersten Decoder testen und dabei das Logging aktivieren. 2. Das FT8-Log gemeinsam auswerten; bei Absturz oder Auffälligkeit ausschließlich die zu Build #89 gehörenden ELF- und MAP-Dateien zusammen mit dem Log verwenden. 3. Danach die übrigen Decoder einzeln testen. 4. Den Band Opening Monitor anschließend als separaten Test prüfen.**
+- FT8/FT4 bleibt dabei unangetastet: zunächst ausschließlich testen und beobachten, keine Änderungen am Decoder vornehmen, solange kein konkreter Fehler nachgewiesen ist. FT8 ist der erste Testschritt, nicht eine Freigabe zur Codeänderung.
+- Build #89 auf dem ATS Mini flashen und testen; Logging beim FT8-Test aktivieren und das Log sichern. Bei einem Absturz oder auffälligem Verhalten die zu Build #89 gehörenden ELF- und MAP-Dateien zusammen mit dem Log sichern und auswerten. Der Assistent hat weder geflasht noch einen Hardwaretest durchgeführt.
+- Beim Log-/Backtrace-Test keine andere Revision flashen und keine ELF/MAP-Dateien eines anderen Builds verwenden.
 
 ---
 ## 2026-11-24 – WLAN-Info ins WLAN-Menü verschoben (aktueller Stand)

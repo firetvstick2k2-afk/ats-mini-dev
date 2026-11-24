@@ -1,3 +1,11 @@
+## 2026-11-24 – Rücksetzung auf letzten bestätigten Hardwarestand
+
+- `development` wurde auf den letzten vom Nutzer bestätigten funktionierenden Stand Build #69 zurückgesetzt: `7825f22feda8d095a542bf819a07f9bf62c23a7c`. `main` blieb unangetastet.
+- Als einzige Firmware-Ausnahme wurde anschließend die About-Anzeige isoliert wieder aufgenommen: Commit `cb0b305acdbb9fc7d79d2b7d0c8d0901fb510b7a` (`ats-mini/About.cpp`). Die vorhandene grafische Space-/Globus-Radio-Mast-Darstellung aus Build #69 blieb erhalten; geändert wurden nur Versionslabel `V1.00`, Repository-Adresse und Credit-Text.
+- Keine Wetterdienst-, WLAN-, Flight-Radar-, Decoder- oder Layout-Änderungen aus den späteren Commits übernommen. Kein Build/Actions-Lauf/Flash durch den Assistenten; Hardwaretest durch den Nutzer steht aus.
+
+---
+
 ## Band Opening Monitor – SWL/VHF-Erweiterung (2026-11-23)
 
 - Zielbranch: `development`; kein Branch angelegt und `main` nicht verändert.

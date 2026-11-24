@@ -1,6 +1,20 @@
+## 2026-11-24 – Build #89 erfolgreich, Backup gesichert, nächster Hardwaretest
+
+- GitHub Actions Build #89 (Run-ID 45490746057) wurde auf development mit Commit b1a3303fc9e42c7af615885f54000efc53ab2e3f ausgeführt und erfolgreich abgeschlossen.
+- Run: https://github.com/firetvstick2k2-afk/ats-mini-dev/actions/runs/45490746057
+- Das Repository wurde vom Nutzer für diesen Test auf Public gestellt. Der Build lief in diesem öffentlichen Repository erfolgreich durch.
+- Das Build-Artefakt Mini_OS-build-89-ospi-de wurde von GitHub Actions veröffentlicht (Artefakt-ID 14965992323, Ablaufdatum 2026-12-08). Laut Nutzer sind Firmware-BIN sowie die zugehörigen ELF- und MAP-Dateien enthalten. Für eine Backtrace-Analyse müssen BIN, ELF und MAP exakt aus demselben Build stammen.
+- Der komplette JS8-Decoder einschließlich GPL-Lizenzdatei und Tests wurde zuvor mit Commit b1a3303fc9e42c7af615885f54000efc53ab2e3f entfernt. Build #89 bestätigt, dass dieser bereinigte Stand kompiliert und ein Artefakt veröffentlicht werden kann.
+- Backup-Branch backup/development-2026-11-24 wurde nach dem erfolgreichen Build erstellt und verifiziert. Er zeigt exakt auf Commit b1a3303fc9e42c7af615885f54000efc53ab2e3f.
+- Aktive Arbeitsregel: ausschließlich auf development weiterarbeiten. Das Backup bleibt unangetastet und wird nur als Rückfallebene aufbewahrt. main bleibt ebenfalls unangetastet; nur die ausdrückliche Anweisung „Bitte Main überschreiben“ erlaubt eine Änderung an main.
+- Der Backup-Branch ist eine ausdrücklich genehmigte einmalige Ausnahme zur früheren Regel „nur main und development“. Keine weiteren Branches anlegen.
+- Nächster Schritt des Nutzers (geplant für 2026-11-25): Build #89 auf dem ATS Mini flashen und testen. Anschließend Logging aktivieren und das Log prüfen. Bei einem Absturz oder auffälligem Verhalten die zu Build #89 gehörenden ELF- und MAP-Dateien zusammen mit dem Log sichern und auswerten. Der Assistent hat weder geflasht noch einen Hardwaretest durchgeführt.
+- Beim Log-/Backtrace-Test keine andere Revision flashen und keine ELF/MAP-Dateien eines anderen Builds verwenden. FT8/FT4 bleibt unangetastet.
+
+---
 ## 2026-11-24 – WLAN-Info ins WLAN-Menü verschoben (aktueller Stand)
 
-- Ziel bleibt ausschließlich `firetvstick2k2-afk/ats-mini-dev`, Branch `development`. `main` blieb unverändert; es wurden keine zusätzlichen Branches angelegt.
+- Ziel bleibt ausschließlich `firetvstick2k2-afk/ats-mini-dev`, aktive Arbeit ausschließlich auf Branch `development`. `main` blieb unverändert. Der einmalige Backup-Branch `backup/development-2026-11-24` wurde nach Build #89 erstellt und bleibt unangetastet.
 - Die Status-Popups in `ats-mini/Draw.cpp` sind jetzt kompakter und dynamisch breit: Breite richtet sich nach dem Text, die Meldung wird zentriert und mit gut lesbarer `FONT_SMALL` dargestellt. Das Overlay löscht den darunterliegenden Bildinhalt nicht; Layout bzw. Menü bleiben ringsum sichtbar.
 - Der zuvor vorhandene WLAN-Modus-Eintrag ist jetzt eindeutig als `WLAN-MODUS` (EN: `Wi-Fi Mode`, IT: `Modalità Wi-Fi`) beschriftet und behält unverändert die bestehende Modusauswahl.
 - `WLAN-INFO` ist jetzt direkt als zusätzlicher Auswahlpunkt im Untermenü `WLAN-MODUS` integriert (EN: `Wi-Fi Info`, IT: `Info Wi-Fi`). Der separate Eintrag in den allgemeinen Einstellungen wurde entfernt. Die WLAN-Modi behalten ihre bisherigen numerischen Werte; ein eigener Menüindex verhindert, dass die Info-Auswahl versehentlich an `netInit()` übergeben wird.
@@ -59,15 +73,15 @@
 
 # ATS Mini Development Handoff
 
-## Unveränderliche Branch-Regel (vom Nutzer festgelegt, 2026-11-23)
+## Verbindliche Branch-Regel (aktualisiert 2026-11-24)
 
-- Im Ziel-Repository `firetvstick2k2-afk/ats-mini-dev` sind **ausschließlich zwei Branches erlaubt: `main` und `development`**.
-- **Es dürfen zu keinem Zeitpunkt weitere Branches angelegt werden** – weder temporäre Feature-, Fix-, Test-, Backup- noch Release-Branches.
-- Sämtliche Entwicklungsarbeit, Codeänderungen und Dokumentationsänderungen erfolgen direkt auf `development`.
+- Sämtliche Entwicklungsarbeit, Codeänderungen und Dokumentationsänderungen erfolgen ausschließlich direkt auf `development`.
+- Der einmalig genehmigte Sicherungsbranch `backup/development-2026-11-24` zeigt auf den nach Build #89 erfolgreich gebauten Commit `b1a3303fc9e42c7af615885f54000efc53ab2e3f`. Dieser Backup-Branch bleibt unangetastet und wird ausschließlich als Rückfallebene aufbewahrt.
+- Keine weiteren Branches anlegen. Der Backup-Branch ist die ausdrücklich genehmigte einmalige Ausnahme zur früheren Zwei-Branch-Regel.
 - **Verbindliche Main-Übernahmeregel:** Erst wenn der Nutzer ausdrücklich sagt **„Bitte Main überschreiben“** (oder unmissverständlich dieselbe Anweisung erteilt), wird `main` vollständig durch den aktuellen Stand von `development` ersetzt.
 - Diese Übernahme ist eine vollständige **1:1-Kopie**: Der gesamte Inhalt und die gesamte Historie/der Branch-Zustand von `main` werden auf den Stand von `development` gesetzt. Es wird nichts aus dem bisherigen `main`-Stand zusammengeführt oder zusätzlich beibehalten. Abweichungen, Widersprüche oder ältere Inhalte in `main` sind dabei ausdrücklich kein Hinderungsgrund.
 - Ohne diesen ausdrücklichen Nutzerauftrag bleibt `main` unverändert. Eine Promotion darf niemals automatisch oder aufgrund einer eigenen Einschätzung erfolgen.
-- Auch bei einer Main-Übernahme dürfen ausschließlich die vorhandenen Branches `main` und `development` verwendet werden; **niemals einen weiteren Branch erstellen**.
+- Bei einer Main-Übernahme werden keine weiteren Branches angelegt; der vorhandene Backup-Branch bleibt unangetastet.
 - Vor einer Übernahme den aktuellen Stand beider Branches prüfen und danach verifizieren, dass `main` exakt denselben Commit/Dateistand wie `development` hat.
 - Diese Vorgabe ist dauerhaft und gilt für alle zukünftigen Arbeiten im Ziel-Repository ohne zeitliche Ausnahme.
 
@@ -95,14 +109,14 @@
 - Die RSS-Nachrichtenansicht wurde am 2026-11-22 als erster konkreter Schritt auf monochrom, tiefschwarz und kräftigere weiße Schrift mit drei Textzeilen pro Seite umgestellt. Diese Änderung ist noch vom Nutzer zu bauen und auf Hardware zu beurteilen.
 
 
-Last updated: 2026-11-23
+Last updated: 2026-11-24
 
 ## Current project status
 
 - **Repository:** [firetvstick2k2-afk/ats-mini-dev](https://github.com/firetvstick2k2-afk/ats-mini-dev)
 - **Active branch:** `development`. All development work, commits and pushes belong here.
 - **Main branch:** remains unchanged unless the user explicitly orders “Bitte Main überschreiben”. On that exact instruction, replace the entire `main` branch with the current `development` state as a 1:1 copy; do not merge or preserve conflicting/older `main` content.
-- **Branch policy:** only `main` and `development` may exist. All development and documentation work is done directly on `development`; never create any additional branch.
+- **Branch policy:** all development and documentation work is done exclusively on `development`. The one-time approved backup branch `backup/development-2026-11-24` is immutable and must not be changed. Do not create any additional branches.
 - **Build workflow:** `.github/workflows/build.yml` currently uses `workflow_dispatch` only. A push does not start a firmware build. Do not start a workflow/build unless the user asks for it.
 - **Build tracking (binding):** Before asking the user to start a firmware build after source changes, inspect the current GitHub Actions workflow/run history and identify the next build/run number. State the exact suggested run number (for example, “Please start Build #60”) so the user can compare it with the latest run and notice if a build was skipped. After the user reports starting a build, record that build number and, whenever the workflow data is accessible, verify the actual Actions run ID/status rather than assuming the user-facing build number equals GitHub's run ID. Never invent a run number or claim a workflow check that was not possible. Update this handoff with the build number, run ID/link if known, commit/revision built, and result when available.
 - **Commit/push permission:** the assistant is authorized to commit and push completed, reviewed changes directly to `development`. No additional approval is needed for ordinary development commits or handoff updates.

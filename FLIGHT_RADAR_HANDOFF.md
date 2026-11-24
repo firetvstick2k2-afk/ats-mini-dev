@@ -1,5 +1,16 @@
 # Flight Radar Handoff
 
+## 2026-11-24 – Build #89 / Backup / nächster Hardwaretest
+
+- Build #89 (GitHub Actions Run-ID 45490746057) wurde auf development mit Commit b1a3303fc9e42c7af615885f54000efc53ab2e3f erfolgreich abgeschlossen: https://github.com/firetvstick2k2-afk/ats-mini-dev/actions/runs/45490746057
+- Das Repository ist für den Test öffentlich gestellt worden. Das veröffentlichte Artefakt heißt Mini_OS-build-89-ospi-de (Artefakt-ID 14965992323); laut Nutzer sind BIN, ELF und MAP enthalten. Für Log-/Backtrace-Analysen ausschließlich die zu genau dieser BIN gehörenden ELF-/MAP-Dateien verwenden.
+- Nach erfolgreichem Build wurde backup/development-2026-11-24 angelegt und verifiziert. Er zeigt auf denselben Commit wie development und bleibt unangetastet.
+- Alle weiteren Arbeiten erfolgen ausschließlich auf development; main bleibt unangetastet. Keine weiteren Branches erstellen.
+- Geplanter Hardwaretest des Nutzers am 2026-11-25: Build #89 flashen, Verhalten prüfen, anschließend Logging aktivieren und das Log kontrollieren. Bei einem Absturz Log sowie ELF/MAP aus Build #89 sichern. Der Assistent hat weder geflasht noch einen Hardwaretest durchgeführt.
+- JS8 inklusive Lizenz wurde entfernt; der erfolgreiche Build bestätigt den aktuellen bereinigten Stand. FT8/FT4 bleibt unangetastet.
+
+---
+
 ## WLAN-UI-Fortsetzung – 2026-11-24 (aktueller Stand: WLAN-Info im WLAN-Menü)
 
 - Status-Popups in `ats-mini/Draw.cpp` wurden kompakter, dynamisch breit und zentriert gestaltet. Der Hintergrund wird nicht gelöscht; das Radio-Layout bzw. Menü bleibt rundherum sichtbar.
@@ -47,7 +58,7 @@
 
 ## Cross-project repository note — 2026-11-24
 
-- The repository owner has changed repository visibility to **private**.
+- The repository owner changed repository visibility to **public** for the successful Build #89 test.
 - All development remains on branch `development`; `main` remains protected.
 
 ## PRIORITY 1 — WLAN-Menüanzeige prüfen (Nutzer-Hardwaretest, 2026-11-24)

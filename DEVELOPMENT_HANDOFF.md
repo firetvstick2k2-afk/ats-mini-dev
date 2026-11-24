@@ -1841,3 +1841,14 @@ Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherch
 - Workflow-Commit auf development: 62b2d92a65aa821e9fd8dba2bc9afdebab20a2e0.
 - Keine Firmware-Quelldateien oder Decoder geändert. FT8/FT4 unangetastet; main unverändert.
 - Noch kein Build/Actions-Lauf nach dieser Korrektur gestartet. Der nächste manuelle Lauf auf development muss Installations- und Compile-Schritte verifizieren sowie das Vorhandensein aller drei Dateien bestätigen.
+
+
+## 2026-11-24 — Cache vollständig aus dem Firmware-Neubuild entfernt (Actions-Lauf #86)
+
+- Zweiter Lauf nach der ersten Workflow-Korrektur: Actions Run 45477705980 (#86), Branch development, HEAD 977439d0fb0809a8ed02e28f5029dcad29622297, Ergebnis failure.
+- Jobzusammenfassung zeigt erneut den Arduino-Cache-Schritt als letzten gestarteten Schritt; Install Arduino CLI und Compile starteten nicht. Der Download des Joblogs über den GitHub-API-Connector lieferte BlobNotFound, daher liegt die genaue Runner-Fehlermeldung nicht vor.
+- Konsequenz: Den optionalen actions/cache-Schritt vollständig aus .github/workflows/build.yml entfernt, nicht nur continue-on-error gesetzt. Cache ist für die Funktion des Builds nicht erforderlich.
+- Arduino-CLI-Installation, explizite ESP32-/Bibliotheksinstallation, direkter Compile mit festem Build-Pfad sowie BIN/ELF/MAP-Verpackung bleiben unverändert.
+- Workflow-Commit auf development: 6e50940c81584b272ce5c93589b50f13bed853b9.
+- Keine Decoder-/Firmware-Quelldateien geändert. FT8/FT4 unangetastet. main nicht geändert.
+- Noch kein Build gestartet; nächster manueller Lauf muss zeigen, ob Install Arduino CLI und Compile jetzt erreicht werden und alle drei Artefakte entstehen.

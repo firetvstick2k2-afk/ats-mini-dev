@@ -51,3 +51,7 @@
 - All development remains on branch `development`; `main` remains protected.
 - No Flight Radar source, API, UI, image, or LittleFS behavior was changed in the JS8 GPL/LDPC milestone.
 - JS8 work is isolated under `ats-mini/src/js8/`; its GPLv3 notice and license are documented separately. This does not alter the Flight Radar implementation.
+
+## JS8 status cross-reference — 2026-11-24
+
+A follow-up JS8-only commit added a known-start/known-frequency NORMAL 8-FSK soft demodulator and a synthetic end-to-end host test. This did not modify Flight Radar code, assets, APIs, UI, or scheduling. See `JS8CALL_RECEIVE_DECODER.md` for the current JS8 state and GPL notices.

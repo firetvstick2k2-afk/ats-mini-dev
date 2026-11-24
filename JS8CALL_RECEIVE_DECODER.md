@@ -351,3 +351,40 @@ The audio monitor now retains a complete 79-symbol NORMAL frame (50,560 samples 
 
 ## 13. Local NORMAL hardware self-test
 The audio monitor now retains a complete 79-symbol NORMAL frame (50,560 samples at 4 kHz) and generates the three NORMAL Costas pilot blocks in its internal test waveform. It evaluates that known local waveform at the known frame start and nominal tone frequency; this is a deterministic self-test, not a blind acquisition search. The UI fixture text is labelled **TEST PAYLOAD (LOCAL ONLY)** and is not decoded from the waveform. PSRAM is required for the full-frame ring. LDPC/CRC and live-air text decoding remain unimplemented.
+
+## 2026-11-24 milestone — GPL LDPC core added
+
+The owner explicitly approved the JS8Call GPLv3 path and changed the repository to private for development. This supersedes the earlier clean-room-only restriction recorded above. The repository's other files keep their existing notices; do not assume that a future statically linked firmware image is MIT-only. Before conveying firmware/source externally, review the combined-work implications and comply with applicable GPLv3 source and installation-information requirements.
+
+### Upstream reference
+
+- Project: `js8call/js8call`
+- Source revision inspected: `a7ff1be0b389d287fdc56e2ea0d06962aa68127d`
+- Source file: `JS8.cpp`
+- License text copied to `ats-mini/src/js8/COPYING`; provenance/distribution notes in `ats-mini/src/js8/NOTICE.md`.
+
+### Added files
+
+- `ats-mini/src/js8/Js8Ldpc.h`
+- `ats-mini/src/js8/Js8Ldpc.cpp`
+- `tests/js8_ldpc_test.cpp`
+
+The isolated module implements the JS8Call LDPC(174,87) parity graph and generator matrix, belief-propagation decoding, JS8 75-bit payload layout, augmented CRC-12 (polynomial 0xC06, XOR 42), and 12-character 6-bit alphabet unpacking. The codeword ordering is 87 parity bits followed by 87 message bits, matching the upstream JS8 encoder/decoder layout. Decoder input is 174 soft LLR values; positive values favor bit 1.
+
+The caller-owned BP workspace is approximately 8 KiB. It must not be placed on the small audio/ADC task stack; later service integration must allocate/own it with an appropriate memory strategy (PSRAM preferred where practical). Decoder work must remain on the worker, never in the ADC callback.
+
+### Current limitations / validation
+
+- This is only the channel-code and payload layer. It is not yet connected to the 8-FSK symbol demodulator, timing/frequency search, or live AudioCaptureService.
+- The host regression source covers payload CRC, a noiseless encoded frame, a single erased LLR, payload unpacking, and CRC rejection after corruption.
+- The host test has **not yet been executed**; the firmware has **not been built** after these commits.
+- Build #84 passed on the earlier commit `b84d00b`; it does not validate the new files.
+- No FT8/FT4 code or DSP path was changed. Preserve the existing FT8/FT4 decoder exactly.
+
+### Next steps
+
+1. Run/validate the host regression test before relying on the LDPC core.
+2. Cross-check generated parity/payload vectors against JS8Call reference vectors, not just a self-round-trip.
+3. Implement NORMAL 8-FSK soft demodulation for the 58 data symbols, mapping their three-bit tone metrics into the 174 LLRs in upstream order.
+4. Feed the LLRs into this isolated decoder from the JS8 worker and require both LDPC convergence and CRC success before emitting a message.
+5. Measure CPU time and memory on ESP32-S3 before enabling live decoding.

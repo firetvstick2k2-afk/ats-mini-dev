@@ -888,3 +888,10 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 - UI LAYOUTS opens the existing layout selector directly; confirming a layout returns to the radio screen.
 - Confirming MODE, STEPS, AGC/ATTN, BANDWIDTH, SOFTMUTE, BFO, VOLUME and BAND returns directly to the radio screen. Existing special short/long-press behavior for SEEK, SCAN, MEMORY, AVC and SQUELCH is preserved.
 - No build, compile, Actions run, flash or hardware test was started.
+
+
+## 2026-11-24 – About-Anzeige: Dispatch-Reihenfolge korrigiert
+
+- Ursache: `drawScreen()` behandelte `CMD_ABOUT` bereits in der allgemeinen Settings-Popup-Abfrage (`currentCmd <= CMD_ABOUT`). Dadurch wurde `drawSettingsPopup()` mit der alten Beschriftung `ATS MINI V4` ausgegeben; der spätere Aufruf von `drawAbout()` war unerreichbar.
+- Korrektur in `ats-mini/Draw.cpp`: obere Grenze der allgemeinen Settings-Abfrage von `<= CMD_ABOUT` auf `< CMD_ABOUT` geändert. `CMD_ABOUT` erreicht nun den dedizierten grafischen About-Renderer in `About.cpp`.
+- Nur `Draw.cpp` und diese Übergabedokumentation geändert. Kein Build, kein Flash und kein Hardwaretest durch den Assistenten; Nutzer soll den nächsten OSPI-DE-Build selbst starten und die About-Seite prüfen.

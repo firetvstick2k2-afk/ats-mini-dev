@@ -1819,3 +1819,13 @@ Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherch
 - Labels für den Sonderindex: Deutsch `WLAN-INFO`, Englisch `Wi-Fi Info`, Italienisch `Info Wi-Fi`.
 - Keine Änderungen an `Network.cpp`, `Draw.cpp`, WLAN-Verbindungslogik, Flight Radar, JS8 oder FT8/FT4.
 - Noch kein Build, keine GitHub Actions und kein Hardwaretest durch ChatGPT gestartet. Nutzer muss den Firmware-Build und den Encoder-/Popup-Ablauf am Gerät prüfen. JS8 bleibt bis zur Nutzerbestätigung pausiert; FT8/FT4 bleibt unangetastet.
+
+
+## 2026-11-24 — ELF- und MAP-Dateien als Build-Artefakte
+
+- Anlass: Für die Auflösung des FT8-Absturz-Backtraces wird die zur Firmware passende ELF-Datei benötigt; die MAP-Datei ergänzt die Linker-/Symbolübersicht. Bisher veröffentlichte der manuelle GitHub-Actions-Build nur die Firmware-BIN.
+- Verifiziert: Arduino-ESP32 3.3.12 erzeugt beim Linken standardmäßig die MAP-Datei über compiler.c.elf.flags und die ELF-Datei über den Linker-Aufruf. Die erwarteten Dateien im Build-Verzeichnis heißen ats-mini.ino.elf und ats-mini.ino.map.
+- Geändert: .github/workflows/build.yml prüft jetzt, ob BIN, ELF und MAP vorhanden sind, kopiert alle drei in das Build-Artefakt und lädt sie einzeln hoch. Bei einem versionierten Release werden ebenfalls alle drei Dateien angehängt.
+- Die Änderung betrifft ausschließlich die Build-Artefakt-Verpackung; keine Firmware-Quelldatei, keine Decoderlogik und keine FT8/FT4-Datei wurde verändert.
+- Commit auf development: 2fd266b73a2da513d62c73349100ed229269c31b.
+- Kein Build und keine GitHub Actions wurden gestartet. Beim nächsten ausdrücklich angeforderten manuellen Workflow-Lauf muss geprüft werden, ob alle drei Dateien im Artefakt vorhanden sind. Für den Backtrace müssen ELF/MAP exakt aus demselben Build wie die geflashte BIN stammen.

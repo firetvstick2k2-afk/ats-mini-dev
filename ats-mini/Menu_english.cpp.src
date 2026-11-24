@@ -195,6 +195,7 @@ static const char *menu[]
 #define MENU_WIFIMODE     19
 #define MENU_ABOUT        20
 #define MENU_WEBLOG       21
+#define MENU_WIFI_INFO    22
 
 bool webDiagEnabled = false;
 
@@ -208,7 +209,7 @@ static const char *settings[] =
   "Theme", "UI Layout", "Zoom Menu", "Scroll Dir.", "RDS",
   "FM Stereo", "FM Region", "Calibration", "DSP Patches",
   "Load EiBi", "Update FW", "USB Port", "TCP Port",
-  "Bluetooth", "Wi-Fi", "About", "USB Log",
+  "Bluetooth", "Wi-Fi Mode", "About", "USB Log", "Wi-Fi Info",
 };
 
 const FMRegion fmRegions[] = { { 0x1, "EU/JP/AU" }, { 0x2, "US" } };
@@ -1022,6 +1023,7 @@ static void clickSettings(int cmd, bool shortPress)
     case MENU_TCPMODE:    currentCmd = CMD_TCPMODE;    break;
     case MENU_BLEMODE:    bleModeMenuIdx = bleModeIdx; currentCmd = CMD_BLEMODE; break;
     case MENU_WIFIMODE:   currentCmd = CMD_WIFIMODE;   break;
+    case MENU_WIFI_INFO: currentCmd = CMD_WIFI_INFO; break;
     case MENU_FM_REGION:  currentCmd = CMD_FM_REGION;  break;
     case MENU_FM_STEREO:  currentCmd = CMD_FM_STEREO;  break;
     case MENU_DSP_PATCHES: currentCmd = CMD_DSP_PATCHES; break;
@@ -1106,6 +1108,7 @@ bool clickHandler(uint16_t cmd, bool shortPress)
     case CMD_UPDATEFW: otaRequestLatest(updateFwIdx == 1);break;
     case CMD_MEMORY:   clickMemory(memoryIdx, shortPress);break;
     case CMD_BLEMODE:  clickBleMode(bleModeMenuIdx, shortPress);break;
+    case CMD_WIFI_INFO: currentCmd = CMD_SETTINGS; break;
     case CMD_WIFIMODE: clickWiFiMode(wifiModeIdx, shortPress);break;
     case CMD_VOLUME:   clickVolume(shortPress);break;
     case CMD_UI:       currentCmd = CMD_NONE; break;

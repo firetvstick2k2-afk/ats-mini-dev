@@ -1,3 +1,11 @@
+## Aktueller Wiederherstellungspunkt – 2026-11-24
+
+- `development` steht wieder auf dem letzten bestätigten Hardwarestand Build #69 (`7825f22feda8d095a542bf819a07f9bf62c23a7c`), danach kam ausschließlich die isolierte About-Anpassung hinzu.
+- About-Commit: `cb0b305acdbb9fc7d79d2b7d0c8d0901fb510b7a`. Bestehende grafische Space-/Globus-Radio-Mast-Anzeige bleibt; nur `V1.00`, Repository-Link und Credit wurden aktualisiert.
+- `main` unverändert. Keine späteren WeatherService-/FlightRadar-/WLAN-/Decoder-/Layout-Änderungen enthalten. Nutzer baut und testet selbst; kein Build gestartet.
+
+---
+
 ## Band Opening Monitor – SWL/VHF-Erweiterung (2026-11-23)
 
 - Zielbranch: `development`; kein Branch angelegt und `main` nicht verändert.

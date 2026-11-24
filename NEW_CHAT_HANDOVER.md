@@ -964,3 +964,14 @@ This is still not a live receiver: no timing/frequency search, slot acquisition,
 - This is a coarse bounded search primitive, not yet a full 15-second rolling-slot scanner. Search bounds/step sizes and thresholds are provisional; CPU cost, noise/interference false positives, timing refinement, and real JS8Call interoperability remain to be measured.
 - No firmware build, GitHub Actions run, hardware test, live AudioCaptureService integration, or full JS8 message decode was performed. FT8/FT4 and LILYGO GPIO11 guard remain untouched.
 - Licensing state: JS8 LDPC/payload component is adapted from GPL-3.0 JS8Call source and includes its license/provenance files. The repository remains private by user decision. Private visibility does not remove GPL obligations if the combined work is later conveyed/distributed; review those obligations before any external distribution.
+
+
+## Latest JS8 continuation — NORMAL acquisition refinement (2026-11-24)
+
+- Repository is private by owner decision; all work remains on `development`, never `main`.
+- `Js8NormalAcquire.h/.cpp` now exposes a bounded local refinement pass around a coarse NORMAL Costas candidate: ±40 samples, 2-sample steps, ±1.25 Hz, 0.625 Hz steps, max 256 candidates by default.
+- New test source: `tests/js8_normal_refine_test.cpp` (synthetic frame at sample 17, +1.25 Hz, plus silence rejection). It has not been executed.
+- Candidate sync is not a decoded frame or a true lock. Require LDPC convergence and CRC success before emitting text.
+- Still missing: full rolling 15-second frame scanner, timing/slot phase tracking, live AudioCaptureService worker integration, independent reference recordings and live hardware validation.
+- No firmware build, Actions run, or hardware test was started. FT8/FT4 and LILYGO GPIO11 guard remain untouched.
+- User explicitly approved the GPLv3 JS8Call path for private development. Keep COPYING/NOTICE and GPL headers; review distribution obligations before conveying the combined firmware.

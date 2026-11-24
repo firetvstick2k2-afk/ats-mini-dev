@@ -49,28 +49,8 @@
 
 - The repository owner has changed repository visibility to **private**.
 - All development remains on branch `development`; `main` remains protected.
-- No Flight Radar source, API, UI, image, or LittleFS behavior was changed in the JS8 GPL/LDPC milestone.
-- JS8 work is isolated under `ats-mini/src/js8/`; its GPLv3 notice and license are documented separately. This does not alter the Flight Radar implementation.
 
-## JS8 status cross-reference — 2026-11-24
-
-A follow-up JS8-only commit added a known-start/known-frequency NORMAL 8-FSK soft demodulator and a synthetic end-to-end host test. This did not modify Flight Radar code, assets, APIs, UI, or scheduling. See `JS8CALL_RECEIVE_DECODER.md` for the current JS8 state and GPL notices.
-
-
-## 2026-11-24 — bounded JS8 NORMAL acquisition candidate search
-
-- Added `Js8NormalAcquire.h/.cpp`: bounded coarse search over caller-specified frame-start and common-frequency-offset ranges. Search is allocation-free and capped by `maxCandidates`; it rejects tone grids outside the 4 kHz Nyquist band.
-- Candidate ranking uses the 21 NORMAL Costas pilots. The result is explicitly only a synchronization candidate; it is not a valid-frame lock and must still pass the existing LDPC decoder and JS8 CRC before any text is emitted.
-- Added `tests/js8_normal_acquire_test.cpp`. Host test compiled with `g++ -std=c++17 -O2 -Wall -Wextra -Werror` and passed: synthetic NORMAL pilot frame found with a 17-sample start displacement and +1.25 Hz offset; silence rejected; candidate budget respected.
-- This is a coarse bounded search primitive, not yet a full 15-second rolling-slot scanner. Search bounds/step sizes and thresholds are provisional; CPU cost, noise/interference false positives, timing refinement, and real JS8Call interoperability remain to be measured.
-- No firmware build, GitHub Actions run, hardware test, live AudioCaptureService integration, or full JS8 message decode was performed. FT8/FT4 and LILYGO GPIO11 guard remain untouched.
-- Licensing state: JS8 LDPC/payload component is adapted from GPL-3.0 JS8Call source and includes its license/provenance files. The repository remains private by user decision. Private visibility does not remove GPL obligations if the combined work is later conveyed/distributed; review those obligations before any external distribution.
-
-
-## JS8 NORMAL acquisition refinement cross-reference — 2026-11-24
-
-The JS8-only subsystem gained bounded local refinement around a coarse NORMAL Costas candidate (`Js8NormalAcquire.h/.cpp`) and a host test source (`tests/js8_normal_refine_test.cpp`). This did not modify Flight Radar code, APIs, UI, assets, scheduling, or LittleFS behavior. The new host test has not been executed; no firmware build or hardware test was performed. See `JS8CALL_RECEIVE_DECODER.md` for JS8 status and licensing notes.
-\n\n---\n\n## PRIORITY 1 — WLAN-Menüanzeige vor jeder weiteren JS8-Arbeit prüfen (Nutzer-Hardwaretest, 2026-11-24)
+## PRIORITY 1 — WLAN-Menüanzeige prüfen (Nutzer-Hardwaretest, 2026-11-24)
 
 **Gemeldeter Fehler (vom Nutzer am Gerät reproduziert):**
 - Im WLAN-MODUS-Menü ist zunächst „Connect“ sichtbar.
@@ -95,7 +75,7 @@ The JS8-only subsystem gained bounded local refinement around a coarse NORMAL Co
 4. Nur die minimal erforderlichen Menü-/Vorlagendateien ändern. Keine WLAN-Verbindungslogik, Zugangsdaten, Netzwerkdienste, Status-Popups oder sonstigen Einstellungen anfassen.
 5. Die betroffenen Handoff-Dateien nach dem Fix aktualisieren. Erst danach den Nutzer um seinen Build-/Hardwaretest bitten; keinen Build und keine GitHub Actions selbst starten, solange der Nutzer das nicht ausdrücklich verlangt.
 
-**Stand:** Diagnose anhand des aktuellen Quelltexts plausibel und direkt passend zum beobachteten Fehler; Fix noch nicht committet. Der Nutzer hat den Fehler am Gerät getestet und meldet ihn als reproduzierbar. JS8-Arbeit ist bis zur erfolgreichen WLAN-Korrektur und Nutzerbestätigung pausiert. FT8/FT4 bleibt unangetastet.
+**Stand:** Diagnose anhand des aktuellen Quelltexts plausibel und direkt passend zum beobachteten Fehler; Fix noch nicht committet. Der Nutzer hat den Fehler am Gerät getestet und meldet ihn als reproduzierbar. FT8/FT4 bleibt unangetastet.
 
 
 ## WLAN-Menü-Popup-Korrektur (2026-11-24)
@@ -104,5 +84,5 @@ The JS8-only subsystem gained bounded local refinement around a coarse NORMAL Co
 - Korrektur ausschließlich in den drei Sprachvorlagen im Zweig `CMD_WIFIMODE`: Die Anzeige verwendet jetzt `wifiMenuIdx`; der Sonderindex `ITEM_COUNT(wifiModeDesc)` wird vor dem Arrayzugriff abgefangen und zeigt das jeweilige lokalisierte Info-Label.
 - Deutsch: `ats-mini/Menu_german.cpp.src` enthält die Korrektur bereits (aktueller Blob-SHA: `f363a715c350b3de2b64b7f1ce04c82a8e7570cf`). Englisch und Italienisch wurden jetzt korrigiert: `ats-mini/Menu_english.cpp.src` Commit `598576c272263d86aff0a1d1a5e542e19ec775a8`; `ats-mini/Menu_italian.cpp.src` Commit `784786bd7f71600d0127a17cadd7ef469ef96089`.
 - Labels für den Sonderindex: Deutsch `WLAN-INFO`, Englisch `Wi-Fi Info`, Italienisch `Info Wi-Fi`.
-- Keine Änderungen an `Network.cpp`, `Draw.cpp`, WLAN-Verbindungslogik, Flight Radar, JS8 oder FT8/FT4.
-- Noch kein Build, keine GitHub Actions und kein Hardwaretest durch ChatGPT gestartet. Nutzer muss den Firmware-Build und den Encoder-/Popup-Ablauf am Gerät prüfen. JS8 bleibt bis zur Nutzerbestätigung pausiert; FT8/FT4 bleibt unangetastet.
+- Keine Änderungen an `Network.cpp`, `Draw.cpp`, WLAN-Verbindungslogik, Flight Radar oder FT8/FT4.
+- Noch kein Build, keine GitHub Actions und kein Hardwaretest durch ChatGPT gestartet. Nutzer muss den Firmware-Build und den Encoder-/Popup-Ablauf am Gerät prüfen. FT8/FT4 bleibt unangetastet.

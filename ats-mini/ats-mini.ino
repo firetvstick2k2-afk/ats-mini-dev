@@ -32,7 +32,6 @@
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
 #include "src/cw/CwUi.h"
-#include "src/js8/Js8Ui.h"
 #include "src/navtex/NavtexUi.h"
 #include "src/psk31/Psk31Ui.h"
 #include "src/radio/FmDxController.h"
@@ -1029,16 +1028,6 @@ void loop()
     elapsedSleep = elapsedCommand = currentTime = millis();
   }
 
-  // Handle JS8 monitor exit immediately after sampling the physical button.
-  if(currentCmd == CMD_JS8_MONITOR && pb1st.isLongPressed && !decoderMenuLongPressHandled)
-  {
-    decoderMenuLongPressHandled = true;
-    pb1st.wasClicked = pb1st.wasShortPressed = false;
-    js8UiExit();
-    needRedraw = true;
-    elapsedSleep = elapsedCommand = currentTime = millis();
-  }
-
   // Handle CW exit immediately after sampling the physical button.
   if(currentCmd == CMD_CW_DECODER && pb1st.isLongPressed && !decoderMenuLongPressHandled)
   {
@@ -1186,14 +1175,6 @@ void loop()
   if(currentCmd == CMD_FTX_DECODER && encCount)
   {
     ftxUiRotate(encCount);
-    needRedraw = true;
-    elapsedSleep = elapsedCommand = currentTime;
-    encCount = encCountAccel = 0;
-  }
-
-  if(currentCmd == CMD_JS8_MONITOR && encCount)
-  {
-    js8UiRotate(encCount);
     needRedraw = true;
     elapsedSleep = elapsedCommand = currentTime;
     encCount = encCountAccel = 0;
@@ -1451,13 +1432,6 @@ void loop()
       elapsedSleep = elapsedCommand = currentTime = millis();
       pb1st.wasClicked = pb1st.wasShortPressed = false;
     }
-    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_JS8_MONITOR)
-    {
-      js8UiClick();
-      needRedraw = true;
-      elapsedSleep = elapsedCommand = currentTime = millis();
-      pb1st.wasClicked = pb1st.wasShortPressed = false;
-    }
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_CW_DECODER)
     {
       cwUiClick();
@@ -1592,8 +1566,6 @@ void loop()
     needRedraw = true;
   if(currentCmd == CMD_RTTY_DECODER && rttyUiTick(currentTime))
     needRedraw = true;
-  if(currentCmd == CMD_JS8_MONITOR && js8UiTick(currentTime))
-    needRedraw = true;
   if(currentCmd == CMD_CW_DECODER && cwUiTick(currentTime))
     needRedraw = true;
 
@@ -1602,7 +1574,7 @@ void loop()
 
   if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
   {
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_PSK31 && currentCmd != CMD_NAVTEX && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_JS8_MONITOR && currentCmd != CMD_FM_DX && currentCmd != CMD_WEATHER && currentCmd != CMD_MOON_CALENDAR && currentCmd != CMD_NEWS && currentCmd != CMD_BAND_OPENING && currentCmd != CMD_WIFI_INFO)
+    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_PSK31 && currentCmd != CMD_NAVTEX && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_FM_DX && currentCmd != CMD_WEATHER && currentCmd != CMD_MOON_CALENDAR && currentCmd != CMD_NEWS && currentCmd != CMD_BAND_OPENING && currentCmd != CMD_WIFI_INFO)
     {
       currentCmd = CMD_NONE;
       needRedraw = true;

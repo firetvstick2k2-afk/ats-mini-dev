@@ -37,15 +37,6 @@ jobs:
           fi
           echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Arduino packages and libraries
-        continue-on-error: true
-        uses: actions/cache@v4
-        with:
-          path: ~/.arduino15
-          key: arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-${{ hashFiles('ats-mini/sketch.yaml') }}
-          restore-keys: |
-            arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-
-
       - name: Install Arduino CLI
         uses: arduino/setup-arduino-cli@v2
         with:

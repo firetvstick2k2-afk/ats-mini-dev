@@ -114,27 +114,28 @@ static int visibleBandIndexAtOffset(int offset)
 }
 
 #define MENU_VOLUME       0
-#define MENU_PROGRAMMES   1
-#define MENU_KEYPAD       2
-#define MENU_BAND         3
-#define MENU_MODE         4
-#define MENU_BFO          5
-#define MENU_STEP         6
-#define MENU_SEEK         7
-#define MENU_SCAN         8
-#define MENU_MEMORY       9
-#define MENU_SQUELCH     10
-#define MENU_BW          11
-#define MENU_FREQ_INPUT  12
-#define MENU_AGC_ATT     13
-#define MENU_AVC         14
-#define MENU_SOFTMUTE    15
-#define MENU_DUAL_RX     16
-#define MENU_VFO         17
-#define MENU_SPECTRUM    18
-#define MENU_ALL_SPECTRUM 19
-#define MENU_SETTINGS    20
-#define MENU_BACK        21
+#define MENU_KEYPAD       1
+#define MENU_BAND         2
+#define MENU_MODE         3
+#define MENU_BFO          4
+#define MENU_STEP         5
+#define MENU_SEEK         6
+#define MENU_SCAN         7
+#define MENU_MEMORY       8
+#define MENU_SQUELCH      9
+#define MENU_BW          10
+#define MENU_FREQ_INPUT  11
+#define MENU_AGC_ATT     12
+#define MENU_AVC         13
+#define MENU_SOFTMUTE    14
+#define MENU_DUAL_RX     15
+#define MENU_VFO         16
+#define MENU_SPECTRUM    17
+#define MENU_ALL_SPECTRUM 18
+#define MENU_UI_LAYOUTS  19
+#define MENU_PROGRAMMES  20
+#define MENU_SETTINGS    21
+#define MENU_BACK        22
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -165,11 +166,11 @@ static const char *spectrumMenu[] = { "VHF SPECTRUM", "ALL Band Spectrum" };
 
 static const char *menu[]
 {
-  "VOLUME", "PROGRAMMES", "KEYPAD", "BAND", "MODE", "BFO",
-  "STEPS", "SEEK", "SCAN", "MEMORY", "SQUELCH",
-  "BANDWIDTH", "FREQUENCY", "AGC/ATTN", "AVC",
-  "SOFTMUTE", "DUAL RX", "VFO A/B", "VHF SPECTRUM",
-  "ALL BAND SPECTRUM", "SETTINGS", "BACK",
+  "VOLUME", "KEYPAD", "BAND", "MODE", "BFO", "STEPS",
+  "SEEK", "SCAN", "MEMORY", "SQUELCH", "BANDWIDTH",
+  "FREQUENCY", "AGC/ATTN", "AVC", "SOFTMUTE",
+  "DUAL RX", "VFO A/B", "VHF SPECTRUM", "ALL BAND SPECTRUM",
+  "UI LAYOUTS", "PROGRAMMES", "SETTINGS", "BACK",
 };
 
 #define MENU_BRIGHTNESS   0
@@ -933,6 +934,7 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_MODE:     currentCmd = CMD_MODE;      break;
     case MENU_BW:       currentCmd = CMD_BANDWIDTH; break;
     case MENU_AGC_ATT:  currentCmd = CMD_AGC;       break;
+    case MENU_UI_LAYOUTS: currentCmd = CMD_UI; break;
     case MENU_PROGRAMMES: programmesMenuIdx = 0; currentCmd = CMD_PROGRAMMES; break;
     case MENU_BAND:     currentCmd = CMD_BAND;      break;
     case MENU_SETTINGS: currentCmd = CMD_SETTINGS;  break;
@@ -1106,6 +1108,13 @@ bool clickHandler(uint16_t cmd, bool shortPress)
     case CMD_BLEMODE:  clickBleMode(bleModeMenuIdx, shortPress);break;
     case CMD_WIFIMODE: clickWiFiMode(wifiModeIdx, shortPress);break;
     case CMD_VOLUME:   clickVolume(shortPress);break;
+    // Simple radio adjustments are confirmed with one click and return to the radio.
+    case CMD_MODE:
+    case CMD_STEP:
+    case CMD_AGC:
+    case CMD_BANDWIDTH:
+    case CMD_SOFTMUTE:
+    case CMD_BFO:      currentCmd = CMD_NONE; break;
     case CMD_BAND:     currentCmd = CMD_NONE; break;
     case CMD_BRT:      currentCmd = CMD_SETTINGS; break;
     case CMD_AVC:      clickAvc(shortPress);break;

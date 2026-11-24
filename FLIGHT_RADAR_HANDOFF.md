@@ -1,5 +1,16 @@
 # Flight Radar Handoff
 
+## WLAN-UI-Fortsetzung – 2026-11-24 (aktueller Stand)
+
+- Status-Popups in `ats-mini/Draw.cpp` wurden kompakter, dynamisch breit und zentriert gestaltet. Der Hintergrund wird nicht gelöscht; das Radio-Layout bzw. Menü bleibt rundherum sichtbar.
+- Die Einstellung ist klar getrennt: `WLAN-MODUS` (EN: `Wi-Fi Mode`) behält die vorhandene Betriebsmodus-Auswahl; der neue Punkt `WLAN-INFO` (EN: `Wi-Fi Info`) öffnet eine read-only Statusanzeige.
+- Die Info-Anzeige zeigt tatsächlichen WLAN-Modus, Verbindungsstatus, SSID, IP, bei AP zusätzlich AP-IP und Clientzahl, bei STA RSSI sowie den Hostnamen `mini-os.local`. Klick kehrt zu Einstellungen zurück; der allgemeine Menü-Timeout schließt die Anzeige nicht.
+- `statusTick(millis())` wird bereits am Ende von `loop()` aufgerufen. Statusverwaltung und Netzwerk-/Verbindungslogik in `Network.cpp` blieben unverändert.
+- Änderungen nur in `Draw.cpp`, `Menu.h`, den drei Sprach-Menüvorlagen und `ats-mini.ino`. Flight-Radar-Funktion und deren Datenpfad nicht verändert.
+- Kein Compile, Build/Actions-Lauf, Flash oder Hardwaretest durch den Assistenten. Nutzer startet den Build selbst; Hardwareprüfung der WLAN-Menüs und Overlays steht aus.
+
+---
+
 ## Status – 2026-11-24
 
 - The `development` branch has been reset to the last user-confirmed hardware-working baseline, Build #69 (`7825f22feda8d095a542bf819a07f9bf62c23a7c`).

@@ -31,6 +31,23 @@ public:
     Js8NormalSync::Result sync{};
   };
 
+  struct Refinement {
+    size_t startRadiusSamples = 40;
+    size_t startStepSamples = 2;
+    float frequencyRadiusHz = 1.25f;
+    float frequencyStepHz = 0.625f;
+    uint32_t maxCandidates = 256;
+    uint8_t minimumMatchedPilots = 18;
+    float minimumMeanExpectedToBest = 0.65f;
+  };
+
+  // Refines a coarse candidate in a bounded local time/frequency window.
+  // Returns a candidate only; the caller must still require LDPC convergence
+  // and JS8 CRC success before declaring lock or publishing decoded text.
+  static bool refine(const int16_t* samples, size_t sampleCount,
+                     size_t coarseFrameStart, float coarseFrequencyOffsetHz,
+                     float firstToneHz, const Refinement& cfg, Result& result);
+
   // Searches no more than maxCandidates. The caller chooses a narrow enough
   // range and step sizes to fit its worker CPU budget. No allocation is done.
   static bool search(const int16_t* samples, size_t sampleCount,

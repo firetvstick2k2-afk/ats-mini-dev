@@ -65,3 +65,8 @@ A follow-up JS8-only commit added a known-start/known-frequency NORMAL 8-FSK sof
 - This is a coarse bounded search primitive, not yet a full 15-second rolling-slot scanner. Search bounds/step sizes and thresholds are provisional; CPU cost, noise/interference false positives, timing refinement, and real JS8Call interoperability remain to be measured.
 - No firmware build, GitHub Actions run, hardware test, live AudioCaptureService integration, or full JS8 message decode was performed. FT8/FT4 and LILYGO GPIO11 guard remain untouched.
 - Licensing state: JS8 LDPC/payload component is adapted from GPL-3.0 JS8Call source and includes its license/provenance files. The repository remains private by user decision. Private visibility does not remove GPL obligations if the combined work is later conveyed/distributed; review those obligations before any external distribution.
+
+
+## JS8 NORMAL acquisition refinement cross-reference — 2026-11-24
+
+The JS8-only subsystem gained bounded local refinement around a coarse NORMAL Costas candidate (`Js8NormalAcquire.h/.cpp`) and a host test source (`tests/js8_normal_refine_test.cpp`). This did not modify Flight Radar code, APIs, UI, assets, scheduling, or LittleFS behavior. The new host test has not been executed; no firmware build or hardware test was performed. See `JS8CALL_RECEIVE_DECODER.md` for JS8 status and licensing notes.

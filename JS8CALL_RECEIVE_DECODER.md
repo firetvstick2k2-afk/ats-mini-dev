@@ -444,3 +444,29 @@ The custom bitwise CRC routine was separately compared with Boost's `augmented_c
 - Added `tests/js8_normal_refine_test.cpp`, using a synthetic frame beginning at sample 17 with a +1.25 Hz carrier offset; it checks sample-level timing refinement, frequency refinement, candidate cap, and silence rejection.
 - Test source has been added but **not executed**. No firmware build, GitHub Actions run, hardware test, or live audio integration was performed. FT8/FT4 and the LILYGO GPIO11/SPI guard remain untouched.
 - Next: execute the acquisition/refinement host tests, then design a rolling 15-second NORMAL frame scanner and validate it with independent JS8Call reference recordings before live worker integration.
+\n\n---\n\n## PRIORITY 1 — WLAN-Menüanzeige vor jeder weiteren JS8-Arbeit prüfen (Nutzer-Hardwaretest, 2026-11-24)
+
+**Gemeldeter Fehler (vom Nutzer am Gerät reproduziert):**
+- Im WLAN-MODUS-Menü ist zunächst „Connect“ sichtbar.
+- Ein Dreh nach rechts ändert intern die Auswahl; auf dem Display bleibt jedoch weiterhin „Connect“ stehen.
+- Auch weitere Drehschritte werden intern übernommen, während die sichtbare Auswahl nicht mitwandert.
+- Ein Druck auf OK führt den tatsächlich intern ausgewählten, aber nicht angezeigten Menüpunkt aus.
+- Beim erneuten Öffnen des WLAN-Menüs stimmt die Anzeige wieder und zeigt die nun gespeicherte Auswahl.
+- Das ist ein Anzeige-/Auswahl-Synchronisationsfehler, kein vom Nutzer gemeldeter WLAN-Verbindungsfehler.
+
+**Code-Ursache bereits im aktuellen Branch lokalisiert (noch NICHT korrigiert):**
+- `ats-mini/Menu_german.cpp.src`, `Menu_english.cpp.src` und `Menu_italian.cpp.src`: `doWiFiMode()` verändert `wifiMenuIdx`; `drawWiFiMode()` zeichnet ebenfalls anhand von `wifiMenuIdx`.
+- Beim Öffnen des WLAN-Menüs wird `wifiMenuIdx = wifiModeIdx` gesetzt.
+- Die Bestätigung über `clickHandler(CMD_WIFIMODE)` übergibt `wifiMenuIdx` an `clickWiFiMode()`, die den Wert nach `wifiModeIdx` übernimmt. Deshalb wird beim OK die unsichtbar weitergedrehte Auswahl tatsächlich ausgeführt.
+- **Fehlerhafte Popup-Anzeige:** In allen drei Sprachvorlagen liest der `CMD_WIFIMODE`-Zweig von `drawSettingsPopup()` derzeit `wifiModeDesc[wifiModeIdx]` statt des temporären Auswahlindex `wifiMenuIdx`. Das Popup zeigt also den zuletzt übernommenen Modus („Connect“) statt der gerade gedrehten Auswahl. Das deckt sich exakt mit dem Hardware-Symptom.
+- **Wichtig beim Fix:** `wifiMenuIdx` kann auch `ITEM_COUNT(wifiModeDesc)` annehmen. Dieser zusätzliche Index steht für `WLAN-INFO` und ist kein gültiger Index in `wifiModeDesc[]`. Eine einfache Ersetzung durch `wifiModeDesc[wifiMenuIdx]` wäre daher bei WLAN-INFO ein Out-of-Bounds-Zugriff. Die Anzeige muss diesen Sonderfall explizit als „WLAN-INFO“ (bzw. vorhandene lokalisierte Bezeichnung) behandeln.
+- Den Auswahlindex `wifiMenuIdx` und den tatsächlich aktiven/übernommenen Modus `wifiModeIdx` weiterhin getrennt halten. WLAN-Info bleibt read-only und muss sich weiterhin öffnen lassen.
+
+**Nächster Arbeitsauftrag für den neuen Chat — zuerst und ausschließlich WLAN:**
+1. Vor jeder Änderung aktuelle Inhalte und SHAs aller betroffenen Dateien erneut aus GitHub holen.
+2. Den Popup-Wert in allen drei Sprachvorlagen konsistent korrigieren: Anzeige folgt `wifiMenuIdx`; Sonderindex `ITEM_COUNT(wifiModeDesc)` zeigt „WLAN-INFO“ und greift nicht auf das Array zu.
+3. Den gesamten Ablauf prüfen: Menü öffnen (Index auf aktiven Modus initialisieren), ein Drehschritt, mehrere Drehschritte, beide Drehrichtungen, Wrap-around, OK auf jeden der fünf WLAN-Modi, OK auf WLAN-INFO, Zurück aus WLAN-INFO und erneutes Öffnen. Prüfen, dass WLAN-Modus erst bei OK übernommen wird und WLAN-INFO nicht versehentlich `netInit()` auslöst.
+4. Nur die minimal erforderlichen Menü-/Vorlagendateien ändern. Keine WLAN-Verbindungslogik, Zugangsdaten, Netzwerkdienste, Status-Popups oder sonstigen Einstellungen anfassen.
+5. Die betroffenen Handoff-Dateien nach dem Fix aktualisieren. Erst danach den Nutzer um seinen Build-/Hardwaretest bitten; keinen Build und keine GitHub Actions selbst starten, solange der Nutzer das nicht ausdrücklich verlangt.
+
+**Stand:** Diagnose anhand des aktuellen Quelltexts plausibel und direkt passend zum beobachteten Fehler; Fix noch nicht committet. Der Nutzer hat den Fehler am Gerät getestet und meldet ihn als reproduzierbar. JS8-Arbeit ist bis zur erfolgreichen WLAN-Korrektur und Nutzerbestätigung pausiert. FT8/FT4 bleibt unangetastet.

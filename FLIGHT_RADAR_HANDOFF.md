@@ -1,13 +1,13 @@
 # Flight Radar Handoff
 
-## WLAN-UI-Fortsetzung – 2026-11-24 (aktueller Stand)
+## WLAN-UI-Fortsetzung – 2026-11-24 (aktueller Stand: WLAN-Info im WLAN-Menü)
 
 - Status-Popups in `ats-mini/Draw.cpp` wurden kompakter, dynamisch breit und zentriert gestaltet. Der Hintergrund wird nicht gelöscht; das Radio-Layout bzw. Menü bleibt rundherum sichtbar.
-- Die Einstellung ist klar getrennt: `WLAN-MODUS` (EN: `Wi-Fi Mode`) behält die vorhandene Betriebsmodus-Auswahl; der neue Punkt `WLAN-INFO` (EN: `Wi-Fi Info`) öffnet eine read-only Statusanzeige.
-- Die Info-Anzeige zeigt tatsächlichen WLAN-Modus, Verbindungsstatus, SSID, IP, bei AP zusätzlich AP-IP und Clientzahl, bei STA RSSI sowie den Hostnamen `mini-os.local`. Klick kehrt zu Einstellungen zurück; der allgemeine Menü-Timeout schließt die Anzeige nicht.
+- `WLAN-MODUS` (EN: `Wi-Fi Mode`) enthält die vorhandene Betriebsmodus-Auswahl plus `WLAN-INFO` als letzten Auswahlpunkt (EN: `Wi-Fi Info`, IT: `Info Wi-Fi`). Der separate Eintrag in den allgemeinen Einstellungen wurde entfernt. Die Info-Auswahl öffnet eine read-only Statusanzeige; ein eigener Menüindex hält die WLAN-Modusnummer unverändert.
+- Die Info-Anzeige zeigt tatsächlichen WLAN-Modus, Verbindungsstatus, SSID, IP, bei AP zusätzlich AP-IP und Clientzahl, bei STA RSSI sowie den Hostnamen `mini-os.local`. Klick kehrt ins WLAN-Untermenü zurück; der allgemeine Menü-Timeout schließt die Anzeige nicht.
 - `statusTick(millis())` wird bereits am Ende von `loop()` aufgerufen. Statusverwaltung und Netzwerk-/Verbindungslogik in `Network.cpp` blieben unverändert.
 - Änderungen nur in `Draw.cpp`, `Menu.h`, den drei Sprach-Menüvorlagen und `ats-mini.ino`. Flight-Radar-Funktion und deren Datenpfad nicht verändert.
-- Kein Compile, Build/Actions-Lauf, Flash oder Hardwaretest durch den Assistenten. Nutzer startet den Build selbst; Hardwareprüfung der WLAN-Menüs und Overlays steht aus.
+- Der Nutzer hat Build #83 gestartet und die Status-Popups bereits als funktionierend und optisch gelungen bestätigt. Die Verschiebung von `WLAN-INFO` ins WLAN-Untermenü ist noch nicht durch einen neuen Build/Hardwaretest bestätigt.
 
 ---
 

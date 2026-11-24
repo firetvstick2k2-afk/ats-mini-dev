@@ -1809,3 +1809,13 @@ Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherch
 5. Die betroffenen Handoff-Dateien nach dem Fix aktualisieren. Erst danach den Nutzer um seinen Build-/Hardwaretest bitten; keinen Build und keine GitHub Actions selbst starten, solange der Nutzer das nicht ausdrücklich verlangt.
 
 **Stand:** Diagnose anhand des aktuellen Quelltexts plausibel und direkt passend zum beobachteten Fehler; Fix noch nicht committet. Der Nutzer hat den Fehler am Gerät getestet und meldet ihn als reproduzierbar. JS8-Arbeit ist bis zur erfolgreichen WLAN-Korrektur und Nutzerbestätigung pausiert. FT8/FT4 bleibt unangetastet.
+
+
+## WLAN-Menü-Popup-Korrektur (2026-11-24)
+
+- Ursache: Das WLAN-Modus-Popup verwendete den übernommenen Index `wifiModeIdx` statt des temporären Navigationsindex `wifiMenuIdx`. Dadurch änderte der Encoder die interne Auswahl, während die sichtbare Popup-Zeile stehen blieb.
+- Korrektur ausschließlich in den drei Sprachvorlagen im Zweig `CMD_WIFIMODE`: Die Anzeige verwendet jetzt `wifiMenuIdx`; der Sonderindex `ITEM_COUNT(wifiModeDesc)` wird vor dem Arrayzugriff abgefangen und zeigt das jeweilige lokalisierte Info-Label.
+- Deutsch: `ats-mini/Menu_german.cpp.src` enthält die Korrektur bereits (aktueller Blob-SHA: `f363a715c350b3de2b64b7f1ce04c82a8e7570cf`). Englisch und Italienisch wurden jetzt korrigiert: `ats-mini/Menu_english.cpp.src` Commit `598576c272263d86aff0a1d1a5e542e19ec775a8`; `ats-mini/Menu_italian.cpp.src` Commit `784786bd7f71600d0127a17cadd7ef469ef96089`.
+- Labels für den Sonderindex: Deutsch `WLAN-INFO`, Englisch `Wi-Fi Info`, Italienisch `Info Wi-Fi`.
+- Keine Änderungen an `Network.cpp`, `Draw.cpp`, WLAN-Verbindungslogik, Flight Radar, JS8 oder FT8/FT4.
+- Noch kein Build, keine GitHub Actions und kein Hardwaretest durch ChatGPT gestartet. Nutzer muss den Firmware-Build und den Encoder-/Popup-Ablauf am Gerät prüfen. JS8 bleibt bis zur Nutzerbestätigung pausiert; FT8/FT4 bleibt unangetastet.

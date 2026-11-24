@@ -864,3 +864,12 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 - Diagnosepräfix `[BANDOPEN][WSPR]`.
 - Commits: cpp `38af3b41797be1326b3ee9059272bc865e36a162`, Header `ad0dedfb583a8f819cd1bbedd1db8cdd9fcc07e1`, Snapshot-Erhalt `7be455123291be823d8535ab6152d8febd3966a5`, Handoff `c807a672b8cfa52caf32999a6a6f55befdf54ff5`.
 - Kein Build, kein Actions-Lauf, kein Flash und kein Gerätetest. Nächster manueller Build bleibt #69; USB-Log muss API-JSON und reale LF/MF-Daten verifizieren.
+
+
+## Menübedienung – Schnell zurück zum Radio-Layout (2026-11-24)
+
+- Auf `development` angepasst; `main` bleibt unverändert.
+- Nach Auswahl von `LAUTSTÄRKE` schaltet der erste Klick in den Einstellmodus; Drehen ändert die Lautstärke; der nächste Klick setzt `currentCmd = CMD_NONE` und zeigt direkt wieder das Radio-Layout.
+- `BAND` verhält sich entsprechend: Drehen wählt weiterhin die sichtbaren Band-Presets; der nächste Klick beendet den Band-Einstellmodus und kehrt direkt zum Radio-Layout zurück.
+- Die Bestätigungsklicks werden explizit in `clickHandler()` behandelt. Es wird nicht zurück ins Hauptmenü gewechselt.
+- Kein Build gestartet, kein lokaler Compile, kein Flash-/Hardwaretest.

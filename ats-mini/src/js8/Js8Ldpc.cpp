@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Copyright (C) JS8Call contributors; adapted for ATS Mini.
- // Derived from JS8Call's JS8.cpp (GPL-3.0), including its LDPC parity
+// Copyright (C) 2025 Allan Bazinet <w6baz@arrl.net> (upstream JS8.cpp).
+// Adapted for ATS Mini from JS8Call's GPL-3.0 implementation, including its LDPC parity
  // matrix, belief-propagation graph and JS8 payload/CRC conventions.
  // See NOTICE.md and COPYING for provenance and license terms.
 

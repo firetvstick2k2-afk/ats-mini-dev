@@ -90,16 +90,15 @@ static void drawAboutProject()
   spr.drawString("Device:", 13, 96);
 
   spr.setTextColor(ABOUT_CYAN);
-  char version[12];
-  snprintf(version, sizeof(version), "v%1.1d.%2.2d", VER_APP / 100, VER_APP % 100);
-  spr.drawString(version, 87, 56);
+  // Fixed public About-screen version label for the V1.00 release baseline.
+  spr.drawString("V1.00", 87, 56);
   spr.drawString(__DATE__, 87, 76);
   spr.drawString("ATS Mini Receiver", 87, 96);
 
   spr.drawRoundRect(12, 121, 235, 28, 4, ABOUT_BLUE);
   spr.fillRoundRect(14, 123, 231, 24, 3, ABOUT_BG);
   spr.setTextColor(ABOUT_CYAN);
-  spr.drawString("github.com/13HN2709/ats-mini", 20, 129, FONT_SMALL);
+  spr.drawString("github.com/firetvstick2k2-afk", 20, 129, FONT_SMALL);
 
   spr.setTextColor(ABOUT_MUTED);
   spr.drawString("Rotate: next page", 12, 151, FONT_SMALL);
@@ -118,7 +117,7 @@ static void drawAboutCredits()
   spr.drawFastHLine(12, 119, 235, ABOUT_BLUE);
   spr.setTextColor(ABOUT_CYAN);
   spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-  spr.drawString("Custom FW by 13HN2709", 13, 128);
+  spr.drawString("Custom FW by Firetvstick2k2-afk", 13, 128);
 
   spr.setTextColor(ABOUT_MUTED);
   spr.setFont(FONT_SMALL);

@@ -55,3 +55,13 @@
 ## JS8 status cross-reference — 2026-11-24
 
 A follow-up JS8-only commit added a known-start/known-frequency NORMAL 8-FSK soft demodulator and a synthetic end-to-end host test. This did not modify Flight Radar code, assets, APIs, UI, or scheduling. See `JS8CALL_RECEIVE_DECODER.md` for the current JS8 state and GPL notices.
+
+
+## 2026-11-24 — bounded JS8 NORMAL acquisition candidate search
+
+- Added `Js8NormalAcquire.h/.cpp`: bounded coarse search over caller-specified frame-start and common-frequency-offset ranges. Search is allocation-free and capped by `maxCandidates`; it rejects tone grids outside the 4 kHz Nyquist band.
+- Candidate ranking uses the 21 NORMAL Costas pilots. The result is explicitly only a synchronization candidate; it is not a valid-frame lock and must still pass the existing LDPC decoder and JS8 CRC before any text is emitted.
+- Added `tests/js8_normal_acquire_test.cpp`. Host test compiled with `g++ -std=c++17 -O2 -Wall -Wextra -Werror` and passed: synthetic NORMAL pilot frame found with a 17-sample start displacement and +1.25 Hz offset; silence rejected; candidate budget respected.
+- This is a coarse bounded search primitive, not yet a full 15-second rolling-slot scanner. Search bounds/step sizes and thresholds are provisional; CPU cost, noise/interference false positives, timing refinement, and real JS8Call interoperability remain to be measured.
+- No firmware build, GitHub Actions run, hardware test, live AudioCaptureService integration, or full JS8 message decode was performed. FT8/FT4 and LILYGO GPIO11 guard remain untouched.
+- Licensing state: JS8 LDPC/payload component is adapted from GPL-3.0 JS8Call source and includes its license/provenance files. The repository remains private by user decision. Private visibility does not remove GPL obligations if the combined work is later conveyed/distributed; review those obligations before any external distribution.

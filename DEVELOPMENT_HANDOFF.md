@@ -1829,3 +1829,15 @@ Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherch
 - Die Änderung betrifft ausschließlich die Build-Artefakt-Verpackung; keine Firmware-Quelldatei, keine Decoderlogik und keine FT8/FT4-Datei wurde verändert.
 - Commit auf development: 2fd266b73a2da513d62c73349100ed229269c31b.
 - Kein Build und keine GitHub Actions wurden gestartet. Beim nächsten ausdrücklich angeforderten manuellen Workflow-Lauf muss geprüft werden, ob alle drei Dateien im Artefakt vorhanden sind. Für den Backtrace müssen ELF/MAP exakt aus demselben Build wie die geflashte BIN stammen.
+
+
+## 2026-11-24 — Neubuild-Workflow korrigiert (Actions-Lauf 45476742772)
+
+- Der Nutzer meldete den fehlgeschlagenen manuellen Lauf 45476742772 auf development (Run #85, Commit cf85f4fbbcc02cc47745928b7f6731eebf7e2a13).
+- Der Lauf endete vor dem Compile-Schritt. In den Jobdaten blieb „Cache Arduino packages and libraries“ als letzter ausgeführter Schritt stehen; Compile und Artefakt-Vorbereitung starteten nicht. Der Joblog-Endpunkt lieferte für diesen abgeschlossenen Lauf keinen lesbaren Loginhalt, daher ist die exakte Cache-Backend-Fehlermeldung nicht verfügbar.
+- Ursprüngliche Änderung: Cache-Schritt ist nun nicht mehr build-blockierend (`continue-on-error: true`); Cache-Key hängt nur von sketch.yaml ab.
+- Compile-Schritt wurde von arduino/compile-sketches Action auf einen direkten arduino-cli-Aufruf umgestellt. Arduino CLI 1.4.1 wird mit arduino/setup-arduino-cli@v2 installiert; Plattform ESP32 3.3.12 und die sechs in sketch.yaml definierten Bibliotheken werden explizit installiert. Build erfolgt mit Profil esp32s3-ospi in `ats-mini/build/esp32.esp32.esp32s3`, damit die Folgestufe BIN/ELF/MAP am gleichen festen Ort vorfindet.
+- Bestehende Prüfung/Kopie und Upload der drei Artefakte BIN, ELF und MAP bleiben bestehen; Release-Anhänge bleiben ebenfalls alle drei Dateien.
+- Workflow-Commit auf development: 62b2d92a65aa821e9fd8dba2bc9afdebab20a2e0.
+- Keine Firmware-Quelldateien oder Decoder geändert. FT8/FT4 unangetastet; main unverändert.
+- Noch kein Build/Actions-Lauf nach dieser Korrektur gestartet. Der nächste manuelle Lauf auf development muss Installations- und Compile-Schritte verifizieren sowie das Vorhandensein aller drei Dateien bestätigen.

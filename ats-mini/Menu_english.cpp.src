@@ -2198,7 +2198,7 @@ void drawSettingsPopup(uint16_t cmd)
     case CMD_USBMODE: valueText=usbModeDesc[usbModeIdx]; break;
     case CMD_TCPMODE: valueText=tcpModeDesc[tcpModeIdx]; break;
     case CMD_BLEMODE: valueText=bleModeDesc[bleModeMenuIdx]; break;
-    case CMD_WIFIMODE: valueText=wifiModeDesc[wifiModeIdx]; break;
+    case CMD_WIFIMODE: valueText = wifiMenuIdx == ITEM_COUNT(wifiModeDesc) ? "Wi-Fi Info" : wifiModeDesc[wifiMenuIdx]; break;
     case CMD_FM_REGION: valueText=fmRegions[FmRegionIdx].desc; break;
     case CMD_FM_STEREO: valueText=fmStereoDesc[fmStereoIdx]; break;
     case CMD_DSP_PATCHES: snprintf(value,sizeof(value),"PATCH %u",dspPatchesIdx); break;

@@ -44,3 +44,10 @@
 - Änderung committed auf `development`: `0d9b8941d5fee27fc6f7d12b2355c4db8faa1c3a`.
 - Der vorhandene WLAN-Modus-Menüeintrag wurde in diesem Commit noch nicht funktional erweitert; ein separates WLAN-Info-Menü ist weiterhin offen.
 - Kein Build, kein GitHub-Actions-Lauf, kein Compile, kein Flash und kein Hardwaretest gestartet. Der Nutzer startet den nächsten Build manuell.
+
+## Cross-project repository note — 2026-11-24
+
+- The repository owner has changed repository visibility to **private**.
+- All development remains on branch `development`; `main` remains protected.
+- No Flight Radar source, API, UI, image, or LittleFS behavior was changed in the JS8 GPL/LDPC milestone.
+- JS8 work is isolated under `ats-mini/src/js8/`; its GPLv3 notice and license are documented separately. This does not alter the Flight Radar implementation.

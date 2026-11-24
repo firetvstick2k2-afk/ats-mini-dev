@@ -34,34 +34,30 @@
 
 - `development` wurde auf den letzten vom Nutzer bestätigten funktionierenden Stand Build #69 zurückgesetzt: `7825f22feda8d095a542bf819a07f9bf62c23a7c`. `main` blieb unangetastet.
 - Als einzige Firmware-Ausnahme wurde anschließend die About-Anzeige isoliert wieder aufgenommen: Commit `cb0b305acdbb9fc7d79d2b7d0c8d0901fb510b7a` (`ats-mini/About.cpp`). Die vorhandene grafische Space-/Globus-Radio-Mast-Darstellung aus Build #69 blieb erhalten; geändert wurden nur Versionslabel `V1.00`, Repository-Adresse und Credit-Text.
-- Keine Wetterdienst-, WLAN-, Flight-Radar-, Decoder- oder Layout-Änderungen aus den späteren Commits übernommen. Kein Build/Actions-Lauf/Flash durch den Assistenten; Hardwaretest durch den Nutzer steht aus.
+- Keine Wetterdienst-, WLAN-, Decoder- oder Layout-Änderungen aus den späteren Commits übernommen. Kein Build/Actions-Lauf/Flash durch den Assistenten; Hardwaretest durch den Nutzer steht aus.
 
 ---
 
-## Band Opening Monitor – SWL/VHF-Erweiterung (2026-11-23)
+## Band Opening Monitor – aktueller Quellstand Build #89 (Commit b1a3303)
 
-- Zielbranch: `development`; kein Branch angelegt und `main` nicht verändert.
-- Die zehn direkten Map-For-HAM-AFU-Bewertungen bleiben unverändert: 160, 80, 60, 40, 30, 20, 17, 15, 12 und 10 m.
-- Map For HAM `solar.json` liefert zusätzlich vier veröffentlichte Gruppenwerte (`bands`). Diese werden als klar markierte Näherung (`SWL ~`) verwendet:
+**Status: Funktion im Quellstand vorhanden; separater Hardwaretest durch den Nutzer noch offen.**  
+Geprüft direkt in `ats-mini/src/radio/BandOpeningService.cpp/.h` aus dem exakt für Build #89 verwendeten Commit `b1a3303fc9e42c7af615885f54000efc53ab2e3f`.
+
+- **HF-AFU-Bänder:** Map For HAM `solar.json`, Feld `bands_detail`, liefert direkte Tag-/Nachtbewertungen für 160, 80, 60, 40, 30, 20, 17, 15, 12 und 10 m.
+- **SWL-Kurzwellenbänder:** Map For HAM `bands` liefert vier Gruppenwerte. Die Firmware übernimmt sie als Näherungen und kennzeichnet die betroffenen Zeilen mit `SWL ~`:
   - `80m-40m`: 90 m, 75 m, 49 m, 41 m
   - `30m-20m`: 31 m, 25 m, 22 m
   - `17m-15m`: 19 m, 16 m, 15 m BC
   - `12m-10m`: 13 m
-  Diese Gruppenwerte sind keine individuellen Bandmessungen. Tag/Nacht werden aus dem jeweiligen Gruppenwert übernommen.
-- 11 m CB bleibt eine Ableitung aus 10 m und 12 m (`CB ~`): gleiche Nachbarwerte werden übernommen; bei unterschiedlichen bekannten Werten wird Fair/Mittel gesetzt; fehlt einer der beiden Werte, bleibt 11 m Unknown.
-- LW/MW bleiben bewusst ohne Ampelfarbe. Für diese Bereiche wurde keine ausreichend belastbare, frei nutzbare Live-Datenquelle integriert; keine erfundenen Bedingungen.
-- Neue VHF/UHF-Aktivitätsquelle: SQ3SWG öffentliche, schreibgeschützte API (kein API-Key):
-  - `https://skeds.sq3swg.com/api/v1/public/propagation` für die europäische höchste Sporadic-E-MUF.
-  - `/spots?band=144&hours=6&limit=30` für 2-m-DX-Spots.
-  - `/spots?band=432&hours=6&limit=30` für 70-cm-DX-Spots.
-  - Abruf alle 15 Minuten; zwischen den drei Requests liegen mindestens 1,1 Sekunden (API-Limit ungefähr 1 Request/Sekunde).
-  - 2 m: Good bei Es-MUF >= 144 MHz oder mindestens 3 Spots in 6 h; Fair bei 1–2 Spots; ohne Nachweis Unknown.
-  - 70 cm: Good bei mindestens 3 Spots in 6 h; Fair bei 1–2 Spots; ohne Nachweis Unknown.
-  - Fehlende Spots bedeuten ausdrücklich nicht „Band geschlossen“ und werden daher nicht rot, sondern Unknown dargestellt. Beide Zeitspalten erhalten denselben Aktivitätsstatus. VHF-Daten verfallen nach 6 Stunden ohne erfolgreichen Abruf.
-  - Anzeige-Typ für 2 m/70 cm: `DX-AKT`. Die SQ3SWG-Seite nennt hamqsl.com (N0NBH) und prop.kc2g.com/GIRO als zugrunde liegende Datenquellen; diese Herkunft ist bei einer späteren Dokumentation/Anzeige zu berücksichtigen.
-- UKW/FM-MUF: vorhandener FMDX-Endpunkt und Parser bleiben unverändert. Die Firmware protokolliert bei einem Fehler bereits HTTP-Status und kompletten kurzen Antwort-Payload; ohne verifizierte alternative API wird kein Ersatz-Endpunkt geraten.
-- `BandOpeningService.cpp` und `BandOpeningService.h` enthalten die Änderungen. Das bestehende Display-Layout wurde nicht umgestaltet.
-- GitHub Actions wurde nicht gestartet. Letzter vorhandener Build: #68 (erfolgreich, vor diesen Änderungen); nächster manueller Build ist #69. Der Nutzer startet ihn selbst und testet anschließend die Hardware.
+  Das sind Gruppen-Näherungen, keine individuellen Messungen der jeweiligen Rundfunkbänder.
+- **11 m CB:** wird aus den benachbarten 10-m- und 12-m-AFU-Werten abgeleitet und mit `CB ~` markiert. Gleiche Nachbarwerte werden übernommen; bei unterschiedlichen bekannten Werten wird vorsichtig `Fair/MITTEL` verwendet; fehlt ein Nachbarwert, bleibt der Status unbekannt.
+- **LW/MW:** sind im Build-#89-Quellstand nicht mehr ohne Datenquelle. Eine separate Abfrage an `db1.wspr.live` nutzt WSPR-Aktivität der LF-/MF-Bereiche als ausdrücklich gekennzeichnete Propagations-Proxys (`LF ~` / `MF ~`), nicht als direkte LW-/MW-Rundfunkmessung. Die Daten werden alle 15 Minuten aktualisiert und nach sechs Stunden verworfen.
+- **2 m:** öffentliche SQ3SWG-API: `/api/v1/public/propagation` (europäische höchste Sporadic-E-MUF) sowie `/spots?band=144&hours=6&limit=30`. Status: `GUT` bei Es-MUF >= 144 MHz oder mindestens 3 Spots in 6 h; `MITTEL` bei 1–2 Spots; sonst `KEINE DATEN` (nicht fälschlich „geschlossen“).
+- **70 cm:** SQ3SWG `/spots?band=432&hours=6&limit=30`; `GUT` bei mindestens 3 Spots, `MITTEL` bei 1–2 Spots, sonst `KEINE DATEN`.
+- **UKW/FM:** genau wie vom Nutzer erinnert: Die Firmware übernimmt den 2-m-Status direkt für die UKW/FM-Zeile und kennzeichnet den Typ mit `2m ~`. Das ist eine persönliche Näherung/Indikation für mögliche FM-DX-Bedingungen, ausdrücklich keine direkte UKW-Messung oder eigenständige FM-MUF-Quelle. Die Quellcode-Kommentare benennen diese Einschränkung ausdrücklich.
+- **Aktualisierung:** HF/Map For HAM etwa alle 5 Minuten; SQ3SWG VHF/UHF etwa alle 15 Minuten; WSPR LF/MF etwa alle 15 Minuten. SQ3SWG-Abfragen werden mit mindestens 1,1 Sekunden Abstand ausgeführt. Die VHF-/WSPR-Daten haben eigene Zeitstempel und Verfallsregeln.
+- **Anzeige:** Bandmonitor ist in Build #89 integriert (`CMD_BAND_OPENING`, eigene Anzeige in `Draw.cpp`, Seiten-Navigation im Hauptloop). Er wird beim Öffnen gestartet und fordert WLAN für die Datenabfrage an; beim Verlassen wird die WLAN-Aufräumlogik ausgeführt.
+- **Wichtiger Prüfpunkt:** Die Funktion und die oben genannten Quellen/Zuordnungen sind im Build-#89-Quellstand vorhanden. Ob alle Endpunkte am Gerät aktuell erreichbar sind und ob die angezeigten Werte plausibel aktualisiert werden, muss der Nutzer separat auf Hardware prüfen. Besonders kontrollieren: 2 m, 70 cm, UKW/FM mit `2m ~`, SWL-Gruppenwerte, 11 m `CB ~`, sowie LW/MW `LF ~`/`MF ~`.
 
 ## PSK31 BPSK RX — initial integration (2026-11-23)
 
@@ -133,11 +129,11 @@ Last updated: 2026-11-24
 - FT8/FT4 and RTTY preset selection use a 2-second preview before committing. **CW preset scrolling is intentionally not yet converted to that same 2-second preview.** Do this after the user's current build/test cycle, matching the FT8/FT4 and RTTY behavior: preview while browsing, restore the original tuning when scrolling away/canceling, and commit only on click.
 
 ### Immediate test focus
-1. Build and flash the current `development` revision using the existing manual workflow.
-2. Verify CW page entry after tuning elsewhere: the displayed frequency must match the receiver's current frequency.
-3. Check CW AUTO Tone, audio level/peak/clipping display and actual decoding with a stable CW signal.
-4. Check FT8/FT4 and RTTY preset preview/restore/commit behavior and their latest UI changes.
-5. Report actual build and hardware results here. Source review is not a substitute for compilation or device verification.
+1. Build #89 flashen und den aktuellen bereinigten Stand auf Hardware testen (Nutzer startet den Test manuell).
+2. Band Opening Monitor separat prüfen: Quellenabruf, Aktualisierung und die im Abschnitt oben dokumentierten Ableitungen (insbesondere UKW/FM `2m ~`).
+3. Decoder-Rückmeldungen sammeln: CW-Seiteneinstieg/AUTO Tone, FT8/FT4 und RTTY-Preset-Vorschau sowie PSK31-Empfang.
+4. CW-Preset-Scrollen mit 2-Sekunden-Vorschau ist eine spätere, ausdrücklich geplante Verbesserung nach dem aktuellen Testzyklus.
+5. Tatsächliche Build- und Hardwareergebnisse dokumentieren; Quellcodeprüfung ersetzt keinen Gerätetest.
 
 ### Working rules
 - Fix user-reported bugs before continuing the feature roadmap.
@@ -197,7 +193,7 @@ Last updated: 2026-11-24
 - Native VHF scanning no longer calls `Scan.cpp`; the web scanner's existing global result buffer is untouched.
 - GitHub Actions workflow was changed earlier to `ubuntu-24.04` for both jobs after an Ubuntu runner/Python issue. Do not revert without a reason.
 
-## Future layout reference: GNBD miniradio (requested 2026-10-28)
+## Future layout idea: GNBD miniradio (requested 2026-10-28)
 - User wants to recreate the screenshot's receiver layout as close to 1:1 as possible in the ATS Mini V4 firmware, using the reference source at https://github.com/GNBD/ats-mini-dualboot/tree/main/GNBD%20miniradio.
 - The supplied screenshot is the visual target: dark near-black background, compact top status bar with time/signal/battery, VHF FM heading, large frequency digits, RSSI/SNR horizontal meters, right-side compact receiver settings, large RDS panel at bottom-left, and small SIG graph panel at bottom-right.
 - Specific adjustment requested: raise the “MHz” unit slightly higher relative to the frequency digits.
@@ -219,7 +215,7 @@ Last updated: 2026-11-24
 
 
 ## Future layout reference: lsongdev/tinyradio (requested 2026-10-29)
-- User wants the additional display layout shown near the bottom of https://github.com/lsongdev/tinyradio added to the project's layout TODO list. User jokingly notes they are a layout fan.
+- The TinyRadio-inspired layout was integrated into the firmware well before Build #89 and is considered complete by the user. Do not keep it in the active layout TODO list or reopen it without a new request.
 - The repository is an AM/FM/SSB SI4732 receiver firmware project for ATS Mini and GeekNest V5A. Inspect the specific screenshot/image near the bottom of the linked repository page and its corresponding implementation before planning a port.
 - Treat this as a separate future layout option, not a replacement for the TEF6686 default layout or the previously requested GNBD miniradio-inspired layout. Preserve existing layouts and isolate the implementation where possible.
 - Priority: after current VHF Spectrum scanner build and menu/input bugs are resolved. Confirm which exact bottom-of-page layout the user means if the repository page contains multiple candidates.
@@ -1098,8 +1094,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Korrektur ausschließlich in den drei Sprachvorlagen im Zweig `CMD_WIFIMODE`: Die Anzeige verwendet jetzt `wifiMenuIdx`; der Sonderindex `ITEM_COUNT(wifiModeDesc)` wird vor dem Arrayzugriff abgefangen und zeigt das jeweilige lokalisierte Info-Label.
 - Deutsch: `ats-mini/Menu_german.cpp.src` enthält die Korrektur bereits (aktueller Blob-SHA: `f363a715c350b3de2b64b7f1ce04c82a8e7570cf`). Englisch und Italienisch wurden jetzt korrigiert: `ats-mini/Menu_english.cpp.src` Commit `598576c272263d86aff0a1d1a5e542e19ec775a8`; `ats-mini/Menu_italian.cpp.src` Commit `784786bd7f71600d0127a17cadd7ef469ef96089`.
 - Labels für den Sonderindex: Deutsch `WLAN-INFO`, Englisch `Wi-Fi Info`, Italienisch `Info Wi-Fi`.
-- Keine Änderungen an `Network.cpp`, `Draw.cpp`, WLAN-Verbindungslogik, Flight Radar oder FT8/FT4.
-- Korrektur abgeschlossen und als erledigt dokumentiert. Der frühere offene Diagnose-/Arbeitsauftrag wurde entfernt. Keine Änderungen an `Network.cpp`, `Draw.cpp`, WLAN-Verbindungslogik, Flight Radar oder FT8/FT4.
+- Korrektur abgeschlossen und als erledigt dokumentiert. Der frühere offene Diagnose-/Arbeitsauftrag wurde entfernt.
 
 
 ## 2026-11-24 — ELF- und MAP-Dateien als Build-Artefakte
@@ -1133,3 +1128,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Workflow-Commit auf development: 6e50940c81584b272ce5c93589b50f13bed853b9.
 - Keine Decoder-/Firmware-Quelldateien geändert. FT8/FT4 unangetastet. main nicht geändert.
 - Noch kein Build gestartet; nächster manueller Lauf muss zeigen, ob Install Arduino CLI und Compile jetzt erreicht werden und alle drei Artefakte entstehen.
+
+
+## Projektstatus – Bereinigung nach Build #89 (2026-11-24)
+
+- **Flight Radar:** vom Nutzer vollständig gestrichen. Keine weitere Entwicklung oder Wiedereinführung. Die separate Datei `FLIGHT_RADAR_HANDOFF.md` wird aus `development` entfernt.
+- **ALL Band Spectrum:** vom Nutzer auf Hardware als zuverlässig funktionierend bestätigt – ERLEDIGT.
+- **Web ALL Band Scanner:** vom Nutzer auf Hardware als zuverlässig funktionierend bestätigt – ERLEDIGT.
+- **TinyRadio-Layout:** bereits seit längerer Zeit integriert – ERLEDIGT; kein aktiver TODO-Punkt.
+- **Band Opening Monitor:** im Build-#89-Quellstand enthalten. Quellen und Zuordnungen wurden geprüft; separater Hardwaretest bleibt offen. Insbesondere wird UKW/FM aus dem 2-m-Status abgeleitet und als `2m ~` gekennzeichnet. Details siehe Abschnitt „Band Opening Monitor – aktueller Quellstand Build #89“.
+- **GNBD-Miniradio-Layout:** bleibt als zukünftige Layoutidee vorgemerkt; nicht mit dem bereits integrierten TinyRadio-Layout verwechseln.

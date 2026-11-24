@@ -259,7 +259,7 @@ void netInit(uint8_t netMode)
     if(netMode!=NET_SYNC)
       statusShow(
         ("Connected to WiFi network (" + WiFi.SSID() + ")").c_str(),
-        ("IP : " + WiFi.localIP().toString() + " or atsmini.local").c_str()
+        ("IP : " + WiFi.localIP().toString() + " or mini-os.local").c_str()
       );
     else
       statusShow(nullptr);
@@ -269,7 +269,7 @@ void netInit(uint8_t netMode)
     // Show the access point details when it is the available connection.
     statusShow(
       ("Use Access Point " + String(apSSID)).c_str(),
-      ("IP : " + WiFi.softAPIP().toString() + " or atsmini.local").c_str()
+      ("IP : " + WiFi.softAPIP().toString() + " or mini-os.local").c_str()
     );
   }
   else
@@ -288,7 +288,7 @@ void netInit(uint8_t netMode)
     webInit();
 
     // Initialize mDNS
-    MDNS.begin("atsmini"); // Set the hostname to "atsmini.local"
+    MDNS.begin("mini-os"); // Set the hostname to "mini-os.local"
     MDNS.addService("http", "tcp", 80);
   }
 }
@@ -339,8 +339,8 @@ static void wifiPowerLevelOnEvent(WiFiEvent_t event)
 static bool wifiInitAP()
 {
   // These are our own access point (AP) addresses
-  IPAddress ip(10, 1, 1, 1);
-  IPAddress gateway(10, 1, 1, 1);
+  IPAddress ip(192, 168, 4, 1);
+  IPAddress gateway(192, 168, 4, 1);
   IPAddress subnet(255, 255, 255, 0);
 
   // Start as access point (AP)

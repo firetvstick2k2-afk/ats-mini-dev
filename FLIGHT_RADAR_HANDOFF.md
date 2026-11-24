@@ -23,3 +23,13 @@
 - Speicher-/LittleFS-Migration und Flight Radar bleiben bewusst außen vor.
 - Code-Commit: `441093f6eab03b65b5e8f26e484c85c8edf00a0e`.
 - Kein Build, kein GitHub-Actions-Lauf, kein Compile, kein Flash und kein Hardware-/Netzwerktest durch den Assistenten. Nutzer startet den nächsten Build manuell.
+
+
+## 2026-11-24 – WLAN-Status als kompaktes Overlay
+
+- `ats-mini/Draw.cpp` ergänzt `drawStatusOverlay()`: WLAN-/Betriebsstatusmeldungen werden nach dem Zeichnen des aktiven Radio-Layouts bzw. des Vollbild-Menüs als kleines, zentriertes Kästchen über den bestehenden Bildinhalt gelegt.
+- Der bisherige Bildschirmhintergrund wird für diese Statusmeldung nicht gelöscht; Layout bzw. Menü bleiben außerhalb des Overlays sichtbar.
+- Die vorhandene Statusverwaltung (`statusShow()` / `statusTick()`) und die vorhandenen WLAN-Meldungstexte in `Network.cpp` bleiben unverändert.
+- Änderung committed auf `development`: `0d9b8941d5fee27fc6f7d12b2355c4db8faa1c3a`.
+- Der vorhandene WLAN-Modus-Menüeintrag wurde in diesem Commit noch nicht funktional erweitert; ein separates WLAN-Info-Menü ist weiterhin offen.
+- Kein Build, kein GitHub-Actions-Lauf, kein Compile, kein Flash und kein Hardwaretest gestartet. Der Nutzer startet den nächsten Build manuell.

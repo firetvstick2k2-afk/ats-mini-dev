@@ -180,7 +180,8 @@ Network behavior should match the selected timing mode and existing digital deco
 
 ## 7. Licensing and source-use boundary
 
-The ATS Mini repository is MIT-licensed. The JS8Call reference implementation is GPLv3. Do not copy GPLv3 source files into the MIT project or perform a direct code port without first resolving the license compatibility and attribution implications. Use public protocol documentation and independently written implementation, or obtain an explicit licensing decision before importing upstream code. Record provenance for any algorithm or reference material used.
+The owner explicitly approved adapting the JS8Call GPLv3 implementation for the JS8 receive-only decoder and changed the repository to private for development. This supersedes the earlier clean-room-only restriction in the initial planning text. Keep the JS8 component's GPLv3 notices, COPYING and NOTICE files intact. The repository's private visibility does not remove GPL obligations if the combined firmware/source is later conveyed or distributed; review the applicable corresponding-source and installation-information requirements before any external distribution.
+
 
 ## 8. Acceptance criteria for the first milestone
 
@@ -433,3 +434,13 @@ The custom bitwise CRC routine was separately compared with Boost's `augmented_c
 - This is a coarse bounded search primitive, not yet a full 15-second rolling-slot scanner. Search bounds/step sizes and thresholds are provisional; CPU cost, noise/interference false positives, timing refinement, and real JS8Call interoperability remain to be measured.
 - No firmware build, GitHub Actions run, hardware test, live AudioCaptureService integration, or full JS8 message decode was performed. FT8/FT4 and LILYGO GPIO11 guard remain untouched.
 - Licensing state: JS8 LDPC/payload component is adapted from GPL-3.0 JS8Call source and includes its license/provenance files. The repository remains private by user decision. Private visibility does not remove GPL obligations if the combined work is later conveyed/distributed; review those obligations before any external distribution.
+
+
+## 2026-11-24 — bounded NORMAL timing/frequency refinement
+
+- Extended `Js8NormalAcquire` with a local refinement pass around a coarse candidate. The caller controls the time radius/step, frequency radius/step, and strict candidate budget.
+- Default refinement scans a ±40-sample window in 2-sample steps and a ±1.25 Hz window in 0.625 Hz steps, with a hard cap of 256 candidate evaluations. This is a bounded local search, not a full 15-second slot scanner.
+- A candidate must meet the configured NORMAL Costas-pilot match thresholds. This still does **not** establish a valid JS8 frame: only successful LDPC convergence plus JS8 CRC validation may authorize decoded text or a true receive lock.
+- Added `tests/js8_normal_refine_test.cpp`, using a synthetic frame beginning at sample 17 with a +1.25 Hz carrier offset; it checks sample-level timing refinement, frequency refinement, candidate cap, and silence rejection.
+- Test source has been added but **not executed**. No firmware build, GitHub Actions run, hardware test, or live audio integration was performed. FT8/FT4 and the LILYGO GPIO11/SPI guard remain untouched.
+- Next: execute the acquisition/refinement host tests, then design a rolling 15-second NORMAL frame scanner and validate it with independent JS8Call reference recordings before live worker integration.

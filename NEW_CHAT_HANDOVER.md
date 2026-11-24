@@ -929,3 +929,22 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 - Änderung committed auf `development`: `0d9b8941d5fee27fc6f7d12b2355c4db8faa1c3a`.
 - Der vorhandene WLAN-Modus-Menüeintrag wurde in diesem Commit noch nicht funktional erweitert; ein separates WLAN-Info-Menü ist weiterhin offen.
 - Kein Build, kein GitHub-Actions-Lauf, kein Compile, kein Flash und kein Hardwaretest gestartet. Der Nutzer startet den nächsten Build manuell.
+
+## Latest continuation note — 2026-11-24 (JS8 GPL path)
+
+The owner has changed `firetvstick2k2-afk/ats-mini-dev` to **private** and explicitly approved using the JS8Call GPLv3 implementation for JS8 receive decoding. Work remains exclusively on `development`; `main` is protected.
+
+New isolated files:
+- `ats-mini/src/js8/Js8Ldpc.h`
+- `ats-mini/src/js8/Js8Ldpc.cpp`
+- `ats-mini/src/js8/COPYING` (GPLv3 text)
+- `ats-mini/src/js8/NOTICE.md` (upstream provenance and distribution caution)
+- `tests/js8_ldpc_test.cpp`
+
+The decoder core adapts JS8Call's LDPC(174,87) parity graph/generator matrix, belief-propagation decoder, CRC-12 convention (polynomial 0xC06, XOR 42), and 12-character JS8 payload unpacking. Upstream source revision inspected: `js8call/js8call` commit `a7ff1be0b389d287fdc56e2ea0d06962aa68127d`.
+
+Status: core is isolated and **not yet connected to live audio**. Host test source is added but not executed. Build #84 passed on the earlier commit `b84d00b`; no build has been run after the JS8 commits. Do not claim the new code is compiled or hardware-tested.
+
+No FT8/FT4, Flight Radar, WLAN, or AudioCaptureService code was changed. Keep FT8/FT4 untouched. Next task is host validation, then NORMAL 8-FSK soft-symbol demodulation and integration through the existing capture service. Never do DSP/LDPC in the ADC callback.
+
+Licensing: keep the JS8 component's GPLv3 notices intact. The repository being private permits private development but does not remove GPL obligations on later conveyance; review the combined firmware and corresponding-source/installation-information requirements before any external distribution.

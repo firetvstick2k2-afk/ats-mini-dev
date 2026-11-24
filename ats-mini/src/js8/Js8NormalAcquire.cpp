@@ -2,6 +2,38 @@
 
 #include <math.h>
 
+bool Js8NormalAcquire::refine(const int16_t* samples, size_t sampleCount,
+                              size_t coarseFrameStart,
+                              float coarseFrequencyOffsetHz,
+                              float firstToneHz, const Refinement& cfg,
+                              Result& result) {
+  result = Result{};
+  if (!samples || !isfinite(coarseFrequencyOffsetHz) ||
+      !isfinite(firstToneHz) || !isfinite(cfg.frequencyRadiusHz) ||
+      !isfinite(cfg.frequencyStepHz) || cfg.frequencyRadiusHz < 0.0f ||
+      cfg.frequencyStepHz <= 0.0f || !cfg.startStepSamples ||
+      !cfg.maxCandidates ||
+      cfg.startRadiusSamples > static_cast<size_t>(-1) - coarseFrameStart) {
+    return false;
+  }
+
+  Search local{};
+  local.firstStart = coarseFrameStart > cfg.startRadiusSamples
+      ? coarseFrameStart - cfg.startRadiusSamples : 0;
+  local.lastStart = coarseFrameStart + cfg.startRadiusSamples;
+  local.startStep = cfg.startStepSamples;
+  local.firstToneHz = firstToneHz;
+  local.minFrequencyOffsetHz =
+      coarseFrequencyOffsetHz - cfg.frequencyRadiusHz;
+  local.maxFrequencyOffsetHz =
+      coarseFrequencyOffsetHz + cfg.frequencyRadiusHz;
+  local.frequencyStepHz = cfg.frequencyStepHz;
+  local.maxCandidates = cfg.maxCandidates;
+  local.minimumMatchedPilots = cfg.minimumMatchedPilots;
+  local.minimumMeanExpectedToBest = cfg.minimumMeanExpectedToBest;
+  return search(samples, sampleCount, local, result);
+}
+
 bool Js8NormalAcquire::search(const int16_t* samples, size_t sampleCount,
                               const Search& cfg, Result& result) {
   result = Result{};

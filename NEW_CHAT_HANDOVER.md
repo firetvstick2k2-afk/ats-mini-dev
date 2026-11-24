@@ -1001,3 +1001,13 @@ This is still not a live receiver: no timing/frequency search, slot acquisition,
 - Still missing: full rolling 15-second frame scanner, timing/slot phase tracking, live AudioCaptureService worker integration, independent reference recordings and live hardware validation.
 - No firmware build, Actions run, or hardware test was started. FT8/FT4 and LILYGO GPIO11 guard remain untouched.
 - User explicitly approved the GPLv3 JS8Call path for private development. Keep COPYING/NOTICE and GPL headers; review distribution obligations before conveying the combined firmware.
+
+
+## WLAN-Menü-Popup-Korrektur (2026-11-24)
+
+- Ursache: Das WLAN-Modus-Popup verwendete den übernommenen Index `wifiModeIdx` statt des temporären Navigationsindex `wifiMenuIdx`. Dadurch änderte der Encoder die interne Auswahl, während die sichtbare Popup-Zeile stehen blieb.
+- Korrektur ausschließlich in den drei Sprachvorlagen im Zweig `CMD_WIFIMODE`: Die Anzeige verwendet jetzt `wifiMenuIdx`; der Sonderindex `ITEM_COUNT(wifiModeDesc)` wird vor dem Arrayzugriff abgefangen und zeigt das jeweilige lokalisierte Info-Label.
+- Deutsch: `ats-mini/Menu_german.cpp.src` enthält die Korrektur bereits (aktueller Blob-SHA: `f363a715c350b3de2b64b7f1ce04c82a8e7570cf`). Englisch und Italienisch wurden jetzt korrigiert: `ats-mini/Menu_english.cpp.src` Commit `598576c272263d86aff0a1d1a5e542e19ec775a8`; `ats-mini/Menu_italian.cpp.src` Commit `784786bd7f71600d0127a17cadd7ef469ef96089`.
+- Labels für den Sonderindex: Deutsch `WLAN-INFO`, Englisch `Wi-Fi Info`, Italienisch `Info Wi-Fi`.
+- Keine Änderungen an `Network.cpp`, `Draw.cpp`, WLAN-Verbindungslogik, Flight Radar, JS8 oder FT8/FT4.
+- Noch kein Build, keine GitHub Actions und kein Hardwaretest durch ChatGPT gestartet. Nutzer muss den Firmware-Build und den Encoder-/Popup-Ablauf am Gerät prüfen. JS8 bleibt bis zur Nutzerbestätigung pausiert; FT8/FT4 bleibt unangetastet.

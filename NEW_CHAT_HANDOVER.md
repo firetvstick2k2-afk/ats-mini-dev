@@ -948,3 +948,9 @@ Status: core is isolated and **not yet connected to live audio**. Host test sour
 No FT8/FT4, Flight Radar, WLAN, or AudioCaptureService code was changed. Keep FT8/FT4 untouched. Next task is host validation, then NORMAL 8-FSK soft-symbol demodulation and integration through the existing capture service. Never do DSP/LDPC in the ADC callback.
 
 Licensing: keep the JS8 component's GPLv3 notices intact. The repository being private permits private development but does not remove GPL obligations on later conveyance; review the combined firmware and corresponding-source/installation-information requirements before any external distribution.
+
+## JS8 NORMAL demodulation follow-up
+
+Added `Js8NormalDemod.h/.cpp` and `tests/js8_normal_demod_test.cpp`. The demodulator evaluates the 58 data symbols at a caller-proposed start/frequency, computes eight Goertzel tone energies per symbol, and emits 174 max-log LLRs in JS8Call ordering (parity 87 bits first, message 87 bits second). The new end-to-end host test synthesizes a 79-symbol NORMAL waveform and exercises sync metric -> 8-FSK soft LLR -> LDPC -> CRC -> text/frame-type unpack.
+
+This is still not a live receiver: no timing/frequency search, slot acquisition, AudioCaptureService decoder subscriber, or live UI messages are implemented. Host tests are added but unrun. Do not claim a JS8 live decode or a post-change firmware build.

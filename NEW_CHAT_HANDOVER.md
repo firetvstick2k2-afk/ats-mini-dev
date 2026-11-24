@@ -873,3 +873,10 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 - `BAND` verhält sich entsprechend: Drehen wählt weiterhin die sichtbaren Band-Presets; der nächste Klick beendet den Band-Einstellmodus und kehrt direkt zum Radio-Layout zurück.
 - Die Bestätigungsklicks werden explizit in `clickHandler()` behandelt. Es wird nicht zurück ins Hauptmenü gewechselt.
 - Kein Build gestartet, kein lokaler Compile, kein Flash-/Hardwaretest.
+
+
+## Main menu and quick-return update (2026-11-24)
+- Main menu now starts with VOLUME/LAUTSTÄRKE, exposes UI LAYOUTS directly before PROGRAMMES/PROGRAMME, and places SETTINGS/EINSTELLUNGEN as the final functional menu entry (BACK/ZURÜCK remains the exit item after it).
+- UI LAYOUTS opens the existing layout selector directly; confirming a layout returns to the radio screen.
+- Confirming MODE, STEPS, AGC/ATTN, BANDWIDTH, SOFTMUTE, BFO, VOLUME and BAND returns directly to the radio screen. Existing special short/long-press behavior for SEEK, SCAN, MEMORY, AVC and SQUELCH is preserved.
+- No build, compile, Actions run, flash or hardware test was started.

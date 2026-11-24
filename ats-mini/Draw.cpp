@@ -109,6 +109,27 @@ bool drawStatus(int x, int y)
   return(false);
 }
 
+// Draw a compact, non-destructive status overlay over the current screen.
+// It is called after the active page has been rendered, so the radio layout
+// or menu remains visible around the message.
+static void drawStatusOverlay()
+{
+  if(!statusLines[0][0] && !statusLines[1][0]) return;
+
+  const int x = 10, y = 62, w = 300, h = 46;
+  spr.fillSmoothRoundRect(x, y, w, h, 5, 0x0841);
+  spr.drawRoundRect(x, y, w, h, 5, 0x07FF);
+  spr.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 4, 0x001F);
+
+  spr.setTextDatum(TC_DATUM);
+  spr.setTextColor(0x07FF);
+  spr.setFont(FONT_DEFAULT);
+  if(statusLines[0][0])
+    spr.drawString(statusLines[0], 160, y + 8, FONT_DEFAULT);
+  if(statusLines[1][0])
+    spr.drawString(statusLines[1], 160, y + 25, FONT_DEFAULT);
+}
+
 //
 // Draw zoomed menu item
 //
@@ -1166,6 +1187,7 @@ void drawScreen()
   if(currentCmd == CMD_MENU || currentCmd == CMD_SETTINGS || currentCmd == CMD_SPECTRUM_MENU || currentCmd == CMD_DECODER_MENU || currentCmd == CMD_PROGRAMMES)
   {
     drawFullScreenMenu(currentCmd);
+    drawStatusOverlay();
     spr.pushSprite(0, 0);
     return;
   }
@@ -1374,5 +1396,6 @@ void drawScreen()
   }
 
 
+  drawStatusOverlay();
   spr.pushSprite(0, 0);
 }

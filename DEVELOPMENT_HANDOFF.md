@@ -1,17 +1,18 @@
-## 2026-11-24 – WLAN-Status-Popups und WLAN-Info (aktueller Stand)
+## 2026-11-24 – WLAN-Info ins WLAN-Menü verschoben (aktueller Stand)
 
 - Ziel bleibt ausschließlich `firetvstick2k2-afk/ats-mini-dev`, Branch `development`. `main` blieb unverändert; es wurden keine zusätzlichen Branches angelegt.
 - Die Status-Popups in `ats-mini/Draw.cpp` sind jetzt kompakter und dynamisch breit: Breite richtet sich nach dem Text, die Meldung wird zentriert und mit gut lesbarer `FONT_SMALL` dargestellt. Das Overlay löscht den darunterliegenden Bildinhalt nicht; Layout bzw. Menü bleiben ringsum sichtbar.
 - Der zuvor vorhandene WLAN-Modus-Eintrag ist jetzt eindeutig als `WLAN-MODUS` (EN: `Wi-Fi Mode`, IT: `Modalità Wi-Fi`) beschriftet und behält unverändert die bestehende Modusauswahl.
-- Neuer separater Menüpunkt `WLAN-INFO` (EN: `Wi-Fi Info`, IT: `Info Wi-Fi`) am Ende der Einstellungen. Er öffnet ein read-only Overlay über dem aktiven Radio-Layout und zeigt tatsächlichen WLAN-Modus, Verbindungsstatus, SSID, IP-Adresse, bei aktivem AP zusätzlich AP-IP/Clientzahl, bei STA-Verbindung RSSI sowie `mini-os.local`.
-- Klick auf der Info-Anzeige führt zurück zur Einstellungsseite. Der Info-Bildschirm wird nicht durch den allgemeinen Menü-Timeout geschlossen.
+- `WLAN-INFO` ist jetzt direkt als zusätzlicher Auswahlpunkt im Untermenü `WLAN-MODUS` integriert (EN: `Wi-Fi Info`, IT: `Info Wi-Fi`). Der separate Eintrag in den allgemeinen Einstellungen wurde entfernt. Die WLAN-Modi behalten ihre bisherigen numerischen Werte; ein eigener Menüindex verhindert, dass die Info-Auswahl versehentlich an `netInit()` übergeben wird.
+- Die Info-Auswahl öffnet das read-only Overlay über dem aktiven Radio-Layout und zeigt tatsächlichen WLAN-Modus, Verbindungsstatus, SSID, IP-Adresse, bei aktivem AP zusätzlich AP-IP/Clientzahl, bei STA-Verbindung RSSI sowie `mini-os.local`. Klick führt zurück ins WLAN-Untermenü.
+- Klick auf der Info-Anzeige führt zurück ins WLAN-Untermenü. Der Info-Bildschirm wird nicht durch den allgemeinen Menü-Timeout geschlossen.
 - Änderungen an `ats-mini/Draw.cpp`, `ats-mini/Menu.h`, `ats-mini/Menu_english.cpp.src`, `ats-mini/Menu_german.cpp.src`, `ats-mini/Menu_italian.cpp.src` und `ats-mini/ats-mini.ino`.
-- Code-Commits in Reihenfolge: `939c2a82ab6479e5e01910f0d4995ee018d54f11` (Command), `e224c23b012629c2685545e08f9f00e39f512b9e` (EN), `5b688036e4ba5eda6e8cb25c4b2692c4f687cf21` (DE), `aa03c11cf5d654d8f9568c4f27d98da6dd54eed4` (IT), `3f69746759978351393a1537eecf7d084c02d91f` (Overlay), `22cbc2650ed94e7923ab7e4378258d74875c25cc` (Info-Timeout-Ausnahme).
+- Ursprüngliche WLAN-UI-Commits: `939c2a82ab6479e5e01910f0d4995ee018d54f11`, `e224c23b012629c2685545e08f9f00e39f512b9e`, `5b688036e4ba5eda6e8cb25c4b2692c4f687cf21`, `aa03c11cf5d654d8f9568c4f27d98da6dd54eed4`, `3f69746759978351393a1537eecf7d084c02d91f`, `22cbc2650ed94e7923ab7e4378258d74875c25cc`. Verschiebung ins WLAN-Untermenü: EN `5f1224205fcf487a4f73e82831c2ec40117b8dac`, DE `d4b78ca034e2e5a3fed5a6d2bd066d6ea2df7f84`, IT `be97e0bb802c1bf3f7f82c75549542436ad51bb3`.
 - Korrektur zur Statusverwaltung: `statusTick(millis())` wird bereits am Ende von `loop()` in `ats-mini/ats-mini.ino` aufgerufen und löst bei Ablauf ein Redraw aus. `statusShow()`/`statusTick()` und die WLAN-Ablauflogik in `Network.cpp` wurden daher nicht verändert.
 - `drawStatus()` bleibt als bestehender Legacy-Renderer unverändert. Der sichtbare Status wird über `drawStatusOverlay()` gerendert.
 - Keine Änderungen an WLAN-Zugangsdaten, Verbindungsmodi, AP-Adresse, mDNS-/Webserver-Initialisierung, NTP, Radio-Layouts oder Decoder-Funktionen.
 - Kein Compile, kein GitHub-Actions-Lauf, kein Flash und kein Hardwaretest durch den Assistenten. Der Nutzer startet den Build selbst.
-- Hardwareprüfung offen: OSPI-DE bauen; WLAN-Modus-Auswahl (Off/WEB CTRL/WEB+Conn/Connect/Sync Only), neue WLAN-Info (Off/AP/STA/AP+STA), SSID/IP/Hostname/RSSI/AP-Clients, Rückkehr per Klick sowie kurze Statusmeldungen auf Hauptlayout und Vollbildmenü prüfen.
+- Build #83 wurde vom Nutzer gestartet; Status-Popups wurden auf Hardware als funktionierend und optisch gut bestätigt. Noch offen: WLAN-Untermenü mit fünf Modi plus `WLAN-INFO` prüfen, Info-Overlay aus dem WLAN-Menü öffnen und per Klick wieder dorthin zurückkehren; danach WLAN-Modi und Datenfelder (SSID/IP/Hostname/RSSI/AP-Clients) prüfen.
 
 ---
 

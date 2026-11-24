@@ -895,3 +895,13 @@ Die bereits lauffähige Wetterfunktion aus `firetvstick2k2-afk/Mini_OS`, Branch 
 - Ursache: `drawScreen()` behandelte `CMD_ABOUT` bereits in der allgemeinen Settings-Popup-Abfrage (`currentCmd <= CMD_ABOUT`). Dadurch wurde `drawSettingsPopup()` mit der alten Beschriftung `ATS MINI V4` ausgegeben; der spätere Aufruf von `drawAbout()` war unerreichbar.
 - Korrektur in `ats-mini/Draw.cpp`: obere Grenze der allgemeinen Settings-Abfrage von `<= CMD_ABOUT` auf `< CMD_ABOUT` geändert. `CMD_ABOUT` erreicht nun den dedizierten grafischen About-Renderer in `About.cpp`.
 - Nur `Draw.cpp` und diese Übergabedokumentation geändert. Kein Build, kein Flash und kein Hardwaretest durch den Assistenten; Nutzer soll den nächsten OSPI-DE-Build selbst starten und die About-Seite prüfen.
+
+
+## WLAN/Netzwerk – AP-Adresse und mDNS-Hostname wiederhergestellt (2026-11-24)
+- Auf `development` wurde in `ats-mini/Network.cpp` die Access-Point-Adresse einschließlich Gateway von `10.1.1.1` auf `192.168.4.1` geändert.
+- Der mDNS-Hostname wurde von `atsmini.local` auf `mini-os.local` umgestellt: `MDNS.begin("mini-os")`; der HTTP-Dienst bleibt auf TCP-Port 80 registriert.
+- Die vorhandenen WLAN-Status-Popups bleiben ausdrücklich erhalten: Verbindungsversuch, erfolgreiche WLAN-Verbindung mit IP/Hostname, AP-SSID mit IP/Hostname sowie Fehlermeldung bei fehlender Verbindung. Diese Popups waren bereits im Build-#69-Baseline-Quelltext vorhanden; die spätere Änderung zum Entfernen der Popups wird NICHT übernommen.
+- WLAN-Zugangsdaten, Verbindungsmodi, Webserver, NTP-Ablauf und sonstige Netzwerk-/Speicherfunktionen wurden nicht geändert.
+- Speicher-/LittleFS-Migration und Flight Radar bleiben bewusst außen vor.
+- Code-Commit: `441093f6eab03b65b5e8f26e484c85c8edf00a0e`.
+- Kein Build, kein GitHub-Actions-Lauf, kein Compile, kein Flash und kein Hardware-/Netzwerktest durch den Assistenten. Nutzer startet den nächsten Build manuell.

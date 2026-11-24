@@ -388,3 +388,38 @@ The caller-owned BP workspace is approximately 8 KiB. It must not be placed on t
 3. Implement NORMAL 8-FSK soft demodulation for the 58 data symbols, mapping their three-bit tone metrics into the 174 LLRs in upstream order.
 4. Feed the LLRs into this isolated decoder from the JS8 worker and require both LDPC convergence and CRC success before emitting a message.
 5. Measure CPU time and memory on ESP32-S3 before enabling live decoding.
+
+## Follow-up — NORMAL 8-FSK soft demodulator added
+
+Added `ats-mini/src/js8/Js8NormalDemod.h/.cpp`. For a caller-proposed frame start and lowest-tone frequency, it:
+- evaluates the 29 parity and 29 message data symbols (symbol indices 7–35 and 43–71);
+- computes Goertzel energy for all eight tones per symbol;
+- converts each 3-bit tone metric into three max-log LLRs;
+- outputs 174 LLRs in the JS8Call order: parity bits 0–86, then message bits 87–173.
+
+Added `tests/js8_normal_demod_test.cpp`, which synthesizes all 79 NORMAL symbols from the JS8 encoder output, checks the 21 Costas pilots, demodulates the 58 data symbols, runs LDPC/CRC, and checks the decoded 12-character payload and frame type.
+
+### Host validation commands (not yet run)
+
+From the repository root:
+
+```sh
+g++ -std=c++17 -O2 tests/js8_ldpc_test.cpp ats-mini/src/js8/Js8Ldpc.cpp -lm -o /tmp/js8_ldpc_test
+/tmp/js8_ldpc_test
+
+g++ -std=c++17 -O2 tests/js8_normal_demod_test.cpp \
+  ats-mini/src/js8/Js8Ldpc.cpp \
+  ats-mini/src/js8/Js8NormalDemod.cpp \
+  ats-mini/src/js8/Js8NormalSync.cpp -lm -o /tmp/js8_normal_demod_test
+/tmp/js8_normal_demod_test
+```
+
+The custom bitwise CRC routine was separately compared with Boost's `augmented_crc<12, 0xc06>` on a sample byte sequence and matched. The full host regression tests above have **not** been executed. The firmware has **not** been built after these commits.
+
+### Still missing
+
+- Timing acquisition and frequency search; both demodulator layers currently require caller-proposed start/frequency.
+- A rolling 15-second frame buffer and JS8 NORMAL slot/frame acquisition.
+- Integration into a dedicated worker using the existing shared AudioCaptureService (no second ADC sampler; no DSP in callback).
+- Live message UI, false-positive rejection under noise/interference, CPU and PSRAM measurement on ESP32-S3.
+- Independent JS8Call reference-vector cross-check; the current synthetic end-to-end test shares the imported encoder matrix and is not an external interoperability proof.

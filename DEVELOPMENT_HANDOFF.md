@@ -1132,7 +1132,6 @@ These are inspiration/research candidates, not confirmed source matches for the 
 
 ## Projektstatus – Bereinigung nach Build #89 (2026-11-24)
 
-- **Flight Radar:** vom Nutzer vollständig gestrichen. Keine weitere Entwicklung oder Wiedereinführung. Die separate Datei `FLIGHT_RADAR_HANDOFF.md` wird aus `development` entfernt.
 - **ALL Band Spectrum:** vom Nutzer auf Hardware als zuverlässig funktionierend bestätigt – ERLEDIGT.
 - **Web ALL Band Scanner:** vom Nutzer auf Hardware als zuverlässig funktionierend bestätigt – ERLEDIGT.
 - **TinyRadio-Layout:** bereits seit längerer Zeit integriert – ERLEDIGT; kein aktiver TODO-Punkt.

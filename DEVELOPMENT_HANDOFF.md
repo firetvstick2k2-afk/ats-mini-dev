@@ -1755,3 +1755,10 @@ Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherch
 - No changes were made to FT8/FT4, Flight Radar, WLAN, or the existing capture path. FT8/FT4 remains hands-off.
 - Before any external distribution, review the combined-firmware GPLv3 implications and satisfy the applicable source and installation-information requirements.
 - Next: validate the new host test/build, then implement NORMAL 8-FSK soft demodulation and connect its 174 LLRs to this decoder. Keep DSP work out of the ADC callback and use the existing shared capture service.
+
+## JS8 follow-up — NORMAL soft demodulation layer
+
+- Added `ats-mini/src/js8/Js8NormalDemod.h/.cpp`. It measures all eight tones for the 58 NORMAL data symbols and emits 174 max-log LLR values in JS8Call order (87 parity bits followed by 87 message bits).
+- Added `tests/js8_normal_demod_test.cpp`, an end-to-end synthetic NORMAL frame test covering the 79-symbol frame, Costas sync metric, 8-FSK soft demodulation, LDPC, CRC, and payload unpacking.
+- This remains a known-start/known-frequency DSP layer. It does not search timing/frequency and is not connected to live audio.
+- The host test source has not been executed; no firmware build has been run after these commits.

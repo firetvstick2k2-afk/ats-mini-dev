@@ -1674,3 +1674,12 @@ Status: Diese Quellenstrategie ist verbindlich. Sie erlaubt eine breite Recherch
 - Die Abfrage ist auf wenige Spalten, zwei Bänder und sechs Stunden begrenzt. WSPR Live dokumentiert eine öffentliche Read-only-API und bittet um faire Nutzung; die Nutzungsbedingungen erlauben eigene Projekte nur, wenn Ergebnisse für alle kostenlos zugänglich sind, und schließen kommerzielle/profit-orientierte Nutzung aus. Quelle: https://wspr.live/ (Datenbankdokumentation und Disclaimer).
 - Diagnosepräfix: `[BANDOPEN][WSPR]`; es protokolliert LF/MF-Meldungen, unterschiedliche RX-Stationen, maximale Distanz und abgeleiteten Status.
 - **Prüfstatus:** Quelltextänderungen committed; kein Build, kein GitHub Actions-Lauf, kein Flash und kein Hardwaretest durchgeführt. API-Antwortformat und reale LF/MF-Meldungsdichte müssen beim nächsten manuellen Build über USB-Log überprüft werden. Build #69 bleibt der nächste manuelle Build; Actions nicht ohne ausdrückliche Aufforderung starten.
+
+
+## Menübedienung – Schnell zurück zum Radio-Layout (2026-11-24)
+
+- Auf `development` angepasst; `main` bleibt unverändert.
+- Nach Auswahl von `LAUTSTÄRKE` schaltet der erste Klick in den Einstellmodus; Drehen ändert die Lautstärke; der nächste Klick setzt `currentCmd = CMD_NONE` und zeigt direkt wieder das Radio-Layout.
+- `BAND` verhält sich entsprechend: Drehen wählt weiterhin die sichtbaren Band-Presets; der nächste Klick beendet den Band-Einstellmodus und kehrt direkt zum Radio-Layout zurück.
+- Die Bestätigungsklicks werden explizit in `clickHandler()` behandelt. Es wird nicht zurück ins Hauptmenü gewechselt.
+- Kein Build gestartet, kein lokaler Compile, kein Flash-/Hardwaretest.

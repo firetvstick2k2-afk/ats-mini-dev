@@ -156,11 +156,11 @@ static uint8_t decoderCategoryIndex = 0;
 static uint8_t decoderMenuIdx = 0;
 static const char *decoderMenu[] = {
   "INDIETRO", "FREQUENZE DECODER", "DECODER CW",
-  "DECODER RTTY", "FT8 / FT4", "NAVTEX"
+  "DECODER RTTY", "FT8 / FT4"
 };
 static const char *decoderMenuXXL[] = {
   "INDIETRO", "FREQUENZE DECODER", "DECODER CW",
-  "DECODER RTTY", "FT8 / FT4", "NAVTEX"
+  "DECODER RTTY", "FT8 / FT4"
 };
 static uint8_t decoderPresetIndex = 0;
 static bool decoderPresetView = false;
@@ -1007,7 +1007,6 @@ static void clickDecoderMenu(int idx)
     case 2: if(cwUiOpen()) currentCmd = CMD_CW_DECODER; break;
     case 3: if(rttyUiOpen(45.45f)) currentCmd = CMD_RTTY_DECODER; break;
     case 4: if(ftxUiOpen(FtxMode::FT8)) currentCmd = CMD_FTX_DECODER; break;
-    case 5: if(navtexUiOpen()) currentCmd = CMD_NAVTEX; break;
     default: currentCmd = CMD_MENU; break;
   }
 }
@@ -1112,7 +1111,6 @@ bool clickHandler(uint16_t cmd, bool shortPress)
     case CMD_FTX_DECODER: ftxUiExit(); break;
     case CMD_CW_DECODER: cwUiExit(); break;
     case CMD_RTTY_DECODER: rttyUiExit(); break;
-    case CMD_NAVTEX: navtexUiClick(); break;
     case CMD_SPECTRUM_MENU:
       if(spectrumMenuIdx == 0) spectrumScannerStart();
       else currentCmd = CMD_SPECTRUM_MENU; // All-band scanner is reserved for a later feature.

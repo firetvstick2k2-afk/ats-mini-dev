@@ -2331,7 +2331,7 @@ bool decoderFrequencyTick(uint32_t now)
   const bool tuned = tuneDecoderFrequencyPreset(presetIndex);
   if(tuned) decoderLastTunedPreset = decoderPresetIndex;
   restoreDecoderFrequencyPreviewAudio();
-  else statusShow("Preset cannot be tuned", "No matching receiver band");
+  if(!tuned) statusShow("Preset cannot be tuned", "No matching receiver band");
   return tuned;
 }
 

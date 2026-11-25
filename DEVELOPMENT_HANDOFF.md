@@ -1452,3 +1452,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Existing decoder implementations, decoder services, audio capture, timers, and interrupts were not intentionally changed.
 - Files changed: new `ats-mini/src/radio/BandOpeningService.cpp/.h`; updated `ats-mini/Menu.h`, three language menu sources, `ats-mini/Draw.cpp`, `ats-mini/ats-mini.ino`, and `ats-mini/sketch.yaml`.
 - Changes are committed directly to `development`. Static source review remains in progress. No build, GitHub Action, flash, or hardware test was run; compilation and device behavior are not yet verified.
+
+
+## HF Bandmonitor — statischer Vorab-Audit (25.11.2026)
+- Vor dem ersten Build zwei konkrete Integrationsfehler gefunden und direkt auf `development` korrigiert: `fetchConditions()` deklariert jetzt lokal `using Status = BandOpeningService::Status;`; `ArduinoJson (7.4.2)` ist nun auch im Profil `esp32s3-qspi` eingetragen.
+- Korrektur-Commits: `eff1c57276e635ce305b1b0145ca713a46afaafe` (Status-Typ), `28b701ae7f59df138986f1baa00f9a6c58a3643a` (QSPI-Abhängigkeit).
+- Statisch erneut geprüft: Menüaktion in DE/EN/IT ruft `bandOpeningUiOpen()` auf; Draw-Dispatch vorhanden; Encoder-Seitenwechsel, Klick-Refresh, Langdruck-Exit und Timeout-Ausnahme vorhanden.
+- Keine Aufrufe von `netInit()`/`netStop()` im Bandmonitor-Service; keine Logger-Aufrufe. Bestehende Decoder-/Audio-Dateien wurden nicht geändert.
+- Noch offen: echte Compilerprüfung und Laufzeit-/Hardwareprüfung. Kein Build, keine Action, kein Flash und kein Hardwaretest wurde gestartet.

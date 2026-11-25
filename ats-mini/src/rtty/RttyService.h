@@ -42,6 +42,7 @@ private:
   volatile bool signal_=false;
   float baud_=45.45f,markHz_=0,spaceHz_=0,toneLowHz_=0,toneHighHz_=0;
   uint8_t polarity_=0;
+  uint8_t signalHoldFrames_=0;
   float dc_=2048.0f;
   float frame_[1024]{};
   size_t frameCount_=0;

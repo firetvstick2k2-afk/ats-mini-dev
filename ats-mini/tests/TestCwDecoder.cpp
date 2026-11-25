@@ -26,7 +26,7 @@ static std::vector<int16_t> makeSignal(const char* msg,float wpm,float tone,floa
   std::vector<int16_t> out; float phase=0;
   emit(out,false,10,wpm,tone,fs,phase);
   for(const char* p=msg;*p;++p) {
-    if(*p==' ') { emit(out,false,4,wpm,tone,fs,phase); continue; }
+    if(*p==' ') { emit(out,false,5,wpm,tone,fs,phase); continue; }
     const char* code=morse(*p);
     for(const char* q=code;*q;++q) {
       emit(out,true,*q=='-'?3.0f:1.0f,wpm,tone,fs,phase);

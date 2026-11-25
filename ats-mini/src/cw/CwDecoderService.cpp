@@ -55,7 +55,14 @@ void CwDecoderService::exit() {
 void CwDecoderService::setTone(float toneHz) {
   if (!mutex_ || !initialized_) return;
   xSemaphoreTake(mutex_, portMAX_DELAY);
-  decoder_.setTone(toneHz);
+  if (fabsf(decoder_.getTone() - toneHz) >= 1.0f) {
+    decoder_.setTone(toneHz);
+    decoder_.reset();
+    shownText_[0] = 0;
+    wpm_ = 0;
+    signal_ = false;
+    lastToneMs_ = 0;
+  }
   xSemaphoreGive(mutex_);
 }
 

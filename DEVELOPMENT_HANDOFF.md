@@ -1,6 +1,6 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-11-21 (RTTY preset preview submenu)
+Last updated: 2026-11-25 (WLAN/EiBi centered overlays)
 Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
 Active work branch: `development` (the sole development branch; never modify `main` except for a completed, tested feature explicitly approved for promotion)
 
@@ -1364,3 +1364,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Statischer Quell-Audit: CW-, RTTY- und FT8/FT4-UI-Funktionen sind vorhanden; die verwendeten Service-Aufrufe passen zu den aktuellen Service-Headern. Alle geänderten Quell-Dateien haben ausgeglichene Klammern. Die drei Sprachvarianten enthalten die erforderlichen Menü-Routen und Popup-Renderer. FtxDecoderService.cpp ist bytegenau auf Build-27-Stand; CwDecoderService und RttyService wurden nicht verändert. Das ersetzt keinen Compilerlauf.
 - Der statische Funktions-/Integrationsaudit des UI-Passes ist abgeschlossen. Es wurde kein Build, keine GitHub Action, kein Flash und kein Hardwaretest gestartet; die Workflow-Datei ist auf manuellen Dispatch ausgelegt. Nächster Schritt ist der vom Nutzer gestartete OSPI-DE-Build und anschließend der Hardware-Härtetest. Erst nach erfolgreichem UI-Test werden die übrigen Funktionen und Änderungen aus dem Backup schrittweise zurückintegriert; nach jeder Integration FT8 gezielt auf Resets testen, bis der auslösende Commit/die auslösende Änderung eingegrenzt ist.
 - Vor jeder weiteren Dateiänderung zuerst den aktuellen GitHub-Inhalt und Blob-SHA abrufen. Alle Arbeiten bleiben auf development; main und der Backup-Branch bleiben unangetastet.
+
+
+## WLAN- und EiBi-Status-Pop-ups — 2026-11-25
+- WLAN-Info wurde als read-only Overlay wieder integriert: Auswahl „WLAN-Info“ im WLAN-Menü öffnet ein kompaktes zentriertes Fenster über dem aktuellen Radiolayout; Modus, Verbindungsstatus, SSID, IP, AP-Clients bzw. RSSI und Hostname werden angezeigt. Ein Klick führt zurück zur WLAN-Auswahl. Die Anzeige verändert den WLAN-Zustand nicht.
+- Allgemeine Statusmeldungen (darunter EiBi-Lade-/Ergebnisstatus) werden wieder als zentrierte, in der Breite an den Text angepasste Pop-ups über dem aktuellen Bildschirm gezeichnet. Der Radiountergrund bleibt außerhalb des Fensters sichtbar. Lange Zeilen werden für die Fensterbreite gekürzt.
+- Die Anzeige ist in EN/DE/IT-Menüquellen verdrahtet. WLAN-Info wird vom Inaktivitäts-Timeout ausgenommen, bis der Nutzer per Klick zurückgeht.
+- Volume-, Helligkeits- und sonstige Einstellungs-Pop-ups wurden nicht verändert. EIBI.cpp, FT8/FT4-Decoderlogik, AudioCapture und Layout-Renderer wurden nicht geändert.
+- Änderungen: Draw.cpp, Menu.h, Menu_english.cpp.src, Menu_german.cpp.src, Menu_italian.cpp.src, ats-mini.ino.
+- Nur Quelltextintegration und statische Plausibilitätsprüfung; kein Build, keine GitHub Action, kein Flash und kein Hardwaretest. WLAN-Panel, EiBi-Statusdauer/-darstellung und Klick-zurück müssen vom Nutzer auf dem Gerät geprüft.

@@ -1788,8 +1788,8 @@ void drawFullScreenMenu(uint16_t cmd)
   const bool settingsPage = cmd == CMD_SETTINGS;
   const bool spectrumPage = cmd == CMD_SPECTRUM_MENU;
   const int rawIdx = settingsPage ? settingsIdx : (spectrumPage ? spectrumMenuIdx : menuIdx);
-  const int selected = settingsPage && rawIdx > MENU_ZOOM ? rawIdx - 1 : rawIdx;
-  const int count = settingsPage ? ITEM_COUNT(settings) - 1 :
+  const int selected = rawIdx;
+  const int count = settingsPage ? ITEM_COUNT(settings) :
     (spectrumPage ? ITEM_COUNT(spectrumMenu) : ITEM_COUNT(menu));
   const char *title = settingsPage ? "IMPOSTAZIONI" :
     (spectrumPage ? "SPETTRO" : "MENU PRINCIPALE");
@@ -1816,8 +1816,7 @@ void drawFullScreenMenu(uint16_t cmd)
     if(item >= count) break;
     const int y = 40 + row * 36;
     const bool active = item == selected;
-    const int settingsItem = settingsPage && item >= MENU_ZOOM ? item + 1 : item;
-    const char *label = settingsPage ? settingsXXL[settingsItem] :
+    const char *label = settingsPage ? settingsXXL[item] :
       (spectrumPage ? spectrumMenuXXL[item] : menuXXL[item]);
     if(active) {
       spr.drawRoundRect(9, y, 298, 31, 3, cyan);

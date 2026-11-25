@@ -1,5 +1,6 @@
 #include "CwUi.h"
 #include "../DecoderMenuUi.h"
+#include "../DecoderPageLayout.h"
 #include "CwDecoderService.h"
 #include "../audio/AudioCaptureService.h"
 #include "Common.h"
@@ -168,73 +169,15 @@ bool cwUiTick(uint32_t now) {
 }
 
 void drawCwDecoderPage() {
-  constexpr uint16_t bg=0x0000, cyan=0x07FF, green=0x07E0, white=0xFFFF, grey=0x7BEF;
-  spr.fillSprite(bg);
-
-  // Match the clean, borderless FT8 page: no decorative boxes around CW data.
-  char frequencyText[24];
-  snprintf(frequencyText,sizeof(frequencyText),"%lu.%03lu",
-           static_cast<unsigned long>(currentFrequency/1000),
-           static_cast<unsigned long>(currentFrequency%1000));
-  spr.setTextColor(white);
-  spr.setTextDatum(TL_DATUM);
-  const int frequencyWidth=spr.drawString(frequencyText,8,5,&lgfx::fonts::Orbitron_Light_24);
-  spr.setTextDatum(ML_DATUM);
-  spr.setTextColor(cyan);
-  spr.drawString("kHz",8+frequencyWidth+7,19,FONT_SMALL);
-
   const bool active=service.signal();
   char status[32];
   snprintf(status,sizeof(status),"%s  %d WPM",active?"CW":"SEARCH",service.wpm());
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(active?green:grey);
-  spr.drawString(status,311,15,FONT_SMALL);
-
-  char toneText[32];
-  snprintf(toneText,sizeof(toneText),"AUTO TONE  %.0f Hz",service.tone());
-  spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(cyan);
-  spr.drawString(toneText,10,34,FONT_SMALL);
-  char levelText[32];
-  snprintf(levelText,sizeof(levelText),"AUDIO LEVEL %u",
-           static_cast<unsigned>(service.audioLevel()));
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(cyan);
-  spr.drawString(levelText,310,34,FONT_SMALL);
-
   const uint16_t level=service.audioLevel()>500?500:service.audioLevel();
-  spr.drawRect(8,49,304,10,cyan);
-  spr.fillRect(10,51,300,6,bg);
-  if(level) spr.fillRect(10,51,(300*level)/500,6,active?green:cyan);
-
-  const char* decoded=service.text();
-  const size_t len=strlen(decoded);
-  constexpr size_t charsPerLine=34;
-  const int rowY[4]={68,91,114,137};
-  const size_t visibleChars=charsPerLine*4;
-  const size_t first=len>visibleChars?len-visibleChars:0;
-  for(int row=0;row<4;++row) {
-    const size_t offset=first+static_cast<size_t>(row)*charsPerLine;
-    if(offset<len) {
-      size_t count=len-offset;
-      if(count>charsPerLine) count=charsPerLine;
-      char line[charsPerLine+1];
-      memcpy(line,decoded+offset,count);
-      line[count]=0;
-      spr.setTextDatum(TL_DATUM);
-      spr.setTextColor(green);
-      spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-      spr.drawString(line,12,rowY[row]);
-    } else if(row==0&&!active) {
-      spr.setTextDatum(TL_DATUM);
-      spr.setTextColor(grey);
-      spr.setFont(FONT_SMALL);
-      spr.drawString("WAITING FOR CW SIGNAL...",12,rowY[row]);
-    }
-  }
+  DecoderPageLayout::draw(currentFrequency,status,service.text(),
+                           "WAITING FOR CW SIGNAL...",level,500);
 
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(cyan);
+  spr.setTextColor(0x07FF);
   spr.setFont(FONT_SMALL);
   spr.drawString("CLICK: ACTIONS   LONG PRESS: EXIT",160,162);
 

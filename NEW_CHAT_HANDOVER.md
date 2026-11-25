@@ -103,7 +103,7 @@ Layout-Indizes (bestehende Indizes erhalten):
 
 ## 7. Korrigierte verbindliche Entwicklungsreihenfolge — 2026-11-21
 
-**Korrektur: JS8Call ist Priorität Nr. 1. Danach folgt FM DX.** Diese Reihenfolge ersetzt alle früheren Prioritätslisten.
+**Aktueller Arbeitsstand (25.11.2026):** FT8/FT4 bleibt geschützt; aktuelle Aufgabe ist die gemeinsame FT8-artige Darstellung für CW und RTTY. JS8 wurde auf ausdrücklichen Nutzerwunsch aus dem Firmwareprojekt entfernt.
 
 1. **JS8Call – nativer Empfangsdecoder**
    - Ausschließlich Empfang: keine Sendefunktion, kein Encoder, keine PTT, kein TX-Menü und keine TX-Hardware.
@@ -616,3 +616,11 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Zusätzlich wird vor dem Verbindungsaufbau `WiFi.setHostname("mini-os")` gesetzt, damit der DHCP-Hostname im WLAN ebenfalls konsistent ist.
 - Nur `ats-mini/Network.cpp` geändert; Menü-/Popup-Verhalten und FT8/FT4-Decoder unangetastet.
 - Statische Quelltextprüfung durchgeführt; kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
+
+
+## Aktueller Stand — 25.11.2026
+- FT8-Test #95: Nutzer meldete bisher störungsfreien Betrieb ohne Abstürze; Testergebnis bleibt vom Nutzer zu bestätigen.
+- Aktuelle Aufgabe: CW- und RTTY-Seiten erhalten die FT8/FT4-Aufteilung (Frequenzkopf, Status/Textzähler, segmentierter Pegelbalken, vier Textzeilen). Decoder-DSP und Audio-Capture bleiben unverändert.
+- JS8 wurde auf ausdrücklichen Nutzerwunsch aus dem Firmware-Build und den Menüs entfernt. Historische JS8-Entwicklungsnotizen in diesem Handoff sind Archiv und keine aktive Roadmap.
+- Arbeitsregeln unverändert: ausschließlich `development`; vor Änderungen Dateien und SHAs frisch abrufen; `main` niemals ohne ausdrückliche Freigabe ändern; FT8/FT4 nicht anfassen; nach jeder sinnvollen Änderung beide Handoff-Dateien aktuell halten.
+- Es wurde kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.

@@ -16,7 +16,6 @@
 #include "src/ftx/FtxUi.h"
 #include "src/cw/CwUi.h"
 #include "src/rtty/RttyUi.h"
-#include "src/js8/Js8Ui.h"
 #include "src/radio/FmDxController.h"
 #include "src/radio/FmDxUi.h"
 #include "Storage.h"
@@ -137,11 +136,11 @@ static const char *programmesMenu[] = { "DECODER", "FM-DX", "INDIETRO" };
 static uint8_t decoderMenuIdx = 0;
 static const char *decoderMenu[] = {
   "INDIETRO", "FREQUENZE DECODER", "DECODER CW", "DECODER RTTY",
-  "FT8 / FT4", "MONITOR JS8 RX"
+  "FT8 / FT4"
 };
 static const char *decoderMenuXXL[] = {
   "INDIETRO", "FREQUENZE DECODER", "DECODER CW", "DECODER RTTY",
-  "FT8 / FT4", "MONITOR JS8 RX"
+  "FT8 / FT4"
 };
 static const char *decoderCategoryLabels[] = {
   "CW",
@@ -1012,7 +1011,6 @@ static void clickDecoderMenu(int idx)
     case 2: if(cwUiOpen()) currentCmd = CMD_CW_DECODER; break;
     case 3: if(rttyUiOpen(45.45f)) currentCmd = CMD_RTTY_DECODER; break;
     case 4: if(ftxUiOpen(FtxMode::FT8)) currentCmd = CMD_FTX_DECODER; break;
-    case 5: if(js8UiOpen()) currentCmd = CMD_JS8_MONITOR; break;
     default: currentCmd = CMD_PROGRAMMES; break;
   }
 }

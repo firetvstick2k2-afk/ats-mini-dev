@@ -1,5 +1,6 @@
 #include "RttyUi.h"
 #include "../DecoderMenuUi.h"
+#include "../DecoderPageLayout.h"
 #include "RttyService.h"
 #include "Common.h"
 #include "Menu.h"
@@ -379,73 +380,17 @@ bool rttyUiTick(uint32_t now) {
 }
 
 void drawRttyDecoderPage() {
-  constexpr uint16_t bg=0x0000,cyan=0x07FF,green=0x07E0,white=0xFFFF,grey=0x7BEF,red=0xF800;
-  spr.fillSprite(bg);
-
-  // Clean FT8-family presentation: no decorative data boxes.
-  char frequencyText[24];
-  snprintf(frequencyText,sizeof(frequencyText),"%lu.%03lu",
-           static_cast<unsigned long>(currentFrequency/1000),
-           static_cast<unsigned long>(currentFrequency%1000));
-  spr.setTextColor(white);
-  spr.setTextDatum(TL_DATUM);
-  const int frequencyWidth=spr.drawString(frequencyText,8,5,&lgfx::fonts::Orbitron_Light_24);
-  spr.setTextDatum(ML_DATUM);
-  spr.setTextColor(cyan);
-  spr.drawString("kHz",8+frequencyWidth+7,19,FONT_SMALL);
-
   const bool active=service.signal();
   char status[32];
-  snprintf(status,sizeof(status),"%s  %.2f Bd",active?"RX":"NO RX",service.baud());
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(active?green:grey);
-  spr.drawString(status,311,15,FONT_SMALL);
-
-  char toneInfo[48];
-  if(service.markHz()>0 && service.spaceHz()>0)
-    snprintf(toneInfo,sizeof(toneInfo),"MARK %.0f  SPACE %.0f Hz",service.markHz(),service.spaceHz());
-  else snprintf(toneInfo,sizeof(toneInfo),"TONE PAIR: SEARCHING");
-  spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(cyan);
-  spr.drawString(toneInfo,10,37,FONT_SMALL);
-
-  char bfoInfo[32];
-  if(bfoAuto) snprintf(bfoInfo,sizeof(bfoInfo),"BFO AUTO");
-  else snprintf(bfoInfo,sizeof(bfoInfo),"BFO %+d Hz",static_cast<int>(currentBFO));
-  spr.setTextDatum(TR_DATUM);
-  spr.drawString(bfoInfo,310,37,FONT_SMALL);
-
-  const char* decoded=service.text();
-  const size_t len=strlen(decoded);
-  constexpr size_t charsPerLine=34;
-  const int rowY[4]={61,85,109,133};
-  const size_t visibleChars=charsPerLine*4;
-  const size_t first=len>visibleChars?len-visibleChars:0;
-  for(int row=0;row<4;++row) {
-    const size_t offset=first+static_cast<size_t>(row)*charsPerLine;
-    if(offset<len) {
-      size_t count=len-offset;
-      if(count>charsPerLine) count=charsPerLine;
-      char line[charsPerLine+1];
-      memcpy(line,decoded+offset,count);
-      line[count]=0;
-      spr.setTextDatum(TL_DATUM);
-      spr.setTextColor(green);
-      spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-      spr.drawString(line,12,rowY[row]);
-    } else if(row==0&&!active) {
-      spr.setTextDatum(TL_DATUM);
-      spr.setTextColor(grey);
-      spr.setFont(FONT_SMALL);
-      spr.drawString("WAITING FOR RTTY SIGNAL...",12,rowY[row]);
-    }
-  }
+  snprintf(status,sizeof(status),"%s  %.2f Bd",active?"RTTY":"SEARCH",service.baud());
+  DecoderPageLayout::draw(currentFrequency,status,service.text(),
+                           "WAITING FOR RTTY SIGNAL...",active?500:0,500);
 
   char footer[80];
   if(bfoAuto) snprintf(footer,sizeof(footer),"CLICK: ACTIONS  LONG PRESS: EXIT");
   else snprintf(footer,sizeof(footer),"ROTATE: BFO  CLICK: ACTIONS  LONG: EXIT");
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(cyan);
+  spr.setTextColor(0x07FF);
   spr.setFont(FONT_SMALL);
   spr.drawString(footer,160,162);
 

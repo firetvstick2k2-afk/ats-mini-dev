@@ -1,6 +1,6 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-11-25 (WLAN/EiBi centered overlays)
+Last updated: 2026-11-25 (CW/RTTY decoder layout alignment; JS8 removal)
 Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
 Active work branch: `development` (the sole development branch; never modify `main` except for a completed, tested feature explicitly approved for promotion)
 
@@ -13,7 +13,7 @@ Active work branch: `development` (the sole development branch; never modify `ma
 
 ## Working agreement
 - Keep this file current after every meaningful feature or code change. Use it as the handoff reference when starting a new chat.
-- **Bugfix priority:** when the user reports a bug during planned feature work, pause the roadmap and handle that bug first; after the fix, resume the previous highest-priority task (currently JS8Call).
+- **Bugfix priority:** when the user reports a bug during planned feature work, pause the roadmap and handle that bug first; after the fix, resume the currently agreed decoder/layout task.
 - New features must be isolated from existing features wherever practical. If implementing a feature would require changing shared feature-specific logic, duplicate that logic into a new module/state/handler for the new feature rather than refactoring the established feature.
 - Preserve Dual RX, existing Web Spectrum behavior, Clean Layout and especially Layout-TEF6686 unless a change is explicitly required.
 - Shared low-level radio/scanning primitives may be reused only after checking their side effects and compatibility.
@@ -1392,3 +1392,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Zusätzlich wird vor dem Verbindungsaufbau `WiFi.setHostname("mini-os")` gesetzt, damit der DHCP-Hostname im WLAN ebenfalls konsistent ist.
 - Nur `ats-mini/Network.cpp` geändert; Menü-/Popup-Verhalten und FT8/FT4-Decoder unangetastet.
 - Statische Quelltextprüfung durchgeführt; kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
+
+
+## Decoder layout alignment and JS8 removal — 2026-11-25
+- User requested the CW and RTTY receive pages to use the same FT8/FT4 visual layout: frequency position/font, top status and text counter, segmented green/yellow/red meter, and four borderless decoded-text rows with matching spacing and colors.
+- Added `ats-mini/src/DecoderPageLayout.h` as a presentation-only helper. CW and RTTY now use the same 320x170 page geometry and row positions as FT8/FT4. Their decoder services, audio capture, DSP, tune behavior, presets, and action menus were not changed.
+- CW meter uses its existing audio-level metric. RTTY currently exposes only a signal-present flag in its service API, so its shared meter is a signal-presence indication (empty while searching, filled while receiving), not an audio-amplitude measurement.
+- JS8 was removed at the user's request: removed its menu entries/routes, display dispatch, command definition, main-loop handlers, Makefile wildcard inclusion, JS8 source directory, JS8 host test, and standalone JS8 planning document. Historical JS8 notes remain archived in this handoff and are superseded by this removal decision.
+- FT8/FT4 decoder implementation and service files were not modified. No firmware build, GitHub Actions run, flash, or hardware test was performed. User must build and verify CW/RTTY rendering and ensure FT8/FT4 remains stable.

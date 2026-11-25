@@ -1400,3 +1400,14 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - CW meter uses its existing audio-level metric. RTTY currently exposes only a signal-present flag in its service API, so its shared meter is a signal-presence indication (empty while searching, filled while receiving), not an audio-amplitude measurement.
 - JS8 was removed at the user's request: removed its menu entries/routes, display dispatch, command definition, main-loop handlers, Makefile wildcard inclusion, JS8 source directory, JS8 host test, and standalone JS8 planning document. Historical JS8 notes remain archived in this handoff and are superseded by this removal decision.
 - FT8/FT4 decoder implementation and service files were not modified. No firmware build, GitHub Actions run, flash, or hardware test was performed. User must build and verify CW/RTTY rendering and ensure FT8/FT4 remains stable.
+
+
+## Decoder-Preset-Vorschau bleibt beim Encoder-Drehen bedienbar — 2026-11-25
+- Einheitliches Verhalten für CW-, FT8-, FT4- und RTTY-Presets sowie für die Preset-Auswahl unter Decoder → Decoder-Frequencies.
+- Beim Weiterdrehen während einer hörbaren Vorschau wird der Lautsprecherpfad sofort stummgeschaltet. Die eigentliche Rückabstimmung wird nicht mehr bei jedem Encoder-Schritt synchron ausgeführt.
+- Die neue Frequenz wird nach zwei Sekunden Encoder-Ruhe abgestimmt und die Vorschau wieder hörbar gemacht. Beim Bestätigen während dieser Wartezeit wird direkt das aktuell markierte Preset übernommen.
+- Bei CW/FT8/FT4/RTTY bleiben ursprünglicher VFO, BFO und die vorherigen Band-Speicherwerte bis zum Bestätigen bzw. Verlassen gesichert. Beim Wechsel zwischen Presets wird nur der vorherige temporäre Band-Speicher zurückgesetzt; die Rückkehr zum ursprünglichen VFO erfolgt erst beim Abbrechen/Verlassen.
+- In der allgemeinen Decoder-Frequency-Auswahl wird die alte Vorschau beim Drehen sofort stummgeschaltet und nach dem zweisekündigen Abstimmen der neuen Auswahl wieder in den vorherigen Lautsprecherzustand zurückgesetzt.
+- Geändert: `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/cw/CwUi.cpp`, `ats-mini/src/rtty/RttyUi.cpp` sowie die Menüquellen EN/DE/IT.
+- Nur UI-/Preset-Vorschau-Steuerung und Lautsprecher-Mute; keine Änderungen an FT8/FT4-DSP, Decoder-Service, Audio-Capture oder FT8/FT4-Decodierlogik.
+- Quelltextänderungen committed auf `development`; statische Quelltextprüfung noch ausstehend. Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.

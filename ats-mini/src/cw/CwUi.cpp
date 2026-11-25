@@ -175,6 +175,7 @@ void drawCwDecoderPage() {
     constexpr uint16_t panel = 0x0008, highlight = 0x0359;
     spr.fillRect(28, 31, 264, 126, panel);
     spr.drawRect(28, 31, 264, 126, green);
+    spr.drawRect(29, 32, 262, 124, 0x0359);
     spr.setTextDatum(MC_DATUM);
     spr.setTextColor(white, panel);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
@@ -182,10 +183,10 @@ void drawCwDecoderPage() {
     const char* labels[kMenuCount] = {"TONE FREQUENCY", "CLEAR TEXT", "RESET DECODER", "BACK", "EXIT CW"};
     for (uint8_t i = 0; i < kMenuCount; ++i) {
       const int y = 58 + i * 18;
-      const uint16_t bg = (i == menuIndex) ? highlight : panel;
-      spr.fillRect(36, y - 7, 248, 16, bg);
+      spr.fillRect(36, y - 7, 248, 16, panel);
+      if (i == menuIndex) spr.drawRoundRect(36, y - 7, 248, 16, 2, green);
       spr.setTextDatum(ML_DATUM);
-      spr.setTextColor(white, bg);
+      spr.setTextColor(white, panel);
       spr.setFont(FONT_SMALL);
       spr.drawString(labels[i], 43, y + 1);
       if (i == 0) {

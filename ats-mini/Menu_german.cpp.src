@@ -18,6 +18,7 @@
 #include "src/cw/CwUi.h"
 #include "src/radio/FmDxController.h"
 #include "src/radio/FmDxUi.h"
+#include "src/radio/BandOpeningService.h"
 #include "Storage.h"
 
 #include <time.h>
@@ -132,7 +133,7 @@ static int visibleBandIndexAtOffset(int offset)
 
 int8_t menuIdx = MENU_KEYPAD;
 static uint8_t programmesMenuIdx = 0;
-static const char *programmesMenu[] = { "DECODER", "FM-DX", "ZURÜCK" };
+static const char *programmesMenu[] = { "DECODER", "HF BANDMONITOR", "FM-DX", "ZURÜCK" };
 static const char *decoderCategoryLabels[] = {
   "CW",
   "FT8",
@@ -1006,7 +1007,8 @@ static void clickProgrammesMenu(int idx)
   switch(idx)
   {
     case 0: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
-    case 1: fmDxUiOpen(); break;
+    case 1: bandOpeningUiOpen(); break;
+    case 2: fmDxUiOpen(); break;
     default: currentCmd = CMD_MENU; break;
   }
 }

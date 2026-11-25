@@ -1851,6 +1851,9 @@ void drawFullScreenMenu(uint16_t cmd)
   const int first = max(0, min(count - visibleRows, selected - 1));
 
   spr.fillSprite(bg);
+  // Consistent cyan frame around the full-screen list.
+  spr.drawRect(8, 6, 304, 143, cyan);
+  spr.drawRect(9, 7, 302, 141, blue);
   spr.fillRect(8, 7, 4, 22, cyan);
   drawXXLText(title, 18, 10, white, FONT_SMALL);
   // The former "DR / ATS MINI" was an unexplained placeholder. Keep only
@@ -1875,13 +1878,16 @@ void drawFullScreenMenu(uint16_t cmd)
       (spectrumPage ? spectrumMenu[item] :
        (decoderPage ? decoderMenu[item] : menu[item]));
     if(active) {
-      spr.fillRoundRect(9, y, 298, 31, 3, blue);
-      spr.fillRect(9, y, 3, 31, cyan);
+      // Outline-only selection keeps the row background transparent.
+      spr.drawRoundRect(9, y, 298, 31, 3, cyan);
+      spr.drawRoundRect(10, y + 1, 296, 29, 2, blue);
+      spr.fillRect(9, y + 3, 3, 25, cyan);
+      spr.fillRect(304, y + 3, 3, 25, cyan);
     }
     char number[5];
     snprintf(number, sizeof(number), "%02d", item + 1);
     drawXXLText(number, 18, y + 8, active ? white : cyan, FONT_SMALL);
-    drawXXLText(label, 52, y + 8, active ? white : 0xBDF7, FONT_SMALL);
+    drawXXLText(label, 52, y + 8, white, FONT_SMALL);
     if(!settingsPage && !decoderPage && !spectrumPage) {
       char value[24] = "";
       switch(item) {

@@ -207,7 +207,9 @@ void RttyService::processSamples(const int16_t* samples,size_t count) {
   for(size_t i=0;i<count;++i) {
     const float raw=static_cast<float>(samples[i]);
     dc_+=(raw-dc_)*0.001f;
-    const float normalized=(raw-dc_)/2048.0f;\n    frame_[frameCount_++]=normalized;\n    spectrum_.push(normalized);
+    const float normalized=(raw-dc_)/2048.0f;
+    frame_[frameCount_++]=normalized;
+    spectrum_.push(normalized);
     if(frameCount_==kFrameSamples) {
       float low=0,high=0;
       const bool found=estimateTones(frame_,low,high);

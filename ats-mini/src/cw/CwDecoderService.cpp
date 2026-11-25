@@ -112,6 +112,7 @@ void CwDecoderService::consumeSamples(const int16_t* samples, size_t count) {
   decoder_.push(samples, static_cast<int>(count));
   for (size_t i = 0; i < count; ++i) {
     const float value = static_cast<float>(samples[i]);
+    spectrum_.push((value-dcEstimate_)/2048.0f);
     dcEstimate_ += (value - dcEstimate_) * 0.001f;
     devSum_ += fabsf(value - dcEstimate_);
     if (++devCount_ >= kSampleRate / 2) {

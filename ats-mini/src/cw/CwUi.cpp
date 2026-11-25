@@ -237,7 +237,8 @@ void drawCwDecoderPage() {
       const char* labels[kMenuCount] = {
         "CW FREQUENCIES", "CLEAR TEXT", "RESET DECODER", "SPECTRUM", "BACK", "EXIT CW"
       };
-      const char* values[kMenuCount] = {nullptr,nullptr,nullptr,spectrumMode?"ON":"OFF",nullptr,nullptr};\n      DecoderMenuUi::draw("CW ACTIONS", labels, values, kMenuCount, menuIndex,
+      const char* values[kMenuCount] = {nullptr,nullptr,nullptr,spectrumMode?"ON":"OFF",nullptr,nullptr};
+      DecoderMenuUi::draw("CW ACTIONS", labels, values, kMenuCount, menuIndex,
                           "TURN: SELECT", "CLICK: OPEN", nullptr, true);
     }
   }

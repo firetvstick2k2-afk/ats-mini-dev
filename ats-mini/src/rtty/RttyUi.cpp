@@ -438,7 +438,7 @@ void drawRttyDecoderPage() {
       };
       const char* values[kMenuCount] = {
         nullptr, bfoAuto ? "AUTO" : "MANUAL", nullptr, nullptr,
-        nullptr, nullptr, nullptr, nullptr
+        nullptr, nullptr, spectrumMode?"ON":"OFF", nullptr
       };
       char baudValue[16], polarityValue[16];
       snprintf(baudValue, sizeof(baudValue), "%.2f Bd", baudChoices[baudIndex]);

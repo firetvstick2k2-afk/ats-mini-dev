@@ -1,6 +1,6 @@
 # ATS Mini Dev — Übergabe für neuen Chat
 
-Stand: 25.11.2026 — Build #98 stabil; HF Bandmonitor erfolgreich getestet; CW-Verbesserungen als nächster Schritt.
+Stand: 26.11.2026 — Build #98 stabil; CW-Tonfilter-Upgrade committed, Build #99 durch Nutzer ausstehend.
 Repository: `firetvstick2k2-afk/ats-mini-dev`
 Arbeitsbranch: `development`
 Stabile Referenz: **Build #97** (vom Nutzer als neuester stabiler, vollständig funktionierender Stand bestätigt).
@@ -659,3 +659,13 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Spätere RESONIK-Ideen (noch nicht beauftragt): Band View/Auto-Store, Beacon Tracker/Propagation, Signal Logger, Backup/Restore, CAT-Steuerung.
 - Weiterhin ausschließlich development; main nur nach ausdrücklicher Anweisung „Bitte Main überschreiben“. Vor jeder Änderung bestehender Dateien Inhalt und SHA aus GitHub abrufen. MIT-Lizenz und Copyright-Hinweise erhalten. Beide Handoff-Dateien nach sinnvollen Änderungen aktuell halten.
 - Builds/Actions/Flash/Hardwaretests führt der Nutzer selbst aus, sofern nicht ausdrücklich anders beauftragt.
+
+
+## CW-Decoder-Upgrade — Stand 26.11.2026
+- Build #98 bleibt stabile Referenz; HF Bandmonitor vom Nutzer erfolgreich getestet.
+- CW-Ton folgt jetzt dem aktiven SI4735-SSB-Filter: Device-Index 4 (0.5k) → 500 Hz; Index 5 (1.0k) → 1000 Hz; sonst 700 Hz. Für USB/LSB; bei Öffnen der CW-Seite und nach CW-Preset-Wechsel gesetzt.
+- Bei Tonänderung werden Decoderzustand und angezeigte CW-Daten zurückgesetzt. Layout und Bedienung bleiben unverändert.
+- Geändert: `src/cw/CwUi.cpp`, `src/cw/CwDecoderService.cpp`; Commits 646c994a162286fd0dac7335821c3f84cf270ae5 und 6036bf31a94911b97960740e2bf3f35a6e2f1350.
+- Host-Test hinzugefügt: `ats-mini/tests/TestCwDecoder.cpp` (synthetische 4-kHz-Signale mit 500/700/1000 Hz und 30 WPM); MIT-Attribution enthalten. Test wurde nicht ausgeführt.
+- Keine separate RESONIK-ADC-Task übernommen; gemeinsame AudioCaptureService bleibt unverändert. Nonblocking-Mutex-Blockverhalten bleibt unverändert, weil Warten im Audio-Callback die gemeinsame Sampling-Task blockieren könnte.
+- FT8/FT4 einschließlich Decoderkern und AudioCapture-Pfad unangetastet. Keine Firmware-Kompilierung/Action/Flash/Hardwareprüfung durch den Assistenten. Nächster Schritt: Nutzer-Build #99 und CW-Empfangstest mit 0.5k-, 1.0k- und breiterem Filter.

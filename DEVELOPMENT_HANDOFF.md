@@ -1,3 +1,15 @@
+## 2026-11-25 – Build #90: zweiter FT8-Test mit aktiviertem Extra-USB-LOG
+
+- Nutzer hat Build #90 erneut getestet; Extra USB-LOG war in den Settings aktiviert und wird beim Boot wiederhergestellt. Im Bootlog stehen `[BOOT][SETTINGS] loaded=1 usb_log_enabled=1` und `[LOG] Extra USB diagnostics enabled`.
+- Die Audio-Task-Diagnose zeigt weiterhin stabile Werte. Bei `elapsed_ms=33000`: `total_samples=131793`, `heap_free=150952`, `heap_min=150868`, `task_stack_high_water=1888`, ein Subscriber und 4000 Hz. Die SYS-Health-Meldung bei 60 s meldet ebenfalls 150952 Byte freien Heap, 150868 Byte Minimum, 10 Tasks und `slow_loops=0`.
+- Der Reset erfolgt um 07:23:25.482. Aus dem Audio-Task-Zeitstempel bei 33 s ergibt sich eine Laufzeit von ungefähr 46,6 s seit Start des Audio-Capture-Tasks.
+- Neuer Backtrace: `0x420310d8:0x3fcc7290 0x42031281:0x3fcc7350 0x403850bd:0x3fcc7370`. Mit derselben Build-#90-ELF liegt der erste Eintrag erneut in `AudioCaptureService::sampleTask()` (im Bereich der bereits identifizierten Sampling-Schleife); danach folgen `AudioCaptureService::taskEntry()` und FreeRTOS `vPortTaskWrapper`. Im Unterschied zum vorherigen Mitschnitt ist kein separater ESP-Timer-Frame im Backtrace enthalten. Die Ursache ist weiterhin nicht bewiesen.
+- Auch dieser Mitschnitt enthält keinen Panic-/Exception-Kopf (kein Guru-Meditation-/Exception-Typ, keine Register/EXCVADDR), sondern nur den Backtrace und den anschließenden Software-Reboot. Der genaue Auslöser bleibt daher offen.
+- Zusammen mit den vorigen Build-#90-Tests bestätigt dies den wiederkehrenden Absturzkontext im gemeinsamen Audio-Capture-Task bei stabil erscheinendem Heap und ausreichendem Stack-Watermark. Kein belastbarer Hinweis auf einen FT8-Decoderfehler; FT8/FT4-Code bleibt unangetastet.
+- Nächster Schritt: keine weitere Änderung auf Verdacht. Die Panic-Ausgabe bzw. mögliche Core-Dump-Konfiguration gezielt untersuchen; bis dahin keine Firmware-Änderung und kein neuer Build. Nur `development` ist Arbeitszweig; `main` und `backup/development-2026-11-24` bleiben unverändert.
+
+---
+
 ## 2026-11-25 – FT8-Hardwaretest Build #89: Reset und Backtrace-Auswertung
 
 - Nutzer hat Build #89 auf dem ATS Mini getestet; beim Start von FT8 tritt reproduzierbar ein Reset auf. FT8-Start und DSP-Initialisierung werden zunächst erfolgreich protokolliert: `mode=FT8`, `sample_rate=4000`, `block_samples=24`, `initialized=1`.

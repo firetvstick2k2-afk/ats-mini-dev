@@ -571,3 +571,21 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Decoder-Aktionsmenüs visuell vereinheitlicht, ohne Menüaktionen oder Decoderzustände zu ändern: `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/rtty/RttyUi.cpp` und `ats-mini/src/cw/CwUi.cpp`. Auswahlzeilen sind jetzt konturiert statt vollflächig gefüllt; Menüfenster haben einen klareren doppelten Rahmen und die Einträge bleiben weiß. FT8/FT4-DSP und `FtxDecoderService.cpp` nicht geändert. Commits: `fd083cbbece5b8d03f4db5a1c626e3c4ecb14e96`, `2ef0197e9a633e9e3415a67b6d48aafee4886ce7`, `b6b6768b6d4a0041b80ead77735838584d940cec`.
 
 - Italienische Haupt- und Einstellungsmenüs auf die scrollende Drei-Zeilen-Darstellung gebracht. Die italienischen Bezeichnungen und vorhandenen Menüaktionen bleiben erhalten; alle 22 Einstellungen bleiben sichtbar. Änderung ausschließlich in `ats-mini/Menu_italian.cpp.src`; Commits: `d46ba71c07e3ab6807ad756b3c15f6b18d74c39e`, `0466a273dd0c3940128344ad6ede40e3e851749c`.
+
+## Aktueller Stand — UI-Menü-Rückholung abgeschlossen (2026-11-25)
+
+Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückholung noch als offen beschreiben.
+
+- Branch ausschließlich development. main und backup/development-2026-11-24 wurden nicht verändert.
+- Hauptmenü in EN/DE/IT: Volume, Keypad, Band, Mode, BFO, Steps, Seek, Scan, Memory, Squelch, Bandwidth, Frequency, AGC/ATTN, AVC, SoftMute, Dual RX, VFO A/B, VHF Spectrum, All Band Spectrum, UI Layouts, Programmes, Settings, Back.
+- Programmes enthält Decoder, FM-DX und Back. Decoder enthält Back, Decoder Frequencies, CW, RTTY, FT8/FT4 und JS8 RX Monitor. Alle Einträge sind mit vorhandenen Funktionen verbunden.
+- Decoder-Frequenz-Back führt zurück in das Decoder-Untermenü. CW besitzt zusätzlich ein Frequenz-Preset-Untermenü mit Vorschau; RTTY- und FT8/FT4-Aktions-/Preset-Menüs verwenden den gemeinsamen DecoderMenuUi-Renderer.
+- Die drei Sprachdateien enthalten die Vollbild-Menüs und Popup-Renderer. Italienische Einstellungen zeigen ebenfalls die Back-Zeile korrekt; DAB-Layoutname und XXL-Umlautpunkte wurden an EN/DE angeglichen.
+- Radio-Regler, Volume und Brightness verwenden die Vollbild-Popups. Volume bestätigt zurück ins Hauptmenü; Mode, Steps, AGC/ATT, Bandwidth, SoftMute, BFO, Band und UI-Layouts kehren nach Bestätigung zum Radio-Bildschirm zurück.
+- CW-, RTTY- und FT8/FT4-UI-Layouts wurden auf den gemeinsamen Renderer gebracht. CW-Langdruck beendet den Decoder passend zum Footer. RTTY-Interaktions-/Tick-/Displayfunktionen sind vollständig erhalten.
+- Layout-Historie bewahrt: HJB und TEF6686 enthalten neuere Designänderungen als Build #27 und bleiben im aktuellen development-Stand. Clean, DABStyle, Decoder, Default, NewUI, SMeter und TinyRadio entsprechen dem Build-#27-Stand.
+- Makefile verfolgt jetzt alle Layout-*.cpp-Dateien, src/cw/*.cpp, src/cw/*.h und src/DecoderMenuUi.h als Abhängigkeiten.
+- Schutz: FtxDecoderService.cpp bleibt bytegenau auf Build-#27-Stand. CwDecoderService und RttyService wurden in diesem UI-Pass nicht geändert. Kein Decoder-DSP-/Audio-Capture-Kern wurde im Zuge der UI-Portierung geändert.
+- Statischer Integrationsaudit abgeschlossen: Funktions-/Service-Aufrufe geprüft, alle verwendeten Service-Methoden sind in den aktuellen Headern vorhanden, Klammern ausgeglichen. Kein Compilerlauf, keine GitHub Action, kein Flash und kein Hardwaretest gestartet.
+- Letzter Quellcommit: 88792885d69c64de79b66ff198f218e4531501ed. Letzter Handoff-Commit: cf71b0ea0412835f1d2ce82a710fcbfb5092e77a.
+- Nächster Schritt: manueller OSPI-DE-Build durch den Nutzer, danach Hardware-Härtetest. Erst nach erfolgreichem UI-Test weitere Funktionsänderungen einzeln zurückholen und FT8 nach jedem Schritt auf Resets prüfen.

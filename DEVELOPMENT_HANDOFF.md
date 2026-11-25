@@ -1384,3 +1384,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - In EN/DE/IT-Menüquellen identisch umgesetzt. WLAN-/EiBi-Overlays bleiben unverändert.
 - FT8/FT4, AudioCapture, Decoder und Layout-Renderer nicht geändert.
 - Quelltextänderung und statische Prüfung; kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
+
+
+## WLAN-Hostname auf mini-os.local — 2026-11-25
+- Die WLAN-Statusmeldungen für Client- und Access-Point-Verbindung nennen jetzt `mini-os.local` statt `atsmini.local`.
+- Der mDNS-Dienst startet mit `MDNS.begin("mini-os")`, damit `http://mini-os.local` aufgelöst wird.
+- Zusätzlich wird vor dem Verbindungsaufbau `WiFi.setHostname("mini-os")` gesetzt, damit der DHCP-Hostname im WLAN ebenfalls konsistent ist.
+- Nur `ats-mini/Network.cpp` geändert; Menü-/Popup-Verhalten und FT8/FT4-Decoder unangetastet.
+- Statische Quelltextprüfung durchgeführt; kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.

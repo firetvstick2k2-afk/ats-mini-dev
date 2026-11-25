@@ -1,10 +1,22 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-11-25 (CW/RTTY decoder layout alignment; JS8 removal)
+Last updated: 2026-11-25 (Build #97 baseline; CB/RTTY UI complete; HF Bandmonitor next)
 Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
-Active work branch: `development` (the sole development branch; never modify `main` except for a completed, tested feature explicitly approved for promotion)
+Active work branch: `development` only; never modify `main` unless the user explicitly says “Bitte Main überschreiben”.
 
-## Latest bugfix: FT8/FT4 logging in offline mode (2026-11-21)
+## BINDING CURRENT PROJECT STATE — 2026-11-25 (supersedes older status/roadmap notes)
+
+- **Stable baseline: Build #97.** The user confirms Build #97 is the newest stable version and works perfectly. Build #96 and every older build reference are historical only, not the current baseline.
+- **Completed UI:** CB and RTTY decoder screen designs are finished and explicitly approved by the user. No UI corrections are currently open.
+- **Next feature: HF Bandmonitor.** This is the active next development task. Inspect the implementation on `backup/development-2026-11-24` first, then integrate the required behavior into Build #97 in small, isolated steps.
+- **Isolation is mandatory:** implement the Bandmonitor in its own `.cpp` and `.h` files. Do not alter decoder code, decoder interfaces/state/timers/interrupts, shared decoder services, audio capture, or working FT8/FT4 behavior. If a helper could affect a decoder, privately copy/reimplement the required logic for Bandmonitor rather than modifying shared code. Prefer extra isolated code over risking a working decoder.
+- **Decoder protection:** FT8/FT4 is known-good and strictly off-limits. CB/RTTY UI is complete; do not redesign it unless explicitly requested. JS8 was removed and is not an active task. Reconsider JS8 only if a clean independent implementation and all dependencies can preserve MIT compatibility; never copy GPL JS8Call/WSJT-X implementation code.
+- **License rule:** preserve the repository's MIT licensing. Verify provenance and license compatibility for every new library, dependency, copied code, image, icon, and font. Do not integrate GPL code/dependencies or unclear-origin material. When compatibility is uncertain, stop and clarify before integration.
+- **Branch and write rules:** work only on `development`; do not create branches. Never modify `main` unless the user explicitly writes **“Bitte Main überschreiben”**. Before changing any existing file, fetch its current GitHub content and SHA. Commit cleanly and directly to `development`. Keep both handoff documents current.
+- **Validation:** do not start builds, GitHub Actions, flashing, or hardware tests unless the user explicitly asks. Never report a build/device test as successful without user confirmation or verifiable results.
+- Historical entries below are retained as a technical archive. If an older entry describes a different active task, baseline, JS8 priority, branch/promotion policy, or pending UI work, this binding section takes precedence; do not treat historical next steps as current instructions.
+
+## Historical bugfix: FT8/FT4 logging in offline mode (2026-11-21)
 - User-reported issue: FT8 Actions > Logging stayed OFF and could not be enabled.
 - Root cause: `ftxLogStart()` rejected offline synchronization and required a valid UTC date; `ftxLogMessage()` also discarded messages without valid UTC. Switching to offline mode additionally stopped and cleared the active log.
 - Fixed in commit `4b3a3e8d46e6061235349d15bf4cad9e4bf8d84e`: logging can start without UTC, uses a unique `FT8_UNTIMED` / `FT4_UNTIMED` filename when no date is available, writes unknown timestamps for offline receptions, and remains active across online/offline sync changes.
@@ -18,7 +30,7 @@ Active work branch: `development` (the sole development branch; never modify `ma
 - Preserve Dual RX, existing Web Spectrum behavior, Clean Layout and especially Layout-TEF6686 unless a change is explicitly required.
 - Shared low-level radio/scanning primitives may be reused only after checking their side effects and compatibility.
 - Branch policy (user-confirmed 2026-11-21): use only `development` for all development. Do not create feature/test branches. The user intends to keep only `main` and `development`; old branches are not sources for recovery/merging—if something is needed later, recreate it in `development`.
-- Promotion policy (user-confirmed 2026-11-21): when a feature is complete, builds successfully and is verified working, promote it to `main`. `main` is the stable approved state; never update it prematurely.
+- Main-branch rule (latest explicit user instruction): never modify `main` unless the user explicitly says “Bitte Main überschreiben”. No automatic promotion, even after a successful feature.
 - Build workflow: pushes to `development` trigger the OSPI-DE BIN build; `workflow_dispatch` remains available. Do not claim a build/device test passed unless verified.
 
 ## Previous task: native VHF Spectrum Scanner
@@ -1421,9 +1433,9 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
 
 
-## 2026-11-25 – CW/RTTY Kopfzeile (optische Korrektur)
-- Nutzer bestätigt Build #96 als erledigt und funktionsfähig; dieser Stand ist die neue funktionierende Referenz.
-- Kleine UI-Korrektur: In `ats-mini/src/DecoderPageLayout.h` wurde ausschließlich der horizontale Anker der oberen Statuszeile von x=205 auf x=185 verschoben, damit die Status-/Audio-Information neben der Frequenz weiter links sitzt.
-- Gemeinsame Layout-Hilfe betrifft CW und RTTY. Frequenz, Schrift, Farben, Pegelanzeige, Textbereich und Decoder-/Audio-Logik bleiben unverändert.
-- FT8/FT4 DSP, Decoder-Service und AudioCaptureService bleiben unangetastet.
-- Code-Commit: bc1e7cd7979ff3d0c8eddb0912ad4cb39f8573ff. Build/Hardwaretest für diese neue optische Änderung stehen noch aus; Nutzer startet den nächsten Build selbst.
+## Current status — Build #97 / HF Bandmonitor (2026-11-25)
+- Build #97 is the user's confirmed stable baseline.
+- CB and RTTY decoder UI are complete and approved.
+- HF Bandmonitor is the next task; start by inspecting the backup branch and isolate it in dedicated source/header files.
+- Keep decoder internals and FT8/FT4 untouched. Preserve MIT compatibility.
+- No code changes, build, Actions run, flash, or hardware test are authorized/claimed by this status update.

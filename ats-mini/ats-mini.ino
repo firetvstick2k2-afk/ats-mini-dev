@@ -971,6 +971,13 @@ void loop()
       needRedraw = true;
       elapsedSleep = elapsedCommand = currentTime = millis();
     }
+    else if(pb1st.isLongPressed && currentCmd == CMD_JS8_MONITOR && !decoderMenuLongPressHandled)
+    {
+      decoderMenuLongPressHandled = true;
+      js8UiExit();
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+    }
     else if(pb1st.isLongPressed && currentCmd == CMD_RTTY_DECODER && !decoderMenuLongPressHandled)
     {
       decoderMenuLongPressHandled = true;

@@ -1419,3 +1419,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Korrektur: Settings-Popup-Bereich endet jetzt exklusiv vor `CMD_ABOUT` (`< CMD_ABOUT`); dadurch wird die dedizierte About-Ansicht gerendert.
 - Geändert: `ats-mini/About.cpp`, `ats-mini/Draw.cpp`. Nur `development`.
 - Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
+
+
+## 2026-11-25 – CW/RTTY Kopfzeile (optische Korrektur)
+- Nutzer bestätigt Build #96 als erledigt und funktionsfähig; dieser Stand ist die neue funktionierende Referenz.
+- Kleine UI-Korrektur: In `ats-mini/src/DecoderPageLayout.h` wurde ausschließlich der horizontale Anker der oberen Statuszeile von x=205 auf x=185 verschoben, damit die Status-/Audio-Information neben der Frequenz weiter links sitzt.
+- Gemeinsame Layout-Hilfe betrifft CW und RTTY. Frequenz, Schrift, Farben, Pegelanzeige, Textbereich und Decoder-/Audio-Logik bleiben unverändert.
+- FT8/FT4 DSP, Decoder-Service und AudioCaptureService bleiben unangetastet.
+- Code-Commit: bc1e7cd7979ff3d0c8eddb0912ad4cb39f8573ff. Build/Hardwaretest für diese neue optische Änderung stehen noch aus; Nutzer startet den nächsten Build selbst.

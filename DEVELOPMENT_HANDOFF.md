@@ -1,6 +1,6 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-11-25 (Build #98 stable; HF Bandmonitor hardware-confirmed; CW improvements next)
+Last updated: 2026-11-26 (Build #98 stable; CW filter-aware tone upgrade committed)
 Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
 Active work branch: `development` only; never modify `main` unless the user explicitly says “Bitte Main überschreiben”.
 
@@ -1471,3 +1471,15 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Danach als mögliche, noch nicht beauftragte RESONIK-Anregungen prüfen: Band View/Auto-Store, Beacon Tracker/Propagation, Signal Logger, Backup/Restore und CAT-Steuerung. Diese sind Ideen für spätere Priorisierung, keine bereits freigegebenen Implementierungen.
 - Schutzregeln bleiben unverändert: ausschließlich development; main nur nach ausdrücklicher Formulierung „Bitte Main überschreiben“; vor jeder Änderung bestehender Dateien aktuellen Inhalt und SHA aus GitHub abrufen; FT8/FT4 und andere funktionierende Decoder nicht unnötig anfassen; MIT-Kompatibilität und Herkunft prüfen; Handoff-Dateien aktuell halten.
 - Der Nutzer startet Builds, Actions, Flash und Hardwaretests selbst, sofern nicht ausdrücklich anders beauftragt. Keine Build-/Hardware-Ergebnisse ohne Bestätigung behaupten.
+
+
+## CW-Decoder-Upgrade — RESONIK-Vergleich (26.11.2026)
+- Build #98 bleibt die vom Nutzer bestätigte stabile Referenz; HF Bandmonitor läuft auf Hardware.
+- CW gezielt verbessert, ohne das Layout oder die Bedienung zu verändern: Decoder-Tonfrequenz folgt jetzt dem tatsächlich aktiven SI4735-SSB-Filter. Mapping anhand der in `Menu_english.cpp.src` und `Menu_german.cpp.src` verifizierten Device-Indizes: SSB-Filterindex 4 (0.5k) → 500 Hz; Index 5 (1.0k) → 1000 Hz; alle anderen Filter → 700 Hz. Gilt für USB/LSB; außerhalb davon bleibt 700 Hz.
+- Ton wird beim Öffnen der CW-Seite und nach dem Anwenden eines CW-Frequenz-Presets gesetzt. Bei tatsächlicher Tonänderung werden Goertzel-Zustände, angezeigter Text, WPM und Signalstatus zurückgesetzt, damit keine Zeichen aus dem vorherigen Filterzustand weiterlaufen.
+- Änderungen: `ats-mini/src/cw/CwUi.cpp`, `ats-mini/src/cw/CwDecoderService.cpp`; Commits `646c994a162286fd0dac7335821c3f84cf270ae5` und `6036bf31a94911b97960740e2bf3f35a6e2f1350`.
+- Neuer Host-Test `ats-mini/tests/TestCwDecoder.cpp`: synthetische 4-kHz-CW-Signale mit 500/700/1000-Hz-Tönen plus 30-WPM-Test. MIT-Attribution für RESONIK ist enthalten. Commits `eba5656324a86bc3413e6542d857aabfafc26390`, `78fc7ac4602ee49fc7670ff37a14b77c6da052d9`, `e0d255adb9687cea09afdfeeec326614703a843c`.
+- Sampling: RESONIKs separate ADC-OneShot-Sampler-Task wurde bewusst **nicht** übernommen. Unsere gemeinsame `AudioCaptureService`-Architektur bleibt unverändert, damit andere Decoder nicht durch einen zweiten GPIO11-ADC-Zugriff gestört werden.
+- Der nicht blockierende Mutex in `consumeSamples()` bleibt vorerst ebenfalls unverändert: ein blockierendes Warten im Callback würde die gemeinsame Sampling-Task selbst anhalten. Sample-Verlust-Quantifizierung bzw. eine lock-freie Übergabe bleibt ein separater möglicher Folgepunkt und ist nicht als gelöst zu betrachten.
+- **FT8/FT4 strikt unangetastet:** keine FT8/FT4-Datei, kein `FtxDecoderService`, keine AudioCaptureService-Datei und keine Decoder-Shared-Pfade geändert. Keine UI-/Layoutänderung.
+- Validierung: GitHub-Quelltext nach den Commits erneut gelesen und Mapping/Einbaupunkte statisch geprüft. Kein Firmware-Build, keine GitHub Action, kein Flash und kein Hardwaretest durch den Assistenten; Host-Test wurde hier nicht ausgeführt. Nutzer baut und prüft Build #99.

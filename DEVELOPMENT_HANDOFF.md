@@ -1439,3 +1439,16 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - HF Bandmonitor is the next task; start by inspecting the backup branch and isolate it in dedicated source/header files.
 - Keep decoder internals and FT8/FT4 untouched. Preserve MIT compatibility.
 - No code changes, build, Actions run, flash, or hardware test are authorized/claimed by this status update.
+
+
+## HF Bandmonitor integration — 2026-11-25 (implementation committed; build pending)
+- The user confirmed the intended data model and estimates are deliberate (including UKW/FM derived from 2m); preserve the backup's interpretation without reinterpretation.
+- Integrated the dedicated `ats-mini/src/radio/BandOpeningService.cpp/.h` module on `development`, based on `backup/development-2026-11-24`.
+- Added `HF BANDMONITOR` under `PROGRAMME` in German, English, and Italian; the menu order is Decoder, HF Bandmonitor, FM-DX, Back.
+- Added the dedicated display and controls: encoder rotates the 15 pages, click requests a refresh, long press exits.
+- The service uses the existing Wi-Fi state read-only (`getWiFiStatus() == 2`); it does not call or modify `netInit()`, `netStop()`, or existing Wi-Fi management.
+- No logging was added: all backup-specific debug/standard logger calls and logger dependency were removed.
+- Added ArduinoJson 7.4.2 to both build profiles in `ats-mini/sketch.yaml`; dependency is MIT licensed.
+- Existing decoder implementations, decoder services, audio capture, timers, and interrupts were not intentionally changed.
+- Files changed: new `ats-mini/src/radio/BandOpeningService.cpp/.h`; updated `ats-mini/Menu.h`, three language menu sources, `ats-mini/Draw.cpp`, `ats-mini/ats-mini.ino`, and `ats-mini/sketch.yaml`.
+- Changes are committed directly to `development`. Static source review remains in progress. No build, GitHub Action, flash, or hardware test was run; compilation and device behavior are not yet verified.

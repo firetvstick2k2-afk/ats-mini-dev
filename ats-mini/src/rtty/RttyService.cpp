@@ -192,7 +192,9 @@ bool RttyService::estimateTones(const float* samples,float& low,float& high) {
     const float score=weaker*(0.55f+0.45f*weaker/(stronger+1.0f));
     if(score>bestScore) { bestScore=score; bestA=peaks[a]; bestB=peaks[b]; }
   }
-  if(bestA<0 || bestB<0 || bestScore<500.0f) return false;
+  // Samples are normalised to ADC full-scale in processSamples(); keep this
+  // threshold in the same normalised-power domain (not raw ADC counts).
+  if(bestA<0 || bestB<0 || bestScore<2.0f) return false;
   low=kMinToneHz+bestA*kToneStepHz;
   high=kMinToneHz+bestB*kToneStepHz;
   return true;

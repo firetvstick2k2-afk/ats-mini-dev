@@ -36,6 +36,7 @@ bool presetPreviewSpeakerWasEnabled=true;
 bool presetPreviewSpeakerForced=false;
 bool presetPreviewAmpWasEnabled=true;
 bool presetPreviewAmpForced=false;
+bool presetPreviewSelectionMuted=false;
 uint8_t restoreNetworkMode=NET_OFF;
 uint32_t lastRefresh=0;
 uint32_t lastAutoBfoAdjust=0;
@@ -77,9 +78,10 @@ const DecoderFrequencyPreset* rttyPresetAt(uint8_t wanted) {
 }
 
 void restoreRttyPresetPreviewSpeaker() {
-  if(presetPreviewSpeakerForced) {
+  if(presetPreviewSpeakerForced || presetPreviewSelectionMuted) {
     digitalWrite(AUDIO_MUTE,presetPreviewSpeakerWasEnabled?LOW:HIGH);
     presetPreviewSpeakerForced=false;
+    presetPreviewSelectionMuted=false;
   }
   if(presetPreviewAmpForced) {
     if(PIN_AMP_EN>=0) digitalWrite(PIN_AMP_EN,presetPreviewAmpWasEnabled?HIGH:LOW);
@@ -126,7 +128,6 @@ void scheduleRttyPresetPreview(uint32_t now) {
     presetOriginalValid=true;
   }
   presetPreviewPending=true;
-  presetPreviewActive=false;
   presetPreviewStartedAt=now;
 }
 
@@ -158,6 +159,11 @@ bool applyRttyPreset(const DecoderFrequencyPreset& preset) {
 }
 
 void startRttyPresetPreview() {
+  if(presetTargetBandSnapshotValid && presetTargetBandIndex>=0 && presetTargetBandIndex<getTotalBands()) {
+    bands[presetTargetBandIndex]=presetTargetBandOriginal;
+    presetTargetBandIndex=-1;
+    presetTargetBandSnapshotValid=false;
+  }
   const DecoderFrequencyPreset* preset=rttyPresetAt(presetSelection);
   if(!preset || !presetOriginalValid) {
     presetPreviewPending=false;
@@ -174,11 +180,12 @@ void startRttyPresetPreview() {
     presetPreviewAmpForced=true;
     digitalWrite(PIN_AMP_EN,HIGH);
   }
-  if(digitalRead(AUDIO_MUTE)!=LOW) {
+  if(digitalRead(AUDIO_MUTE)!=LOW && !presetPreviewSelectionMuted && !presetPreviewSpeakerForced) {
     presetPreviewSpeakerWasEnabled=false;
     presetPreviewSpeakerForced=true;
-    digitalWrite(AUDIO_MUTE,LOW);
   }
+  presetPreviewSelectionMuted=false;
+  digitalWrite(AUDIO_MUTE,LOW);
 }
 
 void commitRttyPresetPreview() {
@@ -193,8 +200,13 @@ void commitRttyPresetPreview() {
 
 void acceptRttyPreset() {
   const DecoderFrequencyPreset* preset=rttyPresetAt(presetSelection);
-  bool applied=presetPreviewActive;
+  bool applied=presetPreviewActive && !presetPreviewPending;
   if(!applied && preset) {
+    if(presetTargetBandSnapshotValid && presetTargetBandIndex>=0 && presetTargetBandIndex<getTotalBands()) {
+      bands[presetTargetBandIndex]=presetTargetBandOriginal;
+      presetTargetBandIndex=-1;
+      presetTargetBandSnapshotValid=false;
+    }
     presetPreviewActive=true;
     applied=applyRttyPreset(*preset);
   }
@@ -274,7 +286,7 @@ void rttyUiRotate(int16_t delta) {
   if(menuOpen) {
     if(presetMenuOpen) {
       const int count=rttyPresetCount();
-      if(presetPreviewActive) restoreRttyPresetOriginal();
+      if(presetPreviewActive) { digitalWrite(AUDIO_MUTE,HIGH); presetPreviewSelectionMuted=true; }
       int next=static_cast<int>(presetSelection)+(delta>0?1:-1);
       if(next<0) next=count-1;
       if(next>=count) next=0;
@@ -411,7 +423,7 @@ void drawRttyDecoderPage() {
                  preset->modulation == USB ? "USB" : preset->modulation == LSB ? "LSB" : "AM");
         labels[i] = storage[i];
       }
-      const char* previewStatus = presetPreviewActive ? "TUNED" : presetPreviewPending ? "TUNING..." : "READY";
+      const char* previewStatus = presetPreviewPending ? "TUNING..." : presetPreviewActive ? "TUNED" : "READY";
       DecoderMenuUi::draw("RTTY FREQUENCIES", labels, nullptr, count, presetSelection,
                           "TURN: SELECT", "CLICK: APPLY", previewStatus);
     } else {

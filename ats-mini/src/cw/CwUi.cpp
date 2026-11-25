@@ -31,6 +31,7 @@ int previewTargetBandIndex = -1;
 Band previewTargetBandOriginal{};
 bool previewTargetBandSnapshotValid = false;
 bool previewSpeakerWasEnabled = true, previewSpeakerForced = false;
+bool previewSelectionMuted = false;
 bool previewAmpWasEnabled = true, previewAmpForced = false;
 constexpr uint32_t kCwPresetPreviewDelayMs = 2000;
 constexpr uint8_t kMenuCount = 5;
@@ -38,7 +39,11 @@ uint8_t cwPresetCount() { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPreset
 const DecoderFrequencyPreset* cwPresetAt(uint8_t wanted) { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) if(kDecoderFrequencyPresets[i].decoder==DecoderKind::CW && n++==wanted) return &kDecoderFrequencyPresets[i]; return nullptr; }
 bool applyCwPreset(const DecoderFrequencyPreset& preset) { int best=-1; uint16_t span=UINT16_MAX; for(int i=0;i<getTotalBands();++i) if(bands[i].bandType!=FM_BAND_TYPE && preset.frequencyKHz>=bands[i].minimumFreq && preset.frequencyKHz<=bands[i].maximumFreq) { uint16_t width=bands[i].maximumFreq-bands[i].minimumFreq; if(width<span){span=width;best=i;} } if(best<0)return false; bands[best].currentFreq=static_cast<uint16_t>(preset.frequencyKHz); bands[best].bandMode=preset.modulation; bands[best].bandwidthIdx=preset.bandwidthChoice; selectBand(static_cast<uint8_t>(best),false); currentMode=preset.modulation; currentFrequency=rx.getFrequency(); service.resetDecoder(); return true; }
 void restoreCwPreviewAudio() {
-  if(previewSpeakerForced) { digitalWrite(AUDIO_MUTE,previewSpeakerWasEnabled?LOW:HIGH); previewSpeakerForced=false; }
+  if(previewSpeakerForced || previewSelectionMuted) {
+    digitalWrite(AUDIO_MUTE,previewSpeakerWasEnabled?LOW:HIGH);
+    previewSpeakerForced=false;
+    previewSelectionMuted=false;
+  }
   if(previewAmpForced) { if(PIN_AMP_EN>=0) digitalWrite(PIN_AMP_EN,previewAmpWasEnabled?HIGH:LOW); previewAmpForced=false; }
 }
 void clearCwPreview() {
@@ -65,9 +70,14 @@ void scheduleCwPreview(uint32_t now) {
   if(!previewOriginalValid) {
     previewOriginalVfo=captureVfo(); previewOriginalBfo=currentBFO; previewOriginalValid=true;
   }
-  previewPending=true; previewActive=false; previewStartedAt=now;
+  previewPending=true; previewStartedAt=now;
 }
 void startCwPreview() {
+  if(previewTargetBandSnapshotValid && previewTargetBandIndex>=0 && previewTargetBandIndex<getTotalBands()) {
+    bands[previewTargetBandIndex]=previewTargetBandOriginal;
+    previewTargetBandIndex=-1;
+    previewTargetBandSnapshotValid=false;
+  }
   const DecoderFrequencyPreset* preset=cwPresetAt(frequencySelection-1);
   if(!preset || !previewOriginalValid) { previewPending=false; return; }
   int best=-1; uint16_t span=UINT16_MAX;
@@ -84,9 +94,11 @@ void startCwPreview() {
   if(PIN_AMP_EN>=0 && digitalRead(PIN_AMP_EN)!=HIGH) {
     previewAmpWasEnabled=false; previewAmpForced=true; digitalWrite(PIN_AMP_EN,HIGH);
   }
-  if(digitalRead(AUDIO_MUTE)!=LOW) {
-    previewSpeakerWasEnabled=false; previewSpeakerForced=true; digitalWrite(AUDIO_MUTE,LOW);
+  if(digitalRead(AUDIO_MUTE)!=LOW && !previewSelectionMuted && !previewSpeakerForced) {
+    previewSpeakerWasEnabled=false; previewSpeakerForced=true;
   }
+  previewSelectionMuted=false;
+  digitalWrite(AUDIO_MUTE,LOW);
 }
 void commitCwPreview() {
   restoreCwPreviewAudio(); previewOriginalValid=false; previewTargetBandIndex=-1;
@@ -136,7 +148,7 @@ void cwUiExit() {
 
 void cwUiRotate(int16_t delta) {
   if (!pageActive || !delta || !menuOpen) return;
-  if(frequencyMenuOpen) { if(previewActive) restoreCwPreview(); int count=cwPresetCount()+1; int next=static_cast<int>(frequencySelection)+(delta>0?1:-1); if(next<0)next=count-1; if(next>=count)next=0; frequencySelection=static_cast<uint8_t>(next); if(frequencySelection<frequencyScroll)frequencyScroll=frequencySelection; frequencyScroll=DecoderMenuUi::firstVisible(frequencySelection,static_cast<uint8_t>(count)); if(frequencySelection) scheduleCwPreview(millis()); return; }
+  if(frequencyMenuOpen) { if(previewActive) { digitalWrite(AUDIO_MUTE,HIGH); previewSelectionMuted=true; } int count=cwPresetCount()+1; int next=static_cast<int>(frequencySelection)+(delta>0?1:-1); if(next<0)next=count-1; if(next>=count)next=0; frequencySelection=static_cast<uint8_t>(next); if(frequencySelection<frequencyScroll)frequencyScroll=frequencySelection; frequencyScroll=DecoderMenuUi::firstVisible(frequencySelection,static_cast<uint8_t>(count)); if(frequencySelection) scheduleCwPreview(millis()); return; }
   int next = static_cast<int>(menuIndex) + delta;
   while (next < 0) next += kMenuCount;
   menuIndex = static_cast<uint8_t>(next % kMenuCount);
@@ -150,7 +162,7 @@ void cwUiClick() {
     menuIndex = 0;
     return;
   }
-  if(frequencyMenuOpen) { if(frequencySelection==0) { restoreCwPreview(); service.resetDecoder(); } else { const DecoderFrequencyPreset* preset=cwPresetAt(frequencySelection-1); bool applied=previewActive; if(!applied && preset) applied=applyCwPreset(*preset); if(applied) commitCwPreview(); else { restoreCwPreview(); statusShow("CW preset failed","No matching receiver band"); } } frequencyMenuOpen=false; return; }
+  if(frequencyMenuOpen) { if(frequencySelection==0) { restoreCwPreview(); service.resetDecoder(); } else { const DecoderFrequencyPreset* preset=cwPresetAt(frequencySelection-1); bool applied=previewActive && !previewPending; if(!applied && preset) { if(previewTargetBandSnapshotValid && previewTargetBandIndex>=0 && previewTargetBandIndex<getTotalBands()) { bands[previewTargetBandIndex]=previewTargetBandOriginal; previewTargetBandIndex=-1; previewTargetBandSnapshotValid=false; } applied=applyCwPreset(*preset); previewActive=true; } if(applied) commitCwPreview(); else { restoreCwPreview(); statusShow("CW preset failed","No matching receiver band"); } } frequencyMenuOpen=false; return; }
   switch (menuIndex) { case 0: frequencyMenuOpen=true; frequencySelection=frequencyScroll=0; break; case 1: service.clearText(); break; case 2: service.resetDecoder(); break; case 3: menuOpen=false; break; case 4: cwUiExit(); break; }
 }
 

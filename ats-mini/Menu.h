@@ -136,7 +136,8 @@ void dualRxBeginScan();
 // These are menu commands
 static inline bool isMenuMode(uint16_t cmd)
 {
-  return((cmd>=CMD_BAND) && (cmd<CMD_SETTINGS));
+  return((cmd>=CMD_BAND) && (cmd<CMD_SETTINGS)) ||
+         cmd == CMD_SPECTRUM_MENU || cmd == CMD_DECODER_MENU || cmd == CMD_PROGRAMMES;
 }
 
 // These are settings

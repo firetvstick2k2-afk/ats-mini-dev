@@ -635,3 +635,13 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Geändert: `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/cw/CwUi.cpp`, `ats-mini/src/rtty/RttyUi.cpp` sowie die Menüquellen EN/DE/IT.
 - Nur UI-/Preset-Vorschau-Steuerung und Lautsprecher-Mute; keine Änderungen an FT8/FT4-DSP, Decoder-Service, Audio-Capture oder FT8/FT4-Decodierlogik.
 - Quelltextänderungen committed auf `development`; statische Quelltextprüfung noch ausstehend. Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
+
+
+## About-/Über-Menü aus Backup wiederhergestellt — 2026-11-25
+- Die zweitseitige About-Ansicht aus `backup/development-2026-11-24` wurde in `ats-mini/About.cpp` wieder eingesetzt (ATS Mini Receiver, Firmware-/Build-/Geräteangaben, Projektadresse `github.com/firetvstick2k2-afk`, Credits).
+- Ursache, warum die Ansicht nicht sichtbar war: `Draw.cpp` leitete `CMD_ABOUT` fälschlich bereits an `drawSettingsPopup()` weiter (`<= CMD_ABOUT`), sodass der spätere Aufruf von `drawAbout()` nie erreicht wurde.
+- Korrektur: Settings-Popup-Bereich endet jetzt exklusiv vor `CMD_ABOUT` (`< CMD_ABOUT`); dadurch wird die dedizierte About-Ansicht gerendert.
+- Geändert: `ats-mini/About.cpp`, `ats-mini/Draw.cpp`. Nur `development`.
+- Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
+
+Aktueller Stand: Das About-/Über-Menü wurde aus dem Backup wiederhergestellt und der Renderer-Fallstrick in `Draw.cpp` behoben. Nutzer-Build/Hardwaretest steht aus.

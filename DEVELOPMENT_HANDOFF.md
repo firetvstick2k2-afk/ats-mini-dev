@@ -1217,3 +1217,14 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - `CMD_NAVTEX` und `CMD_PSK31` wurden aus `Menu.h` entfernt; die nachfolgenden Command-IDs bleiben unverändert.
 - Ziel ist ein reduzierter Testumfang für die weitere Ursachenanalyse der FT8-Resets. Das Entfernen der Decoder beweist noch keine Ursache.
 - Ausschließlich Quell-/Dokumentationsänderung auf `development`. Kein Build, kein GitHub-Actions-Lauf, kein Flash und kein Hardwaretest gestartet. Nutzer startet den nächsten Build manuell.
+
+
+## 2026-11-25 – AudioCaptureService auf Build-#27-Basis zurückgesetzt
+
+- Für die gezielte FT8-Reset-Fehlersuche wurde ausschließlich `ats-mini/src/audio/AudioCaptureService.cpp` exakt auf den bekannten funktionierenden Stand von Build #27 zurückgesetzt.
+- Referenz: Build #27 Commit `eaffd59bd1dea50ebe2fd56d223c04c3fcd7f5a7`, ursprünglicher Datei-Blob-SHA `3dbef5b8c3b1ba14b38126e83f9b9b68e2198a20`.
+- Neuer Commit auf `development`: `ab302bc629e23372acd57f0bc613ba1c24fd0c4b`; wiederhergestellter Datei-Blob-SHA: `3dbef5b8c3b1ba14b38126e83f9b9b68e2198a20`.
+- Damit sind die nach Build #27 ergänzten Audio-Capture-Diagnosemeldungen und `analogReadResolution(12)` in dieser Quelldatei nicht mehr enthalten. Die vorhandene Sample-Taktung einschließlich `taskYIELD()` entspricht wieder dem bekannten Build-#27-Stand.
+- `ats-mini/src/ftx/FtxDecoderService.cpp` wurde nicht verändert (Blob-SHA weiterhin `7ce2c390b6105e449a9842215d7d95d9c61bea0c`). Header, DebugLog-System, Decoderumfang und sonstige Firmware-Funktionen wurden nicht verändert.
+- Ausschließlich Branch `development`; `main` und Backup-Branch bleiben unangetastet. Kein Build und kein Flash gestartet. Nutzer startet Build und Hardwaretest manuell.
+- Testziel: prüfen, ob der bekannte Audio-Capture-Stand den Reset verhindert und FT8 weiterhin dekodiert. Ein erfolgreicher Test würde den Fehler auf Änderungen seit Build #27 im Audio-Capture-Pfad eingrenzen, aber noch nicht die einzelne Ursache beweisen.

@@ -1373,3 +1373,5 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Volume-, Helligkeits- und sonstige Einstellungs-Pop-ups wurden nicht verändert. EIBI.cpp, FT8/FT4-Decoderlogik, AudioCapture und Layout-Renderer wurden nicht geändert.
 - Änderungen: Draw.cpp, Menu.h, Menu_english.cpp.src, Menu_german.cpp.src, Menu_italian.cpp.src, ats-mini.ino.
 - Nur Quelltextintegration und statische Plausibilitätsprüfung; kein Build, keine GitHub Action, kein Flash und kein Hardwaretest. WLAN-Panel, EiBi-Statusdauer/-darstellung und Klick-zurück müssen vom Nutzer auf dem Gerät geprüft.
+
+- Commitfolge der Rückholung: Draw.cpp f81a0fa6bfe20a874e47cf64bd039db4b89e5f5a; Menu.h a1faf412edc5d952c5ebe265701dbdaf0b57262b; EN 71e80086ab2760c8ae25097ae8a4d301f1c537ab; DE 1803624d9637e979d8111cd191ac64c9d8246d6e; IT c008db4bb75384868406dfbfe338a7ee0b5bc2f1; timeout a1417207dd4c651a30ec1f8de4deab528732a755; changelog 5abb99fbbed4ac1b2fd8287fb4a08c557ff9b54e.

@@ -746,7 +746,7 @@ void drawScreen()
 
   // All settings submenus use the same full-screen popup renderer instead of
   // falling back to the legacy compact sidebar widgets.
-  if(currentCmd > CMD_SETTINGS && currentCmd <= CMD_ABOUT)
+  if(currentCmd > CMD_SETTINGS && currentCmd < CMD_ABOUT)
   {
     drawSettingsPopup(currentCmd);
     spr.pushSprite(0, 0);

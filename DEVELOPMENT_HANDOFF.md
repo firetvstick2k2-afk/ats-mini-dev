@@ -1206,3 +1206,14 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Im Mitschnitt steht ausdrücklich `Extra USB-LOG is OFF`. Daher sind die neuen `atsDebugLogf()`-Audio-Task-Meldungen (2-Sekunden-Frühdiagnose, kumulative Samples, Heap und Stack) in diesem Test nicht sichtbar. Der Reset-Grund erscheint dank Standard-USB-Pfad dennoch.
 - Nächster Test sollte USB-LOG in den Geräteeinstellungen aktivieren, damit die Audio-Task-Gesundheitsmeldungen vor dem Reset erfasst werden. Zusätzlich vollständige Panic-Ausgabe sichern. Keine weitere Codeänderung vor Auswertung dieser Daten; FT8/FT4-Decoder bleibt unangetastet.
 - Hardwaretest durch Nutzer; Assistent hat nur das vorhandene Build-Artefakt analysiert. Kein neuer Build gestartet.
+
+
+## 2026-11-25 – Decoderumfang für die Fehlersuche reduziert
+
+- Auf `development` wurden NAVTEX und PSK31 vollständig aus der Firmware-Integration entfernt: Menüeinträge und Start-/Bedien-/Tick-/Renderpfade sowie die jeweiligen Decoder-, Service- und UI-Quelldateien.
+- Die Decoder-Untermenüs sind in Deutsch, Englisch und Italienisch wieder synchron und enthalten nur noch Zurück, Decoder-Frequenzen, CW, RTTY und FT8/FT4.
+- JS8 bleibt entfernt und wird nicht wieder aufgenommen. Frühere JS8-Entwicklungsnotizen in diesem Handoff sind historische Einträge und beschreiben nicht den aktuellen Repository-Stand.
+- Unverändert bleiben CW, RTTY, FT8/FT4, `AudioCaptureService`, `FtxDecoderService`, WLAN, Hauptmenü, Programme, Layouts und die übrigen Radiofunktionen. Die gemeinsamen Audio-Dienste wurden ausdrücklich nicht geändert.
+- `CMD_NAVTEX` und `CMD_PSK31` wurden aus `Menu.h` entfernt; die nachfolgenden Command-IDs bleiben unverändert.
+- Ziel ist ein reduzierter Testumfang für die weitere Ursachenanalyse der FT8-Resets. Das Entfernen der Decoder beweist noch keine Ursache.
+- Ausschließlich Quell-/Dokumentationsänderung auf `development`. Kein Build, kein GitHub-Actions-Lauf, kein Flash und kein Hardwaretest gestartet. Nutzer startet den nächsten Build manuell.

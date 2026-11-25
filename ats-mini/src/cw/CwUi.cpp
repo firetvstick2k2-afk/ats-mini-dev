@@ -150,7 +150,7 @@ void cwUiClick() {
     return;
   }
   if(frequencyMenuOpen) { if(frequencySelection==0) { restoreCwPreview(); service.resetDecoder(); } else { const DecoderFrequencyPreset* preset=cwPresetAt(frequencySelection-1); bool applied=previewActive; if(!applied && preset) applied=applyCwPreset(*preset); if(applied) commitCwPreview(); else { restoreCwPreview(); statusShow("CW preset failed","No matching receiver band"); } } frequencyMenuOpen=false; return; }
-  switch (menuIndex) { case 0: frequencyMenuOpen=true; frequencySelection=frequencyScroll=0; scheduleCwPreview(millis()); break; case 1: service.clearText(); break; case 2: service.resetDecoder(); break; case 3: menuOpen=false; break; case 4: cwUiExit(); break; }
+  switch (menuIndex) { case 0: frequencyMenuOpen=true; frequencySelection=frequencyScroll=0; break; case 1: service.clearText(); break; case 2: service.resetDecoder(); break; case 3: menuOpen=false; break; case 4: cwUiExit(); break; }
 }
 
 bool cwUiTick(uint32_t now) {

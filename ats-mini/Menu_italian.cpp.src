@@ -314,6 +314,7 @@ static uint8_t bleModeMenuIdx = BLE_OFF;
 static const char *bleModeDesc[] = { "Off", "Ad hoc", "HID", "Scollega" };
 
 uint8_t wifiModeIdx = NET_OFF;
+static uint8_t wifiMenuIdx = NET_OFF;
 static const char *wifiModeDesc[] = { "Off", "WEB CTRL", "WEB+Conn", "Connetti", "Solo sync" };
 
 static const Step fmSteps[] = { { 1, "10k", 1 }, { 5, "50k", 5 }, { 10, "100k", 10 }, { 20, "200k", 20 }, { 100, "1M", 10 } };
@@ -644,10 +645,16 @@ static void doSleepMode(int16_t enc) { sleepModeIdx = wrap_range(sleepModeIdx, e
 static void doUSBMode(int16_t enc) { usbModeIdx = wrap_range(usbModeIdx, enc, 0, LAST_ITEM(usbModeDesc)); }
 static void doTCPMode(int16_t enc) { tcpModeIdx = wrap_range(tcpModeIdx, enc, 0, LAST_ITEM(tcpModeDesc)); }
 static void doBleMode(int16_t enc) { bleModeMenuIdx = wrap_range(bleModeMenuIdx, enc, 0, LAST_ITEM(bleModeDesc)); }
-static void doWiFiMode(int16_t enc) { wifiModeIdx = wrap_range(wifiModeIdx, enc, 0, LAST_ITEM(wifiModeDesc)); }
+static void doWiFiMode(int16_t enc) { wifiMenuIdx = wrap_range(wifiMenuIdx, enc, 0, ITEM_COUNT(wifiModeDesc)); }
 
 static void clickBleMode(uint8_t mode, bool shortPress) { currentCmd = CMD_NONE; bleModeIdx = mode; bleInit(mode); }
-static void clickWiFiMode(uint8_t mode, bool shortPress) { currentCmd = CMD_NONE; netInit(mode); }
+static void clickWiFiMode(uint8_t selection, bool shortPress)
+{
+  if(selection == ITEM_COUNT(wifiModeDesc)) { currentCmd = CMD_WIFI_INFO; return; }
+  wifiModeIdx = selection;
+  currentCmd = CMD_NONE;
+  netInit(wifiModeIdx);
+}
 
 static void doRDSMode(int16_t enc)
 {
@@ -1115,7 +1122,8 @@ bool clickHandler(uint16_t cmd, bool shortPress)
     case CMD_UPDATEFW: otaRequestLatest(updateFwIdx == 1);break;
     case CMD_MEMORY:   clickMemory(memoryIdx, shortPress);break;
     case CMD_BLEMODE:  clickBleMode(bleModeMenuIdx, shortPress);break;
-    case CMD_WIFIMODE: clickWiFiMode(wifiModeIdx, shortPress);break;
+    case CMD_WIFI_INFO: currentCmd = CMD_WIFIMODE; break;
+    case CMD_WIFIMODE: clickWiFiMode(wifiMenuIdx, shortPress);break;
     case CMD_VOLUME:   clickVolume(shortPress);break;
     case CMD_BRT:      currentCmd = CMD_SETTINGS; break;
     case CMD_UI:       currentCmd = CMD_NONE; break;
@@ -1404,15 +1412,17 @@ static void drawUpdateFW(int x, int y, int sx)
 static void drawWiFiMode(int x, int y, int sx)
 {
   drawCommon(settings[MENU_WIFIMODE], x, y, sx, true);
-  int count = ITEM_COUNT(wifiModeDesc);
+  const int count = ITEM_COUNT(wifiModeDesc) + 1;
   for(int i=-2 ; i<3 ; i++)
   {
+    const int index = (wifiMenuIdx + count + i) % count;
+    const char *label = index == ITEM_COUNT(wifiModeDesc) ? "Info Wi-Fi" : wifiModeDesc[index];
     if(i==0) {
-      drawZoomedMenu(wifiModeDesc[abs((wifiModeIdx+count+i)%count)]);
+      drawZoomedMenu(label);
       spr.setTextColor(TH.menu_hl_text, TH.menu_hl_bg);
     } else { spr.setTextColor(TH.menu_item); }
     spr.setTextDatum(MC_DATUM);
-    spr.drawString(wifiModeDesc[abs((wifiModeIdx+count+i)%count)], 40+x+(sx/2), 64+y+(i*16), FONT_SMALL);
+    spr.drawString(label, 40+x+(sx/2), 64+y+(i*16), FONT_SMALL);
   }
 }
 
@@ -2394,7 +2404,7 @@ void drawSettingsPopup(uint16_t cmd)
     case CMD_USBMODE: valueText=usbModeDesc[usbModeIdx]; break;
     case CMD_TCPMODE: valueText=tcpModeDesc[tcpModeIdx]; break;
     case CMD_BLEMODE: valueText=bleModeDesc[bleModeMenuIdx]; break;
-    case CMD_WIFIMODE: valueText = wifiModeDesc[wifiModeIdx]; break;
+    case CMD_WIFIMODE: valueText = wifiMenuIdx == ITEM_COUNT(wifiModeDesc) ? "Info Wi-Fi" : wifiModeDesc[wifiMenuIdx]; break;
     case CMD_FM_REGION: valueText=fmRegions[FmRegionIdx].desc; break;
     case CMD_FM_STEREO: valueText=fmStereoDesc[fmStereoIdx]; break;
     case CMD_DSP_PATCHES: snprintf(value,sizeof(value),"PATCH %u",dspPatchesIdx); break;

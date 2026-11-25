@@ -1,9 +1,9 @@
 # ATS Mini Dev — Übergabe für neuen Chat
 
-Stand: 21.11.2026  
+Stand: 25.11.2026  
 Repository: `firetvstick2k2-afk/ats-mini-dev` (privat)  
 Arbeitsbranch: `development`  
-Letzter Code-Commit: b036dbcd234f7fc5577b46d7bfc4335a205fe19a (RTTY preset preview submenu and action-menu polish).
+Letzter Code-Commit: c36ed291c9ea451af74a679edddbe4d68c5aed5c (CW/RTTY layout alignment; JS8 removal).
 
 ## 1. Wichtige Arbeitsregeln
 - **Bugfixes haben Vorrang:** Meldet der Nutzer während geplanter Feature-Arbeit einen Fehler, zuerst diesen Bug beheben und danach mit der zuletzt priorisierten Roadmap-Aufgabe fortfahren.

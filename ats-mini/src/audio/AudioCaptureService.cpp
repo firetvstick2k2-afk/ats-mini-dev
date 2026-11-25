@@ -17,10 +17,9 @@ bool AudioCaptureService::begin() {
                 static_cast<unsigned>(kPin), static_cast<unsigned>(kSampleRate),
                 static_cast<unsigned>(ESP.getFreeHeap()),
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
-  // ATS Mini V4B routes receiver audio to GPIO11 (ADC2_CH0). Keep the
-  // ADC range explicit so decoder thresholds are stable across startup paths.
+  // ATS Mini V4B routes receiver audio to GPIO11 (ADC2_CH0).
+  // Keep 12-bit samples; do not force pin attenuation before ADC channel setup.
   analogReadResolution(12);
-  analogSetPinAttenuation(kPin, ADC_11db);
   pinMode(kPin, INPUT);
   atsDebugLogf("[AUDIO] creating capture task stack=4096 core=0");
   const BaseType_t taskResult = xTaskCreatePinnedToCore(taskEntry, "audio-capture", 4096, this, 3, nullptr, 0);
@@ -82,7 +81,8 @@ void AudioCaptureService::sampleTask() {
   size_t count = 0;
   int64_t base = 0, next = 0;
   uint64_t index = 0;
-  uint32_t lastHealthReportMs = millis();
+  const uint32_t taskStartMs = millis();
+  uint32_t lastHealthReportMs = taskStartMs;
   uint32_t lastOverrunReportMs = 0;
   size_t lastSubscriberCount = SIZE_MAX;
 
@@ -96,9 +96,13 @@ void AudioCaptureService::sampleTask() {
                    static_cast<unsigned>(kBlockSamples));
     }
     const uint32_t healthNow = millis();
-    if (activeCount && (uint32_t)(healthNow - lastHealthReportMs) >= 15000UL) {
+    const uint32_t taskElapsedMs = healthNow - taskStartMs;
+    const uint32_t healthIntervalMs = taskElapsedMs < 20000UL ? 2000UL : 15000UL;
+    if (activeCount && (uint32_t)(healthNow - lastHealthReportMs) >= healthIntervalMs) {
       lastHealthReportMs = healthNow;
-      atsDebugLogf("[AUDIO][TASK_HEALTH] heap_free=%u heap_min=%u task_stack_high_water=%u subscribers=%u sample_rate=%u",
+      atsDebugLogf("[AUDIO][TASK_HEALTH] elapsed_ms=%lu sample_index=%llu block_fill=%u heap_free=%u heap_min=%u task_stack_high_water=%u subscribers=%u sample_rate=%u",
+                   static_cast<unsigned long>(taskElapsedMs),
+                   static_cast<unsigned long long>(index), static_cast<unsigned>(count),
                    static_cast<unsigned>(ESP.getFreeHeap()),
                    static_cast<unsigned>(ESP.getMinFreeHeap()),
                    static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),

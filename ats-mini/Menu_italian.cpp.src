@@ -158,6 +158,14 @@ static const char *decoderCategoryLabels[] = {
 static uint8_t decoderCategoryIndex = 0;
 static uint8_t decoderPresetIndex = 0;
 static bool decoderPresetView = false;
+static bool decoderPreviewSpeakerWasEnabled = true;
+static bool decoderPreviewSpeakerForced = false;
+static void restoreDecoderFrequencyPreviewAudio()
+{
+  if(!decoderPreviewSpeakerForced) return;
+  digitalWrite(AUDIO_MUTE, decoderPreviewSpeakerWasEnabled ? LOW : HIGH);
+  decoderPreviewSpeakerForced = false;
+}
 static uint32_t decoderSelectionChangedAt = 0;
 static int16_t decoderLastTunedPreset = -1;
 int8_t spectrumMenuIdx = 0;
@@ -2074,6 +2082,7 @@ static bool tuneDecoderFrequencyPreset(uint8_t presetIndex)
 
 void decoderFrequencyOpen()
 {
+  restoreDecoderFrequencyPreviewAudio();
   decoderCategoryIndex = 0;
   decoderPresetIndex = 0;
   decoderPresetView = false;
@@ -2087,6 +2096,11 @@ bool decoderFrequencyRotate(int16_t enc)
   if(!enc) return false;
   if(decoderPresetView)
   {
+    if(decoderLastTunedPreset >= 0 && !decoderPreviewSpeakerForced) {
+      decoderPreviewSpeakerWasEnabled = digitalRead(AUDIO_MUTE) == LOW;
+      digitalWrite(AUDIO_MUTE, HIGH);
+      decoderPreviewSpeakerForced = true;
+    }
     const auto &category = kDecoderFrequencyCategories[decoderCategoryIndex];
     decoderPresetIndex = wrap_range(decoderPresetIndex, enc, 0, category.presetCount - 1);
     decoderLastTunedPreset = -1;
@@ -2117,6 +2131,7 @@ bool decoderFrequencyClick()
     }
     decoderLastTunedPreset = decoderPresetIndex;
   }
+  restoreDecoderFrequencyPreviewAudio();
   const DecoderKind decoder = kDecoderFrequencyPresets[presetIndex].decoder;
   if(decoder == DecoderKind::FT8 || decoder == DecoderKind::FT4)
   {
@@ -2130,6 +2145,7 @@ bool decoderFrequencyClick()
 
 bool decoderFrequencyBack()
 {
+  restoreDecoderFrequencyPreviewAudio();
   if(decoderPresetView)
   {
     decoderPresetView = false;
@@ -2146,6 +2162,7 @@ bool decoderFrequencyTick(uint32_t now)
   const uint8_t presetIndex = kDecoderFrequencyCategories[decoderCategoryIndex].firstPreset + decoderPresetIndex;
   const bool tuned = tuneDecoderFrequencyPreset(presetIndex);
   if(tuned) decoderLastTunedPreset = decoderPresetIndex;
+  restoreDecoderFrequencyPreviewAudio();
   else statusShow("Preset cannot be tuned", "No matching receiver band");
   return tuned;
 }

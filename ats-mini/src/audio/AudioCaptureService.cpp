@@ -81,6 +81,7 @@ void AudioCaptureService::sampleTask() {
   size_t count = 0;
   int64_t base = 0, next = 0;
   uint64_t index = 0;
+  uint64_t totalSamples = 0;
   const uint32_t taskStartMs = millis();
   uint32_t lastHealthReportMs = taskStartMs;
   uint32_t lastOverrunReportMs = 0;
@@ -100,9 +101,9 @@ void AudioCaptureService::sampleTask() {
     const uint32_t healthIntervalMs = taskElapsedMs < 20000UL ? 2000UL : 15000UL;
     if (activeCount && (uint32_t)(healthNow - lastHealthReportMs) >= healthIntervalMs) {
       lastHealthReportMs = healthNow;
-      atsDebugLogf("[AUDIO][TASK_HEALTH] elapsed_ms=%lu sample_index=%llu block_fill=%u heap_free=%u heap_min=%u task_stack_high_water=%u subscribers=%u sample_rate=%u",
+      atsDebugLogf("[AUDIO][TASK_HEALTH] elapsed_ms=%lu total_samples=%llu block_fill=%u heap_free=%u heap_min=%u task_stack_high_water=%u subscribers=%u sample_rate=%u",
                    static_cast<unsigned long>(taskElapsedMs),
-                   static_cast<unsigned long long>(index), static_cast<unsigned>(count),
+                   static_cast<unsigned long long>(totalSamples), static_cast<unsigned>(count),
                    static_cast<unsigned>(ESP.getFreeHeap()),
                    static_cast<unsigned>(ESP.getMinFreeHeap()),
                    static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),
@@ -128,6 +129,7 @@ void AudioCaptureService::sampleTask() {
     int value = analogRead(kPin);
     if (value < 0) value = 2048;
     samples[count++] = static_cast<int16_t>(value);
+    ++totalSamples;
 
     if (count >= kBlockSamples) {
       timeval wallTime{};

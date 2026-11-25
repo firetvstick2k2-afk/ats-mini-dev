@@ -31,8 +31,7 @@ public:
       const float coeff=2.0f*cosf(omega);
       float q1=0,q2=0;
       for(uint16_t n=0;n<kWindow;++n) {
-        const float window=0.5f-0.5f*cosf(2.0f*pi*n/(kWindow-1));
-        const float q0=frame[n]*window+coeff*q1-q2;
+        const float q0=frame[n]*window_[n]+coeff*q1-q2;
         q2=q1; q1=q0;
       }
       const float power=q1*q1+q2*q2-coeff*q1*q2;

@@ -55,6 +55,7 @@ bool ftxPresetPreviewActive = false;
 uint32_t ftxPresetPreviewStartedAt = 0;
 bool ftxPresetPreviewSpeakerWasEnabled = true;
 bool ftxPresetPreviewSpeakerForced = false;
+bool ftxPresetPreviewSelectionMuted = false;
 bool ftxAutoScroll = true;
 uint8_t ftxMenuSelection = 0;
 constexpr uint8_t kFtxMenuItems = 9;
@@ -515,12 +516,12 @@ bool applyFtxPreset(const DecoderFrequencyPreset& preset);
 
 void restoreFtxPresetPreviewSpeaker()
 {
-  if(!ftxPresetPreviewSpeakerForced) return;
-  // GPIO3 (AUDIO_MUTE) mutes only the L/R speaker path. Keep the external
-  // amplifier powered because GPIO11 is the independent FT8 ADC audio tap.
+  if(!ftxPresetPreviewSpeakerForced && !ftxPresetPreviewSelectionMuted) return;
+  // GPIO3 mutes only the speaker path; GPIO11 decoder capture stays alive.
   digitalWrite(AUDIO_MUTE, ftxPresetPreviewSpeakerWasEnabled ? LOW : HIGH);
   ftxSpeakerEnabled = ftxPresetPreviewSpeakerWasEnabled;
   ftxPresetPreviewSpeakerForced = false;
+  ftxPresetPreviewSelectionMuted = false;
 }
 
 void clearFtxPresetPreviewState()
@@ -567,12 +568,17 @@ void scheduleFtxPresetPreview(uint32_t now)
     ftxPresetOriginalValid = true;
   }
   ftxPresetPreviewPending = true;
-  ftxPresetPreviewActive = false;
   ftxPresetPreviewStartedAt = now;
 }
 
 void startFtxPresetPreview()
 {
+  if(ftxPresetTargetBandSnapshotValid && ftxPresetTargetBandIndex >= 0 &&
+     ftxPresetTargetBandIndex < getTotalBands()) {
+    bands[ftxPresetTargetBandIndex] = ftxPresetTargetBandOriginal;
+    ftxPresetTargetBandIndex = -1;
+    ftxPresetTargetBandSnapshotValid = false;
+  }
   const DecoderFrequencyPreset* preset = ftxPresetAt(ftxPresetSelection);
   if(!preset || !ftxPresetOriginalValid) {
     ftxPresetPreviewPending = false;
@@ -592,8 +598,10 @@ void startFtxPresetPreview()
     ftxPresetPreviewSpeakerWasEnabled = ftxSpeakerEnabled;
     ftxPresetPreviewSpeakerForced = true;
     ftxSpeakerEnabled = true;
-    digitalWrite(AUDIO_MUTE, LOW);
   }
+  ftxPresetPreviewSelectionMuted = false;
+  digitalWrite(AUDIO_MUTE, LOW);
+  ftxSpeakerEnabled = true;
 }
 
 void commitFtxPresetPreview()
@@ -868,8 +876,10 @@ void ftxUiRotate(int delta)
     int next = static_cast<int>(ftxPresetSelection) + (delta > 0 ? 1 : -1);
     if(next < 0) next = count - 1;
     if(next >= count) next = 0;
-    if(ftxPresetPreviewActive)
-      restoreFtxPresetOriginal();
+    if(ftxPresetPreviewActive) {
+      digitalWrite(AUDIO_MUTE, HIGH);
+      ftxPresetPreviewSelectionMuted = true;
+    }
     ftxPresetSelection = static_cast<uint8_t>(next);
     if(ftxPresetSelection < ftxPresetScroll) ftxPresetScroll = ftxPresetSelection;
     ftxPresetScroll = DecoderMenuUi::firstVisible(ftxPresetSelection, static_cast<uint8_t>(count));
@@ -894,9 +904,14 @@ void ftxUiClick()
   }
   if(ftxPresetMenuOpen) {
     const DecoderFrequencyPreset* preset = ftxPresetAt(ftxPresetSelection);
-    bool applied = ftxPresetPreviewActive;
+    bool applied = ftxPresetPreviewActive && !ftxPresetPreviewPending;
     if(!applied && preset) {
-      // Mark the tune provisional so a receiver tune mismatch is also rolled back.
+      if(ftxPresetTargetBandSnapshotValid && ftxPresetTargetBandIndex >= 0 &&
+         ftxPresetTargetBandIndex < getTotalBands()) {
+        bands[ftxPresetTargetBandIndex] = ftxPresetTargetBandOriginal;
+        ftxPresetTargetBandIndex = -1;
+        ftxPresetTargetBandSnapshotValid = false;
+      }
       ftxPresetPreviewActive = true;
       applied = applyFtxPreset(*preset);
     }
@@ -1074,7 +1089,7 @@ void drawFtxDecoderPage()
         labels[i] = storage[i];
       }
       const char* title = ftxPresetDecoder == DecoderKind::FT4 ? "FT4 FREQUENCIES" : "FT8 FREQUENCIES";
-      const char* previewStatus = ftxPresetPreviewActive ? "TUNED" : ftxPresetPreviewPending ? "TUNING..." : "READY";
+      const char* previewStatus = ftxPresetPreviewPending ? "TUNING..." : ftxPresetPreviewActive ? "TUNED" : "READY";
       DecoderMenuUi::draw(title, labels, nullptr, count, ftxPresetSelection,
                           "TURN: SELECT", "CLICK: APPLY", previewStatus);
     } else {

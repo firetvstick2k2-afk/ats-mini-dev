@@ -231,7 +231,7 @@ void RttyService::update() {
   lastUiMs_=millis();
   char decoded[65]{};
   size_t n=0;
-  if(engineMutex_) { xSemaphoreTake(engineMutex_,portMAX_DELAY); n=rtty_take_text(decoded,sizeof(decoded)); signal_=signal_ || rtty_active(); xSemaphoreGive(engineMutex_); }
+  if(engineMutex_) { xSemaphoreTake(engineMutex_,portMAX_DELAY); n=rtty_take_text(decoded,sizeof(decoded)); xSemaphoreGive(engineMutex_); }
   if(n) {
     for(size_t i=0;i<n;++i) {
       if(decoded[i]=='\r') continue;

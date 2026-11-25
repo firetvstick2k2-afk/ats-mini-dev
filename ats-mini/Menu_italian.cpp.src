@@ -133,15 +133,15 @@ static int visibleBandIndexAtOffset(int offset)
 
 int8_t menuIdx = MENU_KEYPAD;
 static uint8_t programmesMenuIdx = 0;
-static const char *programmesMenu[] = { "DECODER", "MONITOR BANDA", "FM-DX", "CALENDARIO LUNARE", "METEO", "NOTIZIE", "INDIETRO" };
+static const char *programmesMenu[] = { "DECODER", "FM-DX", "INDIETRO" };
 static uint8_t decoderMenuIdx = 0;
 static const char *decoderMenu[] = {
   "INDIETRO", "FREQUENZE DECODER", "DECODER CW", "DECODER RTTY",
-  "FT8 / FT4", "MONITOR JS8 RX", "NAVTEX", "PSK31 BPSK"
+  "FT8 / FT4", "MONITOR JS8 RX"
 };
 static const char *decoderMenuXXL[] = {
   "INDIETRO", "FREQUENZE DECODER", "DECODER CW", "DECODER RTTY",
-  "FT8 / FT4", "MONITOR JS8 RX", "NAVTEX", "PSK31 BPSK"
+  "FT8 / FT4", "MONITOR JS8 RX"
 };
 static const char *decoderCategoryLabels[] = {
   "CW",
@@ -528,7 +528,7 @@ void doVolume(int16_t enc)
 
 static void clickVolume(bool shortPress)
 {
-  currentCmd = CMD_NONE;
+  currentCmd = CMD_MENU;
 }
 
 static void clickSquelch(bool shortPress)
@@ -990,12 +990,7 @@ static void clickProgrammesMenu(int idx)
   switch(idx)
   {
     case 0: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
-    case 2: fmDxUiOpen(); break;
-    // Other programme entries are visible now; their feature modules return in the next recovery phase.
-    case 1:
-    case 3:
-    case 4:
-    case 5: currentCmd = CMD_PROGRAMMES; break;
+    case 1: fmDxUiOpen(); break;
     default: currentCmd = CMD_MENU; break;
   }
 }
@@ -1010,9 +1005,6 @@ static void clickDecoderMenu(int idx)
     case 3: if(rttyUiOpen(45.45f)) currentCmd = CMD_RTTY_DECODER; break;
     case 4: if(ftxUiOpen(FtxMode::FT8)) currentCmd = CMD_FTX_DECODER; break;
     case 5: if(js8UiOpen()) currentCmd = CMD_JS8_MONITOR; break;
-    // NAVTEX and PSK31 entries are placeholders until their decoder modules are restored.
-    case 6:
-    case 7: currentCmd = CMD_DECODER_MENU; break;
     default: currentCmd = CMD_PROGRAMMES; break;
   }
 }

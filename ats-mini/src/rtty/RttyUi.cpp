@@ -440,6 +440,7 @@ void drawRttyDecoderPage() {
     constexpr uint16_t panel=0x1036,cyan=0x07FF;
     spr.fillRect(menuX,menuY,menuW,menuH,panel);
     spr.drawRect(menuX,menuY,menuW,menuH,cyan);
+    spr.drawRect(menuX+1,menuY+1,menuW-2,menuH-2,0x0359);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);
@@ -458,8 +459,8 @@ void drawRttyDecoderPage() {
           static_cast<unsigned>(preset->frequencyKHz%1000),
           preset->modulation==USB?"USB":preset->modulation==LSB?"LSB":"AM");
         const int y=menuY+29+row*20;
-        if(index==presetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,0x0359);
-        spr.setTextColor(index==presetSelection?0xFFFF:0xBDF7);
+        if(index==presetSelection) spr.drawRoundRect(menuX+7,y-3,menuW-14,19,2,cyan);
+        spr.setTextColor(0xFFFF);
         spr.drawString(label,menuX+13,y);
         if(index==presetSelection && (presetPreviewPending || presetPreviewActive)) {
           spr.setTextDatum(TR_DATUM);
@@ -497,8 +498,8 @@ void drawRttyDecoderPage() {
       spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
       for(uint8_t i=0;i<kMenuCount;++i) {
         const int y=menuY+27+i*17;
-        if(i==menuIndex) spr.fillRect(menuX+7,y-2,menuW-14,18,0x0359);
-        spr.setTextColor(i==menuIndex?0xFFFF:0xBDF7);
+        if(i==menuIndex) spr.drawRoundRect(menuX+7,y-2,menuW-14,18,2,cyan);
+        spr.setTextColor(0xFFFF);
         spr.drawString(labels[i],menuX+14,y);
         char value[24]={};
         if(i==2) snprintf(value,sizeof(value),"%.2f Bd",baudChoices[baudIndex]);

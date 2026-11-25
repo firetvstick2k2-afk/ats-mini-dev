@@ -24,7 +24,7 @@ inline void draw(uint32_t frequencyKHz, const char* status,
 
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(cyan);
-  spr.drawString(status ? status : "",205,19,FONT_SMALL);
+  spr.drawString(status ? status : "",185,19,FONT_SMALL);
   char counter[16];
   snprintf(counter,sizeof(counter),"TXT %03u",
            static_cast<unsigned>(decoded ? strlen(decoded) : 0));

@@ -379,9 +379,11 @@ bool rttyUiTick(uint32_t now) {
     startRttyPresetPreview();
     changed=true;
   }
-  if(static_cast<uint32_t>(now-lastRefresh)<100) return changed;
+  const uint32_t interval=spectrumMode?33:100;
+  if(static_cast<uint32_t>(now-lastRefresh)<interval) return changed;
   lastRefresh=now;
   service.update();
+  if(spectrumMode) service.updateSpectrum();
   if(bfoAuto && service.signal() &&
      static_cast<uint32_t>(now-lastAutoBfoAdjust)>=500) {
     const float error=kTargetToneCenterHz-service.toneCenterHz();

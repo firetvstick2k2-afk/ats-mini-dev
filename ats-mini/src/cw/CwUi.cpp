@@ -189,9 +189,11 @@ bool cwUiTick(uint32_t now) {
     startCwPreview();
     changed=true;
   }
-  if(static_cast<uint32_t>(now-lastRefresh)<100) return changed;
+  const uint32_t interval=spectrumMode?33:100;
+  if(static_cast<uint32_t>(now-lastRefresh)<interval) return changed;
   lastRefresh = now;
   service.update();
+  if(spectrumMode) service.updateSpectrum();
   return true;
 }
 

@@ -1,6 +1,6 @@
 # ATS Mini Development Handoff
 
-Last updated: 2026-11-25 (Build #97 baseline; CB/RTTY UI complete; HF Bandmonitor next)
+Last updated: 2026-11-25 (Build #98 stable; HF Bandmonitor hardware-confirmed; CW improvements next)
 Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
 Active work branch: `development` only; never modify `main` unless the user explicitly says “Bitte Main überschreiben”.
 
@@ -1460,3 +1460,14 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Statisch erneut geprüft: Menüaktion in DE/EN/IT ruft `bandOpeningUiOpen()` auf; Draw-Dispatch vorhanden; Encoder-Seitenwechsel, Klick-Refresh, Langdruck-Exit und Timeout-Ausnahme vorhanden.
 - Keine Aufrufe von `netInit()`/`netStop()` im Bandmonitor-Service; keine Logger-Aufrufe. Bestehende Decoder-/Audio-Dateien wurden nicht geändert.
 - Noch offen: echte Compilerprüfung und Laufzeit-/Hardwareprüfung. Kein Build, keine Action, kein Flash und kein Hardwaretest wurde gestartet.
+
+
+## Maßgeblicher aktueller Stand — Build 98 (25.11.2026)
+- **Build #98 ist die neue stabile Referenz.** Der Nutzer hat den Build selbst gebaut und auf dem ATS Mini V4 getestet und bestätigt: „Alles läuft mega, Bandmonitor auch“. Damit sind Firmware-Build und Laufzeit des integrierten HF Bandmonitors vom Nutzer erfolgreich bestätigt.
+- Build #97 ist abgelöst und nur noch historische Referenz.
+- **HF Bandmonitor ist integriert und erfolgreich auf Hardware bestätigt.** Die zuvor offenen Build- und Laufzeitprüfungen für diese Integration sind damit erledigt.
+- Nächster vereinbarter Entwicklungsauftrag: gezielte Qualitätsverbesserungen am CW-Decoder anhand des hochgeladenen RESONIK-Quellcodes. Vorläufige Analyse: Decoderkern ist bereits praktisch identisch; besonders relevant sind die dynamische Tonfrequenz passend zum SI4735-CW-Filter, Prüfung des ADC-/Samplingpfads unter Beibehaltung der gemeinsamen AudioCaptureService-Architektur, Untersuchung möglicher Sample-Block-Verluste am Mutex sowie Übernahme/Integration synthetischer Host-Tests.
+- **CW-Arbeiten erst nach Bestätigung von Build #98** – diese Voraussetzung ist jetzt erfüllt. Noch keine CW-Datei geändert; zunächst gezielte Implementierung auf Basis des aktuellen development-Stands.
+- Danach als mögliche, noch nicht beauftragte RESONIK-Anregungen prüfen: Band View/Auto-Store, Beacon Tracker/Propagation, Signal Logger, Backup/Restore und CAT-Steuerung. Diese sind Ideen für spätere Priorisierung, keine bereits freigegebenen Implementierungen.
+- Schutzregeln bleiben unverändert: ausschließlich development; main nur nach ausdrücklicher Formulierung „Bitte Main überschreiben“; vor jeder Änderung bestehender Dateien aktuellen Inhalt und SHA aus GitHub abrufen; FT8/FT4 und andere funktionierende Decoder nicht unnötig anfassen; MIT-Kompatibilität und Herkunft prüfen; Handoff-Dateien aktuell halten.
+- Der Nutzer startet Builds, Actions, Flash und Hardwaretests selbst, sofern nicht ausdrücklich anders beauftragt. Keine Build-/Hardware-Ergebnisse ohne Bestätigung behaupten.

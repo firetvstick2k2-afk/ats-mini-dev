@@ -1,5 +1,4 @@
 #include "AudioCaptureService.h"
-#include "../../DebugLog.h"
 
 #include <esp_timer.h>
 #include <sys/time.h>
@@ -9,25 +8,12 @@ bool AudioCaptureService::begin() {
 #if defined(LILYGO_SI473X)
   return false; // GPIO11 is the LILYGO SPI MOSI pin, not the ATS Mini audio input.
 #else
-  if (initialized_) {
-    atsDebugLogf("[AUDIO] begin: capture task already initialized");
-    return true;
-  }
-  atsDebugLogf("[AUDIO] begin GPIO=%u rate=%u heap=%u stack=%u\n",
-                static_cast<unsigned>(kPin), static_cast<unsigned>(kSampleRate),
-                static_cast<unsigned>(ESP.getFreeHeap()),
-                static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
-  // ATS Mini V4B routes receiver audio to GPIO11 (ADC2_CH0).
-  // Keep 12-bit samples; do not force pin attenuation before ADC channel setup.
-  analogReadResolution(12);
+  if (initialized_) return true;
   pinMode(kPin, INPUT);
-  atsDebugLogf("[AUDIO] creating capture task stack=4096 core=0");
-  const BaseType_t taskResult = xTaskCreatePinnedToCore(taskEntry, "audio-capture", 4096, this, 3, nullptr, 0);
-  atsDebugLogf("[AUDIO] capture task result=%ld heap=%u\n",
-                static_cast<long>(taskResult), static_cast<unsigned>(ESP.getFreeHeap()));
-  if (taskResult != pdPASS) return false;
+  if (xTaskCreatePinnedToCore(taskEntry, "audio-capture", 4096, this, 3, nullptr, 0) != pdPASS) {
+    return false;
+  }
   initialized_ = true;
-  atsDebugLogf("[AUDIO] begin done");
   return true;
 #endif
 }
@@ -81,35 +67,10 @@ void AudioCaptureService::sampleTask() {
   size_t count = 0;
   int64_t base = 0, next = 0;
   uint64_t index = 0;
-  uint64_t totalSamples = 0;
-  const uint32_t taskStartMs = millis();
-  uint32_t lastHealthReportMs = taskStartMs;
-  uint32_t lastOverrunReportMs = 0;
-  size_t lastSubscriberCount = SIZE_MAX;
 
   for (;;) {
     Subscriber active[kMaxSubscribers]{};
-    const size_t activeCount = snapshotSubscribers(active, kMaxSubscribers);
-    if (activeCount != lastSubscriberCount) {
-      lastSubscriberCount = activeCount;
-      atsDebugLogf("[AUDIO][SUBSCRIBERS] active=%u sample_rate=%u block_samples=%u",
-                   static_cast<unsigned>(activeCount), static_cast<unsigned>(kSampleRate),
-                   static_cast<unsigned>(kBlockSamples));
-    }
-    const uint32_t healthNow = millis();
-    const uint32_t taskElapsedMs = healthNow - taskStartMs;
-    const uint32_t healthIntervalMs = taskElapsedMs < 20000UL ? 2000UL : 15000UL;
-    if (activeCount && (uint32_t)(healthNow - lastHealthReportMs) >= healthIntervalMs) {
-      lastHealthReportMs = healthNow;
-      atsDebugLogf("[AUDIO][TASK_HEALTH] elapsed_ms=%lu total_samples=%llu block_fill=%u heap_free=%u heap_min=%u task_stack_high_water=%u subscribers=%u sample_rate=%u",
-                   static_cast<unsigned long>(taskElapsedMs),
-                   static_cast<unsigned long long>(totalSamples), static_cast<unsigned>(count),
-                   static_cast<unsigned>(ESP.getFreeHeap()),
-                   static_cast<unsigned>(ESP.getMinFreeHeap()),
-                   static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)),
-                   static_cast<unsigned>(activeCount), static_cast<unsigned>(kSampleRate));
-    }
-    if (activeCount == 0) {
+    if (snapshotSubscribers(active, kMaxSubscribers) == 0) {
       count = 0;
       base = next = 0;
       index = 0;
@@ -125,11 +86,9 @@ void AudioCaptureService::sampleTask() {
 
     ++index;
     next = base + static_cast<int64_t>(index * 1000000ULL / kSampleRate);
-    // GPIO11 is ADC2 on the ATS Mini V4B; callers must stop Wi-Fi first.
     int value = analogRead(kPin);
     if (value < 0) value = 2048;
     samples[count++] = static_cast<int16_t>(value);
-    ++totalSamples;
 
     if (count >= kBlockSamples) {
       timeval wallTime{};
@@ -149,15 +108,7 @@ void AudioCaptureService::sampleTask() {
       base = next = esp_timer_get_time();
       index = 0;
     }
-    const int64_t lateMicros = esp_timer_get_time() - next;
-    if (lateMicros > 10000) {
-      if ((uint32_t)(millis() - lastOverrunReportMs) >= 5000UL) {
-        lastOverrunReportMs = millis();
-        atsDebugLogf("[AUDIO][SAMPLE_OVERRUN] late_us=%lld sample_index=%llu heap_free=%u",
-                     static_cast<long long>(lateMicros),
-                     static_cast<unsigned long long>(index),
-                     static_cast<unsigned>(ESP.getFreeHeap()));
-      }
+    if (esp_timer_get_time() - next > 10000) {
       base = next = esp_timer_get_time();
       index = 0;
     }

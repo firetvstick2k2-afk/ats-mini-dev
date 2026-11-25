@@ -126,11 +126,14 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_VFO         16
 #define MENU_SPECTRUM    17
 #define MENU_ALL_SPECTRUM 18
-#define MENU_DECODER_MENU 19
-#define MENU_SETTINGS    20
-#define MENU_FM_DX       21
+#define MENU_UI_LAYOUTS  19
+#define MENU_PROGRAMMES  20
+#define MENU_SETTINGS    21
+#define MENU_BACK        22
 
 int8_t menuIdx = MENU_KEYPAD;
+static uint8_t programmesMenuIdx = 0;
+static const char *programmesMenu[] = { "DECODER", "FM-DX", "BACK" };
 static const char *decoderCategoryLabels[] = {
   "CW",
   "FT8",
@@ -156,11 +159,11 @@ static const char *spectrumMenu[] = { "VHF SPECTRUM", "ALL Band Spectrum" };
 
 static const char *menu[] =
 {
-  "Volume", "Keypad", "Band", "Mode", "BFO",
-  "Steps", "Seek", "Scan", "Memory", "Squelch",
-  "Bandwidth", "Frequency", "AGC/ATTN", "AVC",
-  "SoftMute", "DUAL RX", "VFO A/B", "VHF Spectrum",
-  "ALL Band Spectrum", "Decoder", "Settings", "FM DX",
+  "VOLUME", "KEYPAD", "BAND", "MODE", "BFO", "STEPS",
+  "SEEK", "SCAN", "MEMORY", "SQUELCH", "BANDWIDTH",
+  "FREQUENCY", "AGC/ATTN", "AVC", "SOFTMUTE",
+  "DUAL RX", "VFO A/B", "VHF SPECTRUM", "ALL BAND SPECTRUM",
+  "UI LAYOUTS", "PROGRAMMES", "SETTINGS", "BACK",
 };
 
 #define MENU_BRIGHTNESS   0
@@ -947,8 +950,9 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_DUAL_RX: dualRxStart(); break;
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
-    case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
-    case MENU_FM_DX: fmDxUiOpen(); break;
+    case MENU_UI_LAYOUTS: currentCmd = CMD_UI; break;
+    case MENU_PROGRAMMES: programmesMenuIdx = 0; currentCmd = CMD_PROGRAMMES; break;
+    case MENU_BACK: currentCmd = CMD_NONE; break;
   }
 }
 
@@ -960,11 +964,21 @@ static const char *settingLabel(int idx)
 
 static void doSettings(int16_t enc) { settingsIdx = wrap_range(settingsIdx, enc, 0, ITEM_COUNT(settings) - 1); }
 
+static void clickProgrammesMenu(int idx)
+{
+  switch(idx)
+  {
+    case 0: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
+    case 1: fmDxUiOpen(); break;
+    default: currentCmd = CMD_MENU; break;
+  }
+}
+
 static void clickDecoderMenu(int idx)
 {
   switch(idx)
   {
-    case 0: currentCmd = CMD_MENU; break;
+    case 0: currentCmd = CMD_PROGRAMMES; break;
     case 1: decoderFrequencyOpen(); break;
     case 2: if(cwUiOpen()) currentCmd = CMD_CW_DECODER; break;
     case 3: if(rttyUiOpen(45.45f)) currentCmd = CMD_RTTY_DECODER; break;
@@ -1015,6 +1029,7 @@ bool doSideBar(uint16_t cmd, int16_t enc, int16_t enca)
   switch(cmd)
   {
     case CMD_MENU:       doMenu(scrollDirection * enc);break;
+    case CMD_PROGRAMMES: programmesMenuIdx = wrap_range(programmesMenuIdx, scrollDirection * enc, 0, LAST_ITEM(programmesMenu)); break;
     case CMD_DECODER_MENU: decoderMenuIdx = wrap_range(decoderMenuIdx, scrollDirection * enc, 0, LAST_ITEM(decoderMenu)); break;
     case CMD_SPECTRUM_MENU: spectrumMenuIdx = wrap_range(spectrumMenuIdx, scrollDirection * enc, 0, LAST_ITEM(spectrumMenu)); break;
     case CMD_MODE:       doMode(scrollDirection * enc);break;
@@ -1059,6 +1074,7 @@ bool clickHandler(uint16_t cmd, bool shortPress)
   switch(cmd)
   {
     case CMD_MENU:     clickMenu(menuIdx, shortPress);break;
+    case CMD_PROGRAMMES: clickProgrammesMenu(programmesMenuIdx); break;
     case CMD_DECODER_MENU: clickDecoderMenu(decoderMenuIdx); break;
     case CMD_DECODER_FREQUENCIES: decoderFrequencyClick(); break;
     case CMD_FTX_DECODER: ftxUiExit(); break;
@@ -1840,13 +1856,17 @@ void drawFullScreenMenu(uint16_t cmd)
   const bool settingsPage = cmd == CMD_SETTINGS;
   const bool spectrumPage = cmd == CMD_SPECTRUM_MENU;
   const bool decoderPage = cmd == CMD_DECODER_MENU;
+  const bool programmesPage = cmd == CMD_PROGRAMMES;
   const int selected = settingsPage ? settingsIdx :
-    (spectrumPage ? spectrumMenuIdx : (decoderPage ? decoderMenuIdx : menuIdx));
+    (spectrumPage ? spectrumMenuIdx : (decoderPage ? decoderMenuIdx :
+     (programmesPage ? programmesMenuIdx : menuIdx)));
   const int count = settingsPage ? ITEM_COUNT(settings) :
     (spectrumPage ? ITEM_COUNT(spectrumMenu) :
-     (decoderPage ? ITEM_COUNT(decoderMenu) : ITEM_COUNT(menu)));
+     (decoderPage ? ITEM_COUNT(decoderMenu) :
+      (programmesPage ? ITEM_COUNT(programmesMenu) : ITEM_COUNT(menu))));
   const char *title = settingsPage ? "SETTINGS" :
-    (spectrumPage ? "SPECTRUM" : (decoderPage ? "DECODER" : "MENU"));
+    (spectrumPage ? "SPECTRUM" : (decoderPage ? "DECODER" :
+     (programmesPage ? "PROGRAMMES" : "MENU")));
   constexpr int visibleRows = 3;
   const int first = max(0, min(count - visibleRows, selected - 1));
 
@@ -1876,7 +1896,8 @@ void drawFullScreenMenu(uint16_t cmd)
     const int settingsItem = item == 0 ? -1 : (item <= MENU_ZOOM ? item - 1 : item);
     const char *label = settingsPage ? (item == 0 ? "BACK" : settingLabel(settingsItem)) :
       (spectrumPage ? spectrumMenu[item] :
-       (decoderPage ? decoderMenu[item] : menu[item]));
+       (decoderPage ? decoderMenu[item] :
+        (programmesPage ? programmesMenu[item] : menu[item])));
     if(active) {
       // Outline-only selection keeps the row background transparent.
       spr.drawRoundRect(9, y, 298, 31, 3, cyan);
@@ -1888,13 +1909,13 @@ void drawFullScreenMenu(uint16_t cmd)
     snprintf(number, sizeof(number), "%02d", item + 1);
     drawXXLText(number, 18, y + 8, active ? white : cyan, FONT_SMALL);
     drawXXLText(label, 52, y + 8, white, FONT_SMALL);
-    if(!settingsPage && !decoderPage && !spectrumPage) {
+    if(!settingsPage && !decoderPage && !spectrumPage && !programmesPage) {
       char value[24] = "";
       switch(item) {
         case MENU_VOLUME: snprintf(value, sizeof(value), "%u", volume); break;
         case MENU_BAND: snprintf(value, sizeof(value), "%s", bands[bandIdx].bandName); break;
         case MENU_MODE: snprintf(value, sizeof(value), "%s", bandModeDesc[currentMode]); break;
-        case MENU_DECODER_MENU:
+        case MENU_PROGRAMMES:
         case MENU_SETTINGS: snprintf(value, sizeof(value), ">"); break;
         default: break;
       }

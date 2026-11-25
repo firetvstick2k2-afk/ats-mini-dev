@@ -3,7 +3,6 @@
 // =================================
 
 #include "Common.h"
-#include "DebugLog.h"
 #include <Wire.h>
 #include "Rotary.h"
 #include "Button.h"
@@ -24,14 +23,10 @@
 #include "FreqKeypad.h"
 #include "SpectrumScanner.h"
 #include "AllBandSpectrum.h"
-#include "WeatherService.h"
-#include "NewsService.h"
-#include "MoonCalendar.h"
-#include "src/radio/BandOpeningService.h"
-#include <WiFi.h>
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
 #include "src/cw/CwUi.h"
+#include "src/js8/Js8Ui.h"
 #include "src/radio/FmDxController.h"
 #include "src/radio/FmDxUi.h"
 #include "StationLogoClient.h"
@@ -41,7 +36,7 @@
 #define MIN_ELAPSED_TIME         5  // 300
 #define MIN_ELAPSED_RSSI_TIME  200  // RSSI check uses IN_ELAPSED_RSSI_TIME * 6 = 1.2s
 #define ELAPSED_COMMAND      10000  // time to turn off the last command controlled by encoder. Time to goes back to the VFO control // G8PTN: Increased time and corrected comment
-#define DEFAULT_VOLUME          30  // change it for your favorite sound volume
+#define DEFAULT_VOLUME          35  // change it for your favorite sound volume
 #define DEFAULT_SLEEP            0  // Default sleep interval, range = 0 (off) to 255 in steps of 5
 #define RDS_CHECK_TIME         250  // Increased from 90
 #define SEEK_TIMEOUT        600000  // Max seek timeout (ms)
@@ -112,12 +107,6 @@ uint32_t background_timer = millis();   // Background screen refresh timer.
 //
 uint16_t currentCmd  = CMD_NONE;
 uint8_t  currentMode = FM;
-uint8_t weatherPage = 0;
-uint8_t newsCurrentIndex = 0;
-uint8_t newsCurrentPage = 0;
-uint8_t bandOpeningPage = 0;
-volatile uint8_t weatherUiState = WEATHER_UI_IDLE;
-volatile uint8_t moonUiState = MOON_UI_IDLE;
 int16_t  currentBFO  = 0;
 
 uint8_t  rssi = 0;
@@ -131,7 +120,6 @@ ButtonTracker pb1 = ButtonTracker();
 LGFX tft;
 LGFX_Sprite spr(&tft);
 SI4735_fixed rx;
-BandOpeningService bandOpeningService;
 
 // ============================================================================
 // SKIZZEN-WASSERFALL (ECO-MODE) CONFIG & HELPERS (ORIGINAL BEHALTEN)
@@ -171,59 +159,6 @@ void drawEcoWaterfallStatic(LGFX_Sprite &targetSprite) {
     targetSprite.fillRect(wfX + X_MID_START + X_MID_WIDTH, wfY, WATERFALL_WIDTH - (X_MID_START + X_MID_WIDTH), WATERFALL_HEIGHT, 0x001F);
 }
 
-// Compact state snapshots make display/audio shutdowns diagnosable even when
-// the USB terminal is disconnected at the moment the event occurs.
-static void atsDebugRadioStateTick()
-{
-  static bool initialized = false;
-  static uint16_t lastCmd = 0xFFFF;
-  static uint8_t lastMode = 0xFF;
-  static uint8_t lastLayout = 0xFF;
-  static uint16_t lastFrequency = 0xFFFF;
-  static int16_t lastBfo = INT16_MIN;
-  static bool lastSleeping = false;
-  static int lastMutePin = -1;
-  static int lastAmpPin = -2;
-  static uint32_t lastSnapshotMs = 0;
-
-  const bool sleeping = sleepOn();
-  const int mutePin = digitalRead(AUDIO_MUTE);
-  const int ampPin = PIN_AMP_EN >= 0 ? digitalRead(PIN_AMP_EN) : -1;
-  const bool changed = !initialized || currentCmd != lastCmd ||
-    currentMode != lastMode || uiLayoutIdx != lastLayout ||
-    currentFrequency != lastFrequency || currentBFO != lastBfo ||
-    sleeping != lastSleeping || mutePin != lastMutePin || ampPin != lastAmpPin;
-
-  if(changed)
-  {
-    atsDebugLogf("[RADIO][STATE_CHANGE] cmd=%u mode=%u freq_raw=%u bfo=%d layout=%u sleeping=%u mute_gpio=%d amp_gpio=%d volume=%u brightness_setting=%u sleep_timeout=%u",
-      (unsigned)currentCmd, (unsigned)currentMode, (unsigned)currentFrequency,
-      (int)currentBFO, (unsigned)uiLayoutIdx, sleeping ? 1U : 0U,
-      mutePin, ampPin, (unsigned)volume, (unsigned)currentBrt,
-      (unsigned)currentSleep);
-    lastCmd = currentCmd;
-    lastMode = currentMode;
-    lastLayout = uiLayoutIdx;
-    lastFrequency = currentFrequency;
-    lastBfo = currentBFO;
-    lastSleeping = sleeping;
-    lastMutePin = mutePin;
-    lastAmpPin = ampPin;
-    initialized = true;
-  }
-
-  const uint32_t now = millis();
-  if((uint32_t)(now - lastSnapshotMs) >= 15000UL)
-  {
-    lastSnapshotMs = now;
-    atsDebugLogf("[RADIO][STATE] cmd=%u mode=%u freq_raw=%u bfo=%d layout=%u sleeping=%u mute_gpio=%d amp_gpio=%d volume=%u brightness_setting=%u sleep_timeout=%u heap=%u",
-      (unsigned)currentCmd, (unsigned)currentMode, (unsigned)currentFrequency,
-      (int)currentBFO, (unsigned)uiLayoutIdx, sleeping ? 1U : 0U,
-      mutePin, ampPin, (unsigned)volume, (unsigned)currentBrt,
-      (unsigned)currentSleep, (unsigned)ESP.getFreeHeap());
-  }
-}
-
 //
 // Hardware initialization and setup
 //
@@ -233,14 +168,6 @@ void setup()
   tzset();
 
   Serial.begin(115200);
-  delay(50);
-  atsDebugBegin();
-  atsDebugFlushTick();
-  atsDebugLogf("[BOOT][SETUP] setup() entered");
-
-  // Start background workers only after USB CDC and the debug logger are ready.
-  newsService.begin();
-  atsDebugLogf("[BOOT][WORKER] NewsService begin requested heap=%u tasks=%u", (unsigned)ESP.getFreeHeap(), (unsigned)uxTaskGetNumberOfTasks());
 
   pinMode(ENCODER_PUSH_BUTTON, INPUT_PULLUP);
   pinMode(ENCODER_PIN_A, INPUT_PULLUP);
@@ -266,7 +193,6 @@ void setup()
 
   tft.init();
   tft.setRotation(3);
-  atsDebugLogf("[BOOT][DISPLAY] TFT initialized rotation=3 heap=%u", (unsigned)ESP.getFreeHeap());
 
   tft.fillScreen(TH.bg);
   spr.setPsram(true);
@@ -291,8 +217,7 @@ void setup()
     while(digitalRead(ENCODER_PUSH_BUTTON) == LOW) delay(100);
   }
 
-  const bool storageReady = diskInit();
-  atsDebugLogf("[BOOT][STORAGE] diskInit_result=%u heap_free=%u", storageReady ? 1U : 0U, (unsigned)ESP.getFreeHeap());
+  diskInit();
   logosInit();  // Prepare /logos and migrate legacy root-level PNG logos.
   dabLogoBegin();
 
@@ -312,7 +237,6 @@ void setup()
   rx.setI2CFastModeCustom(800000UL);
 
   int16_t si4735Addr = rx.getDeviceI2CAddress(RESET_PIN);
-  atsDebugLogf("[BOOT][RADIO] SI4735 address=0x%02X detected=%u", (unsigned)si4735Addr, si4735Addr ? 1U : 0U);
   if(!si4735Addr)
   {
     ledcWrite(PIN_LCD_BL, 255);
@@ -322,14 +246,9 @@ void setup()
     while(1);
   }
 
-  atsDebugLogf("[BOOT][RADIO] receiver setup begin");
   rx.setup(RESET_PIN, MW_BAND_TYPE);
-  atsDebugLogf("[BOOT][RADIO] receiver setup complete heap_free=%u", (unsigned)ESP.getFreeHeap());
 
-  const bool settingsLoaded = prefsLoad(SAVE_SETTINGS|SAVE_VERIFY);
-  atsDebugSettingsReady(webDiagEnabled);
-  atsDebugLogf("[BOOT][SETTINGS] loaded=%u usb_log_enabled=%u heap=%u", settingsLoaded ? 1U : 0U, webDiagEnabled ? 1U : 0U, (unsigned)ESP.getFreeHeap());
-  if(!settingsLoaded)
+  if(!prefsLoad(SAVE_SETTINGS|SAVE_VERIFY))
   {
     prefsSave(SAVE_SETTINGS);
     spr.fillSprite(TH.bg);
@@ -339,8 +258,8 @@ void setup()
     while(digitalRead(ENCODER_PUSH_BUTTON)==LOW) delay(100);
   }
 
-  // Restore the firmware's standard startup volume.
-  volume = DEFAULT_VOLUME;
+  // Always start quietly, regardless of the volume saved from the previous session.
+  volume = 10;
 
   webDiagLog("BOOT: startup");
 
@@ -367,11 +286,8 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A), rotaryEncoder, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B), rotaryEncoder, CHANGE);
 
-  atsDebugLogf("[BOOT][NETWORK] netInit requested mode=%u", (unsigned)wifiModeIdx);
   netInit(wifiModeIdx);
-  atsDebugLogf("[BOOT][BLE] bleInit requested mode=%u", (unsigned)bleModeIdx);
   bleInit(bleModeIdx);
-  atsDebugLogf("[BOOT][READY] setup complete cmd=%u mode=%u freq_raw=%u layout=%u heap=%u tasks=%u", (unsigned)currentCmd, (unsigned)currentMode, (unsigned)currentFrequency, (unsigned)uiLayoutIdx, (unsigned)ESP.getFreeHeap(), (unsigned)uxTaskGetNumberOfTasks());
 }
 
 
@@ -759,223 +675,12 @@ bool processRssiSnr()
 
 void loop()
 {
-  atsDebugTick();
-  atsDebugRadioStateTick();
   static bool decoderMenuLongPressHandled = false;
   uint32_t currentTime = millis();
   // Remember the last band and frequency used for frequency-dependent layout hints.
   static uint32_t lastBandplanDisplayFrequency = UINT32_MAX;
   static const Band *lastBandplanDisplayBand = nullptr;
   bool needRedraw = false;
-
-  // Start WiFi only while the weather screen is open. Preserve the original
-  // mode and defer shutdown until an in-flight HTTPS request has completed.
-  static bool weatherSessionActive = false;
-  static bool weatherWifiCleanupPending = false;
-  static bool newsSessionActive = false;
-  static bool newsWifiCleanupPending = false;
-  static bool bandOpeningSessionActive = false;
-  static bool bandOpeningWifiCleanupPending = false;
-
-  if(currentCmd == CMD_WEATHER && !weatherSessionActive)
-  {
-    weatherSessionActive = true;
-    weatherUiState = weatherService.hasConfiguredLocation() ? WEATHER_UI_WAITING_WIFI : WEATHER_UI_NO_LOCATION;
-    if(weatherService.hasConfiguredLocation())
-      netWeatherBegin();
-  }
-  if(currentCmd != CMD_WEATHER && weatherSessionActive)
-  {
-    weatherSessionActive = false;
-    weatherWifiCleanupPending = true;
-    weatherUiState = WEATHER_UI_IDLE;
-  }
-
-  if(currentCmd == CMD_NEWS && !newsSessionActive)
-  {
-    newsSessionActive = true;
-    if(newsService.hasEnabledFeeds()) netWeatherBegin();
-  }
-  if(currentCmd != CMD_NEWS && newsSessionActive)
-  {
-    newsSessionActive = false;
-    newsWifiCleanupPending = true;
-  }
-  const bool bandOpeningOpen = currentCmd == CMD_BAND_OPENING;
-  if(bandOpeningOpen && !bandOpeningSessionActive)
-  {
-    bandOpeningSessionActive = true;
-    bandOpeningPage = 0;
-    bandOpeningService.begin();
-    atsDebugLogf("[BANDOPEN][UI] monitor opened; requesting Wi-Fi");
-    netWeatherBegin();
-  }
-  if(!bandOpeningOpen && bandOpeningSessionActive)
-  {
-    bandOpeningSessionActive = false;
-    bandOpeningWifiCleanupPending = true;
-    atsDebugLogf("[BANDOPEN][UI] monitor closed; stopping new requests");
-  }
-  bool bandOpeningConnected = WiFi.status() == WL_CONNECTED;
-  if(bandOpeningSessionActive) bandOpeningConnected = netWeatherPoll();
-  bandOpeningService.update(bandOpeningSessionActive && bandOpeningConnected);
-
-  bool newsConnected = WiFi.status() == WL_CONNECTED;
-  if(newsSessionActive && newsService.hasEnabledFeeds()) newsConnected = netWeatherPoll();
-  newsService.update(newsConnected, newsSessionActive && newsService.hasEnabledFeeds());
-
-  bool weatherConnected = WiFi.status() == WL_CONNECTED;
-  if(weatherSessionActive && weatherService.hasConfiguredLocation())
-  {
-    weatherConnected = netWeatherPoll();
-    if(!weatherConnected)
-      weatherUiState = WEATHER_UI_WAITING_WIFI;
-  }
-
-  weatherService.update(weatherConnected, weatherSessionActive);
-
-  if(weatherSessionActive && weatherService.hasConfiguredLocation() && weatherConnected)
-  {
-    const WeatherService::Snapshot sessionWeather = weatherService.snapshot();
-    weatherUiState = (sessionWeather.fetching || !sessionWeather.valid) ? WEATHER_UI_LOADING : WEATHER_UI_READY;
-  }
-
-  // Shared WiFi cleanup is deferred until all weather/news workers are idle.
-
-  // Moon phases are calculated locally. Wi-Fi is only needed when the
-  // system clock has never been synchronized; reuse the weather session and
-  // restore the previous Wi-Fi mode immediately after a successful NTP sync.
-  static bool moonWifiSessionActive = false;
-  static bool moonWifiCleanupPending = false;
-  static uint32_t lastMoonNtpAttempt = 0;
-  static uint8_t lastMoonUiState = 0xFF;
-  static time_t lastMoonDrawMinute = 0;
-
-  if(currentCmd == CMD_MOON_CALENDAR && !moonWifiSessionActive && !moonWifiCleanupPending)
-  {
-    if(time(nullptr) < 1700000000)
-    {
-      moonUiState = MOON_UI_WAITING_WIFI;
-      moonWifiSessionActive = true;
-      netWeatherBegin();
-    }
-    else
-      moonUiState = MOON_UI_READY;
-  }
-  if(currentCmd != CMD_MOON_CALENDAR && moonWifiSessionActive)
-  {
-    moonWifiSessionActive = false;
-    moonWifiCleanupPending = true;
-    moonUiState = MOON_UI_IDLE;
-  }
-  if(moonWifiSessionActive)
-  {
-    if(netWeatherPoll())
-    {
-      moonUiState = MOON_UI_SYNCING_TIME;
-      if(!lastMoonNtpAttempt || millis() - lastMoonNtpAttempt >= 5000)
-      {
-        lastMoonNtpAttempt = millis();
-        if(ntpSyncTime() || time(nullptr) >= 1700000000)
-        {
-          moonUiState = MOON_UI_READY;
-          moonWifiSessionActive = false;
-          moonWifiCleanupPending = true;
-        }
-      }
-    }
-    else
-      moonUiState = MOON_UI_WAITING_WIFI;
-  }
-  // Moon-calendar cleanup uses the same shared network session.
-  if(currentCmd == CMD_MOON_CALENDAR)
-  {
-    const time_t now = time(nullptr);
-    const time_t minute = now / 60;
-    if(minute != lastMoonDrawMinute || moonUiState != lastMoonUiState)
-    {
-      lastMoonDrawMinute = minute;
-      lastMoonUiState = moonUiState;
-      needRedraw = true;
-    }
-  }
-
-  if(!weatherSessionActive && !moonWifiSessionActive && !newsSessionActive && !bandOpeningSessionActive &&
-     (weatherWifiCleanupPending || moonWifiCleanupPending || newsWifiCleanupPending || bandOpeningWifiCleanupPending) &&
-     !weatherService.snapshot().fetching && !newsService.isFetching() && !bandOpeningService.snapshot().fetching)
-  {
-    netWeatherEnd();
-    weatherWifiCleanupPending = false;
-    moonWifiCleanupPending = false;
-    newsWifiCleanupPending = false;
-    bandOpeningWifiCleanupPending = false;
-  }
-
-  static bool lastNewsDrawFetching = false;
-  static uint8_t lastNewsDrawCount = 0;
-  static uint32_t lastNewsTickerRedraw = 0;
-  if(currentCmd == CMD_NEWS && newsService.itemCount())
-  {
-    NewsService::Item tickerItem;
-    if(newsService.getItem(newsCurrentIndex % newsService.itemCount(),tickerItem) &&
-       strlen(tickerItem.title) > 35 &&
-       (uint32_t)(millis()-lastNewsTickerRedraw) >= 180)
-    {
-      lastNewsTickerRedraw = millis();
-      needRedraw = true;
-    }
-  }
-
-  if(currentCmd == CMD_NEWS)
-  {
-    const uint8_t count = newsService.itemCount();
-    const bool fetching = newsService.isFetching();
-    if(count != lastNewsDrawCount || fetching != lastNewsDrawFetching)
-    {
-      lastNewsDrawCount = count;
-      lastNewsDrawFetching = fetching;
-      if(count && newsCurrentIndex >= count) newsCurrentIndex = 0;
-      needRedraw = true;
-    }
-  }
-
-  static uint32_t lastWeatherDrawUpdate = UINT32_MAX;
-  static bool lastWeatherDrawFetching = false;
-  static bool lastWeatherDrawValid = false;
-  static uint32_t lastBandOpeningDrawUpdate = UINT32_MAX;
-  static bool lastBandOpeningDrawFetching = false;
-  static bool lastBandOpeningDrawValid = false;
-  static bool lastBandOpeningDrawStale = true;
-  static uint8_t lastWeatherUiState = 0xFF;
-  if(currentCmd == CMD_WEATHER)
-  {
-    const WeatherService::Snapshot weatherState = weatherService.snapshot();
-    if(weatherState.updatedAtMs != lastWeatherDrawUpdate ||
-       weatherState.fetching != lastWeatherDrawFetching ||
-       weatherState.valid != lastWeatherDrawValid ||
-       weatherUiState != lastWeatherUiState)
-    {
-      lastWeatherDrawUpdate = weatherState.updatedAtMs;
-      lastWeatherDrawFetching = weatherState.fetching;
-      lastWeatherDrawValid = weatherState.valid;
-      lastWeatherUiState = weatherUiState;
-      needRedraw = true;
-    }
-  }
-
-  if(currentCmd == CMD_BAND_OPENING)
-  {
-    const BandOpeningService::Snapshot state = bandOpeningService.snapshot();
-    if(state.updatedAtMs != lastBandOpeningDrawUpdate || state.fetching != lastBandOpeningDrawFetching ||
-       state.valid != lastBandOpeningDrawValid || state.stale != lastBandOpeningDrawStale)
-    {
-      lastBandOpeningDrawUpdate = state.updatedAtMs;
-      lastBandOpeningDrawFetching = state.fetching;
-      lastBandOpeningDrawValid = state.valid;
-      lastBandOpeningDrawStale = state.stale;
-      needRedraw = true;
-    }
-  }
 
   uint32_t encCounts = consumeEncoderCounts();
   int16_t encCount = (int16_t)(encCounts & 0xFFFF);
@@ -984,44 +689,22 @@ void loop()
   ButtonTracker::State pb1st = pb1.update(digitalRead(ENCODER_PUSH_BUTTON) == LOW);
   if(!pb1st.isPressed) decoderMenuLongPressHandled = false;
 
-  if(currentCmd == CMD_NEWS && encCount)
-  {
-    const uint8_t count = newsService.itemCount();
-    if(count)
-    {
-      NewsService::Item item;
-      newsService.getItem(newsCurrentIndex % count, item);
-      uint8_t pages = newsPageCountForCurrentItem();
-      int next = (int)newsCurrentPage + encCount;
-      if(next < 0) { newsCurrentIndex = newsCurrentIndex ? newsCurrentIndex - 1 : count - 1; newsCurrentPage = 0; }
-      else if(next >= pages) { newsCurrentIndex = (newsCurrentIndex + 1) % count; newsCurrentPage = 0; }
-      else newsCurrentPage = (uint8_t)next;
-    }
-    needRedraw = true; elapsedSleep = elapsedCommand = currentTime; encCount = encCountAccel = 0;
-  }
-
-  if(currentCmd == CMD_BAND_OPENING && encCount)
-  {
-    int next = static_cast<int>(bandOpeningPage) + encCount;
-    while(next < 0) next += BandOpeningService::kPageCount;
-    bandOpeningPage = static_cast<uint8_t>(next % BandOpeningService::kPageCount);
-    needRedraw = true; elapsedSleep = elapsedCommand = currentTime; encCount = encCountAccel = 0;
-  }
-
-  if(currentCmd == CMD_WEATHER && encCount)
-  {
-    weatherPage = static_cast<uint8_t>((weatherPage + encCount % 2 + 2) % 2);
-    needRedraw = true;
-    elapsedSleep = elapsedCommand = currentTime;
-    encCount = encCountAccel = 0;
-  }
-
   // Handle FM DX screen exit immediately after sampling the physical button.
   if(currentCmd == CMD_FM_DX && pb1st.isLongPressed && !decoderMenuLongPressHandled)
   {
     decoderMenuLongPressHandled = true;
     pb1st.wasClicked = pb1st.wasShortPressed = false;
     fmDxUiExit();
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime = millis();
+  }
+
+  // Handle JS8 monitor exit immediately after sampling the physical button.
+  if(currentCmd == CMD_JS8_MONITOR && pb1st.isLongPressed && !decoderMenuLongPressHandled)
+  {
+    decoderMenuLongPressHandled = true;
+    pb1st.wasClicked = pb1st.wasShortPressed = false;
+    js8UiExit();
     needRedraw = true;
     elapsedSleep = elapsedCommand = currentTime = millis();
   }
@@ -1048,11 +731,7 @@ void loop()
     elapsedSleep = elapsedCommand = currentTime = millis();
   }
 
-  const uint32_t serialLoopStartedUs = micros();
   int ser_event = serialLoop(usbModeIdx);
-  const uint32_t serialLoopDurationUs = micros() - serialLoopStartedUs;
-  if(serialLoopDurationUs > 10000UL)
-    atsDebugLogf("[USB][SERIAL_LOOP_SLOW] duration_us=%lu rx_available=%d", (unsigned long)serialLoopDurationUs, Serial.available());
   needRedraw |= !!(ser_event & REMOTE_CHANGED);
   pb1st.isPressed |= !!(ser_event & REMOTE_PRESSED);
   pb1st.wasClicked |= !!(ser_event & REMOTE_CLICK);
@@ -1103,7 +782,6 @@ void loop()
     {
       dualRxLongPressHandled = true;
       // Long press only dims/wakes the display; Dual RX keeps scanning in the background.
-      atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=dual_rx_encoder_long_press");
       sleepOn(!sleepOn());
       elapsedSleep = elapsedCommand = currentTime = millis();
       pb1st.wasClicked = false;
@@ -1121,7 +799,7 @@ void loop()
       else if(dualRxSetupStage == 4)
       {
         // A short click stops the scan and wakes the display if it was dimmed.
-        if(sleepOn()) { atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=dual_rx_short_click_wake"); sleepOn(false); }
+        if(sleepOn()) sleepOn(false);
         dualRxStop();
       }
       needRedraw = true;
@@ -1147,6 +825,14 @@ void loop()
   if(currentCmd == CMD_FTX_DECODER && encCount)
   {
     ftxUiRotate(encCount);
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime;
+    encCount = encCountAccel = 0;
+  }
+
+  if(currentCmd == CMD_JS8_MONITOR && encCount)
+  {
+    js8UiRotate(encCount);
     needRedraw = true;
     elapsedSleep = elapsedCommand = currentTime;
     encCount = encCountAccel = 0;
@@ -1271,34 +957,6 @@ void loop()
         currentCmd = CMD_NONE;
       needRedraw = true;
     }
-    else if(pb1st.isLongPressed && currentCmd == CMD_BAND_OPENING && !decoderMenuLongPressHandled)
-    {
-      decoderMenuLongPressHandled = true;
-      currentCmd = CMD_NONE;
-      needRedraw = true;
-      elapsedSleep = elapsedCommand = currentTime = millis();
-    }
-    else if(pb1st.isLongPressed && currentCmd == CMD_NEWS && !decoderMenuLongPressHandled)
-    {
-      decoderMenuLongPressHandled = true;
-      currentCmd = CMD_NONE;
-      needRedraw = true;
-      elapsedSleep = elapsedCommand = currentTime = millis();
-    }
-    else if(pb1st.isLongPressed && currentCmd == CMD_WEATHER && !decoderMenuLongPressHandled)
-    {
-      decoderMenuLongPressHandled = true;
-      currentCmd = CMD_NONE;
-      needRedraw = true;
-      elapsedSleep = elapsedCommand = currentTime = millis();
-    }
-    else if(pb1st.isLongPressed && currentCmd == CMD_MOON_CALENDAR && !decoderMenuLongPressHandled)
-    {
-      decoderMenuLongPressHandled = true;
-      currentCmd = CMD_NONE;
-      needRedraw = true;
-      elapsedSleep = elapsedCommand = currentTime = millis();
-    }
     else if(pb1st.isLongPressed && currentCmd == CMD_FTX_DECODER && !decoderMenuLongPressHandled)
     {
       decoderMenuLongPressHandled = true;
@@ -1321,7 +979,6 @@ void loop()
     }
     else if(pb1st.isLongPressed && !decoderMenuLongPressHandled)
     {
-      atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=encoder_long_press cmd=%u", (unsigned)currentCmd);
       sleepOn(!sleepOn());
       elapsedSleep = elapsedCommand = currentTime = millis();
     }
@@ -1332,36 +989,6 @@ void loop()
     }
     // The native Spectrum keypad handles its own encoder clicks below.
     // Do not let the generic click handler clear CMD_SPECTRUM_INPUT first.
-    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_BAND_OPENING)
-    {
-      bandOpeningService.requestRefresh();
-      needRedraw = true;
-      elapsedSleep = elapsedCommand = currentTime = millis();
-      pb1st.wasClicked = pb1st.wasShortPressed = false;
-    }
-    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_NEWS)
-    {
-      const uint8_t count = newsService.itemCount();
-      if(count) newsCurrentIndex = (newsCurrentIndex + 1) % count;
-      newsCurrentPage = 0;
-      needRedraw = true;
-      elapsedSleep = elapsedCommand = currentTime = millis();
-      pb1st.wasClicked = pb1st.wasShortPressed = false;
-    }
-    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_WEATHER)
-    {
-      weatherPage ^= 1;
-      needRedraw = true;
-      elapsedSleep = elapsedCommand = currentTime = millis();
-      pb1st.wasClicked = pb1st.wasShortPressed = false;
-    }
-    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_MOON_CALENDAR)
-    {
-      currentCmd = CMD_NONE;
-      needRedraw = true;
-      elapsedSleep = elapsedCommand = currentTime = millis();
-      pb1st.wasClicked = pb1st.wasShortPressed = false;
-    }
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_FM_DX)
     {
       fmDxUiClick();
@@ -1372,6 +999,13 @@ void loop()
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_FTX_DECODER)
     {
       ftxUiClick();
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+      pb1st.wasClicked = pb1st.wasShortPressed = false;
+    }
+    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_JS8_MONITOR)
+    {
+      js8UiClick();
       needRedraw = true;
       elapsedSleep = elapsedCommand = currentTime = millis();
       pb1st.wasClicked = pb1st.wasShortPressed = false;
@@ -1398,7 +1032,6 @@ void loop()
       {
         if(currentSleep)
         {
-          atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=encoder_click_wake");
           sleepOn(false);
           needRedraw = true;
         }
@@ -1506,6 +1139,8 @@ void loop()
     needRedraw = true;
   if(currentCmd == CMD_RTTY_DECODER && rttyUiTick(currentTime))
     needRedraw = true;
+  if(currentCmd == CMD_JS8_MONITOR && js8UiTick(currentTime))
+    needRedraw = true;
   if(currentCmd == CMD_CW_DECODER && cwUiTick(currentTime))
     needRedraw = true;
 
@@ -1514,7 +1149,7 @@ void loop()
 
   if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
   {
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_FM_DX && currentCmd != CMD_WEATHER && currentCmd != CMD_MOON_CALENDAR && currentCmd != CMD_NEWS && currentCmd != CMD_BAND_OPENING && currentCmd != CMD_WIFI_INFO)
+    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_JS8_MONITOR && currentCmd != CMD_FM_DX)
     {
       currentCmd = CMD_NONE;
       needRedraw = true;
@@ -1525,7 +1160,6 @@ void loop()
 
   if(currentSleep && !sleepOn() && ((currentTime - elapsedSleep) > currentSleep * 1000))
   {
-    atsDebugLogf("[DISPLAY][SLEEP_SOURCE] source=auto_timeout elapsed_ms=%lu configured_seconds=%u", (unsigned long)(currentTime - elapsedSleep), (unsigned)currentSleep);
     sleepOn(true);
     elapsedSleep = elapsedCommand = currentTime = millis();
   }
@@ -1581,28 +1215,11 @@ void loop()
 
   needRedraw |= statusTick(millis());
 
-  // The Decoder layout's waterfall advances one scan line per render.
-  // Refresh it at the same 120 ms cadence used by the Mini OS decoder graph,
-  // instead of waiting for an RSSI change or encoder input to redraw the UI.
-  static uint32_t lastDecoderWaterfallRefresh = 0;
-  const uint32_t waterfallNow = millis();
-  if(currentCmd == CMD_NONE && uiLayoutIdx == 3 &&
-     (waterfallNow - lastDecoderWaterfallRefresh) >= 120)
-  {
-    needRedraw = true;
-    lastDecoderWaterfallRefresh = waterfallNow;
-  }
-
   if(needRedraw) {
-    const uint32_t drawStartedUs = micros();
     drawScreen();
-    const uint32_t drawDurationUs = micros() - drawStartedUs;
-    if(drawDurationUs > 50000UL)
-      atsDebugLogf("[DISPLAY][DRAW_SLOW] duration_us=%lu cmd=%u layout=%u heap=%u", (unsigned long)drawDurationUs, (unsigned)currentCmd, (unsigned)uiLayoutIdx, (unsigned)ESP.getFreeHeap());
     // Statischer Rahmen und blaue Seiten des Eco-Wasserfalls beim Redraw
     drawEcoWaterfallStatic(spr);
   }
 
   delay(5);
-  atsDebugFlushTick();
 }

@@ -1,5 +1,4 @@
 #include "FtxUi.h"
-#include "../DecoderMenuUi.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -872,7 +871,7 @@ void ftxUiRotate(int delta)
       restoreFtxPresetOriginal();
     ftxPresetSelection = static_cast<uint8_t>(next);
     if(ftxPresetSelection < ftxPresetScroll) ftxPresetScroll = ftxPresetSelection;
-    ftxPresetScroll = DecoderMenuUi::firstVisible(ftxPresetSelection, static_cast<uint8_t>(count));
+    if(ftxPresetSelection >= ftxPresetScroll + 6) ftxPresetScroll = ftxPresetSelection - 5;
     scheduleFtxPresetPreview(millis());
     return;
   }
@@ -1058,49 +1057,61 @@ void drawFtxDecoderPage()
     spr.setTextColor(distanceKm>=0?cyan:0x7BEF); spr.drawString(distanceText,306,y+7);
   }
   if(ftxActionsOpen) {
+    const int menuX=20, menuY=8, menuW=280, menuH=154;
+    spr.fillRect(menuX,menuY,menuW,menuH,bg);
+    spr.drawRect(menuX,menuY,menuW,menuH,blue);
+    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(cyan);
     if(ftxPresetMenuOpen) {
-      const uint8_t count = ftxPresetCount();
-      char storage[kDecoderFrequencyPresetCount][40] = {};
-      const char* labels[kDecoderFrequencyPresetCount] = {};
-      for(uint8_t i = 0; i < count; ++i) {
-        const DecoderFrequencyPreset* preset = ftxPresetAt(i);
+      spr.drawString(ftxPresetDecoder==DecoderKind::FT4 ? "FT4 PRESETS" : "FT8 PRESETS",menuX+12,menuY+7);
+      const uint8_t count=ftxPresetCount();
+      for(uint8_t row=0;row<6;++row) {
+        const uint8_t index=ftxPresetScroll+row;
+        if(index>=count) break;
+        const DecoderFrequencyPreset* preset=ftxPresetAt(index);
         if(!preset) continue;
-        const char* name = preset->label;
-        if(!strncmp(name, "FT8 ", 4) || !strncmp(name, "FT4 ", 4)) name += 4;
-        snprintf(storage[i], sizeof(storage[i]), "%s  %u.%03u %s", name,
-                 static_cast<unsigned>(preset->frequencyKHz / 1000),
-                 static_cast<unsigned>(preset->frequencyKHz % 1000),
-                 preset->modulation == USB ? "USB" : preset->modulation == LSB ? "LSB" : "AM");
-        labels[i] = storage[i];
+        char label[40];
+        snprintf(label,sizeof(label),"%-8s %2u.%03u MHz USB",
+                 preset->label+4,
+                 static_cast<unsigned>(preset->frequencyKHz/1000),
+                 static_cast<unsigned>(preset->frequencyKHz%1000));
+        const int y=menuY+29+row*20;
+        if(index==ftxPresetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,blue);
+        spr.setTextColor(index==ftxPresetSelection?0xFFFF:0xBDF7);
+        spr.drawString(label,menuX+13,y);
+        if(index==ftxPresetSelection && (ftxPresetPreviewPending || ftxPresetPreviewActive)) {
+          spr.setTextDatum(TR_DATUM);
+          spr.setTextColor(ftxPresetPreviewActive ? 0x07E0 : 0xFFE0);
+          spr.drawString(ftxPresetPreviewActive ? "LISTEN" : "WAIT",menuX+menuW-12,y);
+          spr.setTextDatum(TL_DATUM);
+        }
       }
-      const char* title = ftxPresetDecoder == DecoderKind::FT4 ? "FT4 FREQUENCIES" : "FT8 FREQUENCIES";
-      const char* previewStatus = ftxPresetPreviewActive ? "TUNED" : ftxPresetPreviewPending ? "TUNING..." : "READY";
-      DecoderMenuUi::draw(title, labels, nullptr, count, ftxPresetSelection,
-                          "TURN: SELECT", "CLICK: APPLY", previewStatus);
+      char page[12];
+      snprintf(page,sizeof(page),"%02u/%02u",static_cast<unsigned>(ftxPresetSelection+1),static_cast<unsigned>(count));
+      spr.setTextDatum(TR_DATUM);
+      spr.setTextColor(0xFFFF);
+      spr.drawString(page,menuX+menuW-10,menuY+7);
     } else {
-      const char* ft8Labels[kFtxMenuItems] = {
-        "FT8 FREQUENCIES", "FT4 FREQUENCIES",
-        ftxOfflineSyncPreference ? "TIME SYNC" : "TIME SYNC",
-        "SPEAKER", "AUTO SCROLL", "CLEAR STATIONS", "LOGGING", "BACK", "EXIT FT8/FT4"
+      const char* labels[kFtxMenuItems] = {
+        "FT8 PRESETS",
+        "FT4 PRESETS",
+        ftxOfflineSyncPreference ? "TIME SYNC   OFFLINE" : "TIME SYNC   ONLINE",
+        ftxSpeakerEnabled ? "SPEAKER       ON" : "SPEAKER       OFF",
+        ftxAutoScroll ? "AUTO SCROLL   ON" : "AUTO SCROLL   OFF",
+        "CLEAR STATIONS",
+        ftxLogEnabled ? "LOGGING       ON" : "LOGGING       OFF",
+        "BACK",
+        "EXIT FT8 + FT4"
       };
-      const char* ft4Labels[6] = {
-        "SPEAKER", "AUTO SCROLL", "CLEAR STATIONS", "LOGGING", "BACK", "EXIT FT4"
-      };
-      const char* ft8Values[kFtxMenuItems] = {
-        nullptr, nullptr, ftxOfflineSyncPreference ? "OFFLINE" : "ONLINE",
-        ftxSpeakerEnabled ? "ON" : "OFF", ftxAutoScroll ? "ON" : "OFF",
-        nullptr, ftxLogEnabled ? "ON" : "OFF", nullptr, nullptr
-      };
-      const char* ft4Values[6] = {
-        ftxSpeakerEnabled ? "ON" : "OFF", ftxAutoScroll ? "ON" : "OFF",
-        nullptr, ftxLogEnabled ? "ON" : "OFF", nullptr, nullptr
-      };
-      if(pageMode == FtxMode::FT4)
-        DecoderMenuUi::draw("FT4 ACTIONS", ft4Labels, ft4Values, 6, ftxMenuSelection,
-                            "TURN: SELECT", "CLICK: OPEN", nullptr, true);
-      else
-        DecoderMenuUi::draw("FT8 ACTIONS", ft8Labels, ft8Values, ftxActionCount(), ftxMenuSelection,
-                            "TURN: SELECT", "CLICK: OPEN", nullptr, true);
+      const uint8_t count=ftxActionCount();
+      spr.drawString(pageMode==FtxMode::FT4 ? "FT4 ACTIONS" : "FT8 ACTIONS",menuX+12,menuY+7);
+      for(uint8_t i=0;i<count;++i) {
+        const int y=menuY+27+i*14;
+        if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,15,blue);
+        spr.setTextColor(i==ftxMenuSelection?0xFFFF:0xBDF7);
+        spr.drawString(labels[i+(pageMode==FtxMode::FT4?3:0)],menuX+14,y);
+      }
     }
   }
 }

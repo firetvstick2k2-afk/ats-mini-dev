@@ -1,6 +1,5 @@
 #include "math.h"
 #include "Common.h"
-#include "DebugLog.h"
 #include "Themes.h"
 #include "Utils.h"
 #include "Draw.h"
@@ -8,9 +7,6 @@
 #include "Ota.h"
 #include "BleMode.h"
 #include "Menu.h"
-#include "WeatherService.h"
-#include "NewsService.h"
-#include "src/DecoderMenuUi.h"
 #include "Memories.h"
 #include "Patches.h"
 #include "FreqKeypad.h"
@@ -20,6 +16,7 @@
 #include "src/ftx/FtxUi.h"
 #include "src/rtty/RttyUi.h"
 #include "src/cw/CwUi.h"
+#include "src/js8/Js8Ui.h"
 #include "src/radio/FmDxController.h"
 #include "src/radio/FmDxUi.h"
 #include "Storage.h"
@@ -129,10 +126,9 @@ static int visibleBandIndexAtOffset(int offset)
 #define MENU_VFO         16
 #define MENU_SPECTRUM    17
 #define MENU_ALL_SPECTRUM 18
-#define MENU_UI_LAYOUTS  19
-#define MENU_PROGRAMMES  20
-#define MENU_SETTINGS    21
-#define MENU_BACK        22
+#define MENU_DECODER_MENU 19
+#define MENU_SETTINGS    20
+#define MENU_FM_DX       21
 
 int8_t menuIdx = MENU_KEYPAD;
 static const char *decoderCategoryLabels[] = {
@@ -147,13 +143,10 @@ static const char *decoderCategoryLabels[] = {
   "SSB QSO",
   "Signal / Data",
   "CB",
-  "EXIT",
 };
 static uint8_t decoderCategoryIndex = 0;
-static uint8_t programmesMenuIdx = 0;
-static const char *programmesMenu[] = { "DECODER", "BAND MONITOR", "FM-DX", "MOON CALENDAR", "WEATHER REPORT", "NEWS", "BACK" };
 static uint8_t decoderMenuIdx = 0;
-static const char *decoderMenu[] = { "BACK", "DECODER FREQUENCIES", "CW DECODER", "RTTY DECODER", "FT8 / FT4" };
+static const char *decoderMenu[] = { "BACK", "DECODER FREQUENCIES", "CW DECODER", "RTTY DECODER", "FT8 / FT4", "JS8 RX MONITOR" };
 static uint8_t decoderPresetIndex = 0;
 static bool decoderPresetView = false;
 static uint32_t decoderSelectionChangedAt = 0;
@@ -161,13 +154,13 @@ static int16_t decoderLastTunedPreset = -1;
 int8_t spectrumMenuIdx = 0;
 static const char *spectrumMenu[] = { "VHF SPECTRUM", "ALL Band Spectrum" };
 
-static const char *menu[]
+static const char *menu[] =
 {
-  "VOLUME", "KEYPAD", "BAND", "MODE", "BFO", "STEPS",
-  "SEEK", "SCAN", "MEMORY", "SQUELCH", "BANDWIDTH",
-  "FREQUENCY", "AGC/ATTN", "AVC", "SOFTMUTE",
-  "DUAL RX", "VFO A/B", "VHF SPECTRUM", "ALL BAND SPECTRUM",
-  "UI LAYOUTS", "PROGRAMMES", "SETTINGS", "BACK",
+  "Volume", "Keypad", "Band", "Mode", "BFO",
+  "Steps", "Seek", "Scan", "Memory", "Squelch",
+  "Bandwidth", "Frequency", "AGC/ATTN", "AVC",
+  "SoftMute", "DUAL RX", "VFO A/B", "VHF Spectrum",
+  "ALL Band Spectrum", "Decoder", "Settings", "FM DX",
 };
 
 #define MENU_BRIGHTNESS   0
@@ -193,7 +186,7 @@ static const char *menu[]
 #define MENU_ABOUT        20
 #define MENU_WEBLOG       21
 
-bool webDiagEnabled = false;
+bool webDiagEnabled = true;
 
 static uint8_t updateFwIdx = 0;
 static const char *const updateFwActions[] = {"Check", "Update"};
@@ -205,7 +198,7 @@ static const char *settings[] =
   "Theme", "UI Layout", "Zoom Menu", "Scroll Dir.", "RDS",
   "FM Stereo", "FM Region", "Calibration", "DSP Patches",
   "Load EiBi", "Update FW", "USB Port", "TCP Port",
-  "Bluetooth", "Wi-Fi Mode", "About", "USB Log",
+  "Bluetooth", "Wi-Fi", "About", "Diagnostic Log",
 };
 
 const FMRegion fmRegions[] = { { 0x1, "EU/JP/AU" }, { 0x2, "US" } };
@@ -289,7 +282,6 @@ static uint8_t bleModeMenuIdx = BLE_OFF;
 static const char *bleModeDesc[] = { "Off", "Ad hoc", "HID", "Unpair All" };
 
 uint8_t wifiModeIdx = NET_OFF;
-static uint8_t wifiMenuIdx = NET_OFF;
 static const char *wifiModeDesc[] = { "Off", "WEB CTRL", "WEB+Conn", "Connect", "Sync Only" };
 
 static const Step fmSteps[] = { { 1, "10k", 1 }, { 5, "50k", 5 }, { 10, "100k", 10 }, { 20, "200k", 20 }, { 100, "1M", 10 } };
@@ -504,8 +496,7 @@ void doVolume(int16_t enc)
 
 static void clickVolume(bool shortPress)
 {
-  // Confirm the selected volume and return directly to the radio layout.
-  currentCmd = CMD_NONE;
+  currentCmd = CMD_MENU;
 }
 
 static void clickSquelch(bool shortPress)
@@ -621,16 +612,10 @@ static void doSleepMode(int16_t enc) { sleepModeIdx = wrap_range(sleepModeIdx, e
 static void doUSBMode(int16_t enc) { usbModeIdx = wrap_range(usbModeIdx, enc, 0, LAST_ITEM(usbModeDesc)); }
 static void doTCPMode(int16_t enc) { tcpModeIdx = wrap_range(tcpModeIdx, enc, 0, LAST_ITEM(tcpModeDesc)); }
 static void doBleMode(int16_t enc) { bleModeMenuIdx = wrap_range(bleModeMenuIdx, enc, 0, LAST_ITEM(bleModeDesc)); }
-static void doWiFiMode(int16_t enc) { wifiMenuIdx = wrap_range(wifiMenuIdx, enc, 0, ITEM_COUNT(wifiModeDesc)); }
+static void doWiFiMode(int16_t enc) { wifiModeIdx = wrap_range(wifiModeIdx, enc, 0, LAST_ITEM(wifiModeDesc)); }
 
 static void clickBleMode(uint8_t mode, bool shortPress) { currentCmd = CMD_NONE; bleModeIdx = mode; bleInit(mode); }
-static void clickWiFiMode(uint8_t selection, bool shortPress)
-{
-  if(selection == ITEM_COUNT(wifiModeDesc)) { currentCmd = CMD_WIFI_INFO; return; }
-  wifiModeIdx = selection;
-  currentCmd = CMD_NONE;
-  netInit(wifiModeIdx);
-}
+static void clickWiFiMode(uint8_t mode, bool shortPress) { currentCmd = CMD_NONE; netInit(mode); }
 
 static void doRDSMode(int16_t enc)
 {
@@ -938,8 +923,6 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_MODE:     currentCmd = CMD_MODE;      break;
     case MENU_BW:       currentCmd = CMD_BANDWIDTH; break;
     case MENU_AGC_ATT:  currentCmd = CMD_AGC;       break;
-    case MENU_UI_LAYOUTS: currentCmd = CMD_UI; break;
-    case MENU_PROGRAMMES: programmesMenuIdx = 0; currentCmd = CMD_PROGRAMMES; break;
     case MENU_BAND:     currentCmd = CMD_BAND;      break;
     case MENU_SETTINGS: currentCmd = CMD_SETTINGS;  break;
     case MENU_KEYPAD:   currentCmd = CMD_FREQ_KEYPAD; freqKeypadReset(); break;
@@ -964,31 +947,18 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_DUAL_RX: dualRxStart(); break;
     case MENU_SPECTRUM: spectrumScannerStart(); break;
     case MENU_ALL_SPECTRUM: allBandSpectrumStart(); break;
-    case MENU_BACK: currentCmd = CMD_NONE; break;
+    case MENU_DECODER_MENU: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
+    case MENU_FM_DX: fmDxUiOpen(); break;
   }
 }
 
 static const char *settingLabel(int idx)
 {
-  if(idx == MENU_WEBLOG) return webDiagEnabled ? "USB Log: ON" : "USB Log: OFF";
+  if(idx == MENU_WEBLOG) return webDiagEnabled ? "Diag Log: ON" : "Diag Log: OFF";
   return settings[idx];
 }
 
 static void doSettings(int16_t enc) { settingsIdx = wrap_range(settingsIdx, enc, 0, ITEM_COUNT(settings) - 1); }
-
-static void clickProgrammesMenu(int idx)
-{
-  switch(idx)
-  {
-    case 0: decoderMenuIdx = 0; currentCmd = CMD_DECODER_MENU; break;
-    case 1: currentCmd = CMD_BAND_OPENING; break;
-    case 2: fmDxUiOpen(); break;
-    case 3: currentCmd = CMD_MOON_CALENDAR; break;
-    case 4: weatherPage = 0; currentCmd = CMD_WEATHER; weatherService.requestRefresh(); break;
-    case 5: newsCurrentIndex = 0; newsCurrentPage = 0; currentCmd = CMD_NEWS; newsService.begin(); newsService.requestRefresh(); break;
-    default: currentCmd = CMD_MENU; break;
-  }
-}
 
 static void clickDecoderMenu(int idx)
 {
@@ -999,6 +969,7 @@ static void clickDecoderMenu(int idx)
     case 2: if(cwUiOpen()) currentCmd = CMD_CW_DECODER; break;
     case 3: if(rttyUiOpen(45.45f)) currentCmd = CMD_RTTY_DECODER; break;
     case 4: if(ftxUiOpen(FtxMode::FT8)) currentCmd = CMD_FTX_DECODER; break;
+    case 5: if(js8UiOpen()) currentCmd = CMD_JS8_MONITOR; break;
     default: currentCmd = CMD_MENU; break;
   }
 }
@@ -1022,16 +993,15 @@ static void clickSettings(int cmd, bool shortPress)
     case MENU_USBMODE:    currentCmd = CMD_USBMODE;    break;
     case MENU_TCPMODE:    currentCmd = CMD_TCPMODE;    break;
     case MENU_BLEMODE:    bleModeMenuIdx = bleModeIdx; currentCmd = CMD_BLEMODE; break;
-    case MENU_WIFIMODE:   wifiMenuIdx = wifiModeIdx; currentCmd = CMD_WIFIMODE; break;
+    case MENU_WIFIMODE:   currentCmd = CMD_WIFIMODE;   break;
     case MENU_FM_REGION:  currentCmd = CMD_FM_REGION;  break;
     case MENU_FM_STEREO:  currentCmd = CMD_FM_STEREO;  break;
     case MENU_DSP_PATCHES: currentCmd = CMD_DSP_PATCHES; break;
     case MENU_ABOUT:      currentCmd = CMD_ABOUT;      break;
     case MENU_WEBLOG:
-      if(webDiagEnabled) webDiagLog("USB LOG DISABLED");
+      if(webDiagEnabled) webDiagLog("DIAGNOSTIC LOG DISABLED");
       webDiagEnabled = !webDiagEnabled;
-      if(webDiagEnabled) webDiagLog("USB LOG ENABLED");
-      atsDebugSettingsReady(webDiagEnabled);
+      if(webDiagEnabled) webDiagLog("DIAGNOSTIC LOG ENABLED");
       prefsRequestSave(SAVE_SETTINGS, true);
       break;
     case MENU_UPDATEFW:   updateFwIdx = 0; currentCmd = CMD_UPDATEFW; break;
@@ -1045,9 +1015,7 @@ bool doSideBar(uint16_t cmd, int16_t enc, int16_t enca)
   switch(cmd)
   {
     case CMD_MENU:       doMenu(scrollDirection * enc);break;
-    case CMD_PROGRAMMES: programmesMenuIdx = wrap_range(programmesMenuIdx, scrollDirection * enc, 0, LAST_ITEM(programmesMenu)); break;
     case CMD_DECODER_MENU: decoderMenuIdx = wrap_range(decoderMenuIdx, scrollDirection * enc, 0, LAST_ITEM(decoderMenu)); break;
-    case CMD_DECODER_FREQUENCIES: decoderFrequencyRotate(scrollDirection * enc); break;
     case CMD_SPECTRUM_MENU: spectrumMenuIdx = wrap_range(spectrumMenuIdx, scrollDirection * enc, 0, LAST_ITEM(spectrumMenu)); break;
     case CMD_MODE:       doMode(scrollDirection * enc);break;
     case CMD_STEP:       doStep(scrollDirection * enc);break;
@@ -1091,7 +1059,6 @@ bool clickHandler(uint16_t cmd, bool shortPress)
   switch(cmd)
   {
     case CMD_MENU:     clickMenu(menuIdx, shortPress);break;
-    case CMD_PROGRAMMES: clickProgrammesMenu(programmesMenuIdx); break;
     case CMD_DECODER_MENU: clickDecoderMenu(decoderMenuIdx); break;
     case CMD_DECODER_FREQUENCIES: decoderFrequencyClick(); break;
     case CMD_FTX_DECODER: ftxUiExit(); break;
@@ -1106,18 +1073,8 @@ bool clickHandler(uint16_t cmd, bool shortPress)
     case CMD_UPDATEFW: otaRequestLatest(updateFwIdx == 1);break;
     case CMD_MEMORY:   clickMemory(memoryIdx, shortPress);break;
     case CMD_BLEMODE:  clickBleMode(bleModeMenuIdx, shortPress);break;
-    case CMD_WIFI_INFO: currentCmd = CMD_WIFIMODE; break;
-    case CMD_WIFIMODE: clickWiFiMode(wifiMenuIdx, shortPress);break;
+    case CMD_WIFIMODE: clickWiFiMode(wifiModeIdx, shortPress);break;
     case CMD_VOLUME:   clickVolume(shortPress);break;
-    case CMD_UI:       currentCmd = CMD_NONE; break;
-    // Simple radio adjustments are confirmed with one click and return to the radio.
-    case CMD_MODE:
-    case CMD_STEP:
-    case CMD_AGC:
-    case CMD_BANDWIDTH:
-    case CMD_SOFTMUTE:
-    case CMD_BFO:      currentCmd = CMD_NONE; break;
-    case CMD_BAND:     currentCmd = CMD_NONE; break;
     case CMD_BRT:      currentCmd = CMD_SETTINGS; break;
     case CMD_AVC:      clickAvc(shortPress);break;
     case CMD_SQUELCH:  clickSquelch(shortPress);break;
@@ -1397,17 +1354,15 @@ static void drawUpdateFW(int x, int y, int sx)
 static void drawWiFiMode(int x, int y, int sx)
 {
   drawCommon(settings[MENU_WIFIMODE], x, y, sx, true);
-  const int count = ITEM_COUNT(wifiModeDesc) + 1;
+  int count = ITEM_COUNT(wifiModeDesc);
   for(int i=-2 ; i<3 ; i++)
   {
-    const int index = (wifiMenuIdx + count + i) % count;
-    const char *label = index == ITEM_COUNT(wifiModeDesc) ? "Wi-Fi Info" : wifiModeDesc[index];
     if(i==0) {
-      drawZoomedMenu(label);
+      drawZoomedMenu(wifiModeDesc[abs((wifiModeIdx+count+i)%count)]);
       spr.setTextColor(TH.menu_hl_text, TH.menu_hl_bg);
     } else { spr.setTextColor(TH.menu_item); }
     spr.setTextDatum(MC_DATUM);
-    spr.drawString(label, 40+x+(sx/2), 64+y+(i*16), FONT_SMALL);
+    spr.drawString(wifiModeDesc[abs((wifiModeIdx+count+i)%count)], 40+x+(sx/2), 64+y+(i*16), FONT_SMALL);
   }
 }
 
@@ -1828,10 +1783,9 @@ static int drawXXLText(const char *text, int x, int y, uint16_t color, const lgf
       spr.fillCircle(center - 3, y - 2, 1, color);
       spr.fillCircle(center + 3, y - 2, 1, color);
     }
-    // A small inter-character gap improves readability on the 320 px display.
-    cursor += width + 1;
+    cursor += width;
   }
-  return cursor - x - 1;
+  return cursor - x;
 }
 
 
@@ -1861,9 +1815,9 @@ static int measureXXLText(const char *text, const lgfx::IFont *font)
     }
     glyph[0] = base;
     const int glyphWidth = spr.textWidth(glyph);
-    width += (sharpS ? glyphWidth * 2 : glyphWidth) + 1;
+    width += sharpS ? glyphWidth * 2 : glyphWidth;
   }
-  return width > 0 ? width - 1 : 0;
+  return width;
 }
 
 static int drawXXLTextCentered(const char *text, int centerX, int y, uint16_t color, const lgfx::IFont *font)
@@ -1886,25 +1840,17 @@ void drawFullScreenMenu(uint16_t cmd)
   const bool settingsPage = cmd == CMD_SETTINGS;
   const bool spectrumPage = cmd == CMD_SPECTRUM_MENU;
   const bool decoderPage = cmd == CMD_DECODER_MENU;
-  const bool programmesPage = cmd == CMD_PROGRAMMES;
   const int selected = settingsPage ? settingsIdx :
-    (spectrumPage ? spectrumMenuIdx : (decoderPage ? decoderMenuIdx :
-     (programmesPage ? programmesMenuIdx : menuIdx)));
+    (spectrumPage ? spectrumMenuIdx : (decoderPage ? decoderMenuIdx : menuIdx));
   const int count = settingsPage ? ITEM_COUNT(settings) :
     (spectrumPage ? ITEM_COUNT(spectrumMenu) :
-     (decoderPage ? ITEM_COUNT(decoderMenu) :
-      (programmesPage ? ITEM_COUNT(programmesMenu) : ITEM_COUNT(menu))));
+     (decoderPage ? ITEM_COUNT(decoderMenu) : ITEM_COUNT(menu)));
   const char *title = settingsPage ? "SETTINGS" :
-    (spectrumPage ? "SPECTRUM" : (decoderPage ? "DECODER" :
-     (programmesPage ? "PROGRAMMES" : "MENU")));
+    (spectrumPage ? "SPECTRUM" : (decoderPage ? "DECODER" : "MENU"));
   constexpr int visibleRows = 3;
   const int first = max(0, min(count - visibleRows, selected - 1));
 
   spr.fillSprite(bg);
-  // Consistent cyan frame around every full-screen list (main, settings,
-  // spectrum and decoder menus).
-  spr.drawRect(8, 6, 304, 143, cyan);
-  spr.drawRect(9, 7, 302, 141, blue);
   spr.fillRect(8, 7, 4, 22, cyan);
   drawXXLText(title, 18, 10, white, FONT_SMALL);
   // The former "DR / ATS MINI" was an unexplained placeholder. Keep only
@@ -1927,26 +1873,22 @@ void drawFullScreenMenu(uint16_t cmd)
     const int settingsItem = item == 0 ? -1 : (item <= MENU_ZOOM ? item - 1 : item);
     const char *label = settingsPage ? (item == 0 ? "BACK" : settingLabel(settingsItem)) :
       (spectrumPage ? spectrumMenu[item] :
-       (decoderPage ? decoderMenu[item] :
-        (programmesPage ? programmesMenu[item] : menu[item])));
+       (decoderPage ? decoderMenu[item] : menu[item]));
     if(active) {
-      // Outline-only selection: keep the row background transparent.
-      spr.drawRoundRect(9, y, 298, 31, 3, cyan);
-      spr.drawRoundRect(10, y + 1, 296, 29, 2, blue);
-      spr.fillRect(9, y + 3, 3, 25, cyan);
-      spr.fillRect(304, y + 3, 3, 25, cyan);
+      spr.fillRoundRect(9, y, 298, 31, 3, blue);
+      spr.fillRect(9, y, 3, 31, cyan);
     }
     char number[5];
     snprintf(number, sizeof(number), "%02d", item + 1);
     drawXXLText(number, 18, y + 8, active ? white : cyan, FONT_SMALL);
-    drawXXLText(label, 52, y + 8, white, FONT_SMALL);
-    if(!settingsPage && !decoderPage && !spectrumPage && !programmesPage) {
+    drawXXLText(label, 52, y + 8, active ? white : 0xBDF7, FONT_SMALL);
+    if(!settingsPage && !decoderPage && !spectrumPage) {
       char value[24] = "";
       switch(item) {
         case MENU_VOLUME: snprintf(value, sizeof(value), "%u", volume); break;
         case MENU_BAND: snprintf(value, sizeof(value), "%s", bands[bandIdx].bandName); break;
         case MENU_MODE: snprintf(value, sizeof(value), "%s", bandModeDesc[currentMode]); break;
-        case MENU_PROGRAMMES:
+        case MENU_DECODER_MENU:
         case MENU_SETTINGS: snprintf(value, sizeof(value), ">"); break;
         default: break;
       }
@@ -1995,96 +1937,6 @@ void drawVolumePopup()
   drawXXLText("TURN: ADJUST",12,151,cyan,FONT_SMALL);
   spr.setTextDatum(TR_DATUM);
   drawXXLTextRight("CLICK: CONFIRM",308,151,cyan,FONT_SMALL);
-}
-
-
-void drawRadioMenuPopup(uint16_t cmd)
-{
-  const uint16_t bg=0x0000, blue=0x001F, cyan=0x07FF, white=0xFFFF;
-  char value[48] = "";
-  const char *label = "RADIO";
-  const char *valueText = value;
-  int barMax = 0, barValue = 0;
-
-  switch(cmd) {
-    case CMD_BAND:
-      label = menu[MENU_BAND]; valueText = bands[bandIdx].bandName; break;
-    case CMD_MODE:
-      label = menu[MENU_MODE]; valueText = bandModeDesc[currentMode]; break;
-    case CMD_STEP:
-      label = menu[MENU_STEP]; valueText = getCurrentStep()->desc; break;
-    case CMD_BANDWIDTH:
-      label = menu[MENU_BW]; valueText = getCurrentBandwidth()->desc; break;
-    case CMD_SEEK:
-      label = menu[MENU_SEEK];
-      valueText = seekMode(false) == SEEK_SCHEDULE ? "SCHEDULE" : "DEFAULT";
-      break;
-    case CMD_SCAN:
-      label = menu[MENU_SCAN]; valueText = "START SCAN"; break;
-    case CMD_AGC:
-      label = menu[MENU_AGC_ATT];
-      if(!agcIdx) valueText = "ON";
-      else snprintf(value,sizeof(value),"MANUAL %02u",static_cast<unsigned>(agcNdx));
-      break;
-    case CMD_SOFTMUTE:
-      label = menu[MENU_SOFTMUTE];
-      snprintf(value,sizeof(value),"%u dB",static_cast<unsigned>(softMuteMaxAttIdx));
-      barMax = 32; barValue = softMuteMaxAttIdx; break;
-    case CMD_AVC:
-      label = menu[MENU_AVC];
-      if(isSSB() && ssbAvcHold) valueText = "HOLD";
-      else snprintf(value,sizeof(value),"%u dB",static_cast<unsigned>(isSSB()?SsbAvcIdx:AmAvcIdx));
-      if(currentMode != FM) { barMax=90; barValue=isSSB()?SsbAvcIdx:AmAvcIdx; }
-      break;
-    case CMD_MEMORY: {
-      label = menu[MENU_MEMORY];
-      const Memory memory = getMemory(memoryIdx);
-      if(!memory.freq) valueText = "- - -";
-      else if(memory.name[0]) valueText = memory.name;
-      else if(memory.mode == FM) snprintf(value,sizeof(value),"%3.2f MHz",memory.freq / 1000000.0);
-      else snprintf(value,sizeof(value),"%5lu kHz",static_cast<unsigned long>(memory.freq / 1000));
-      break;
-    }
-    case CMD_SQUELCH: {
-      label = menu[MENU_SQUELCH];
-      const uint8_t squelchValue = currentSquelch[currentMode] & 0x7f;
-      const bool snr = (currentSquelch[currentMode] & 0x80) != 0;
-      if(squelchValue) snprintf(value,sizeof(value),"%u %s",static_cast<unsigned>(squelchValue),snr?"dB SNR":"dB RSSI");
-      else valueText = snr ? "OFF (SNR)" : "OFF (RSSI)";
-      barMax=127; barValue=squelchValue;
-      break;
-    }
-    case CMD_BFO:
-      label = "BFO"; snprintf(value,sizeof(value),"%+d Hz",currentBFO);
-      barMax=5000; barValue=abs(currentBFO); break;
-    default: valueText = ""; break;
-  }
-
-  spr.fillSprite(bg);
-  spr.drawRect(8,6,304,143,cyan);
-  spr.drawRect(9,7,302,141,blue);
-  spr.fillRect(8,7,4,22,cyan);
-  const char *section = "MENU";
-  int sectionWidth = drawXXLText(section,18,8,cyan,FONT_SMALL);
-  sectionWidth += drawXXLText(" / ",18+sectionWidth,8,cyan,FONT_SMALL);
-  drawXXLText(label,18+sectionWidth,8,white,FONT_SMALL);
-  spr.drawFastHLine(10,34,300,blue);
-
-  spr.drawRoundRect(20,48,280,88,8,cyan);
-  drawXXLTextCentered(label,160,60,0xBDF7,FONT_SMALL);
-  drawXXLTextCentered(valueText,160,91,white,FONT_LARGE);
-
-  if(barMax > 0) {
-    spr.fillRoundRect(42,116,236,8,4,0x39E7);
-    const int width = constrain(barValue,0,barMax) * 236 / barMax;
-    if(width > 0) spr.fillRoundRect(42,116,width,8,4,white);
-  }
-  spr.drawFastHLine(10,143,300,blue);
-  drawXXLText("TURN: ADJUST",12,151,cyan,FONT_DEFAULT);
-  spr.setTextDatum(TR_DATUM);
-  spr.setTextColor(cyan);
-  spr.setFont(FONT_DEFAULT);
-  drawXXLTextRight("CLICK: OK",308,151,cyan,FONT_DEFAULT);
 }
 
 void drawBrightnessPopup()
@@ -2191,7 +2043,7 @@ void drawSettingsPopup(uint16_t cmd)
     case CMD_USBMODE: valueText=usbModeDesc[usbModeIdx]; break;
     case CMD_TCPMODE: valueText=tcpModeDesc[tcpModeIdx]; break;
     case CMD_BLEMODE: valueText=bleModeDesc[bleModeMenuIdx]; break;
-    case CMD_WIFIMODE: valueText = wifiMenuIdx == ITEM_COUNT(wifiModeDesc) ? "Wi-Fi Info" : wifiModeDesc[wifiMenuIdx]; break;
+    case CMD_WIFIMODE: valueText=wifiModeDesc[wifiModeIdx]; break;
     case CMD_FM_REGION: valueText=fmRegions[FmRegionIdx].desc; break;
     case CMD_FM_STEREO: valueText=fmStereoDesc[fmStereoIdx]; break;
     case CMD_DSP_PATCHES: snprintf(value,sizeof(value),"PATCH %u",dspPatchesIdx); break;
@@ -2331,7 +2183,7 @@ bool decoderFrequencyRotate(int16_t enc)
     decoderSelectionChangedAt = millis();
   }
   else
-    decoderCategoryIndex = wrap_range(decoderCategoryIndex, enc, 0, kDecoderFrequencyCategoryCount);
+    decoderCategoryIndex = wrap_range(decoderCategoryIndex, enc, 0, kDecoderFrequencyCategoryCount - 1);
   return true;
 }
 
@@ -2339,12 +2191,6 @@ bool decoderFrequencyClick()
 {
   if(!decoderPresetView)
   {
-    if(decoderCategoryIndex == kDecoderFrequencyCategoryCount)
-    {
-      currentCmd = CMD_DECODER_MENU;
-      decoderCategoryIndex = 0;
-      return true;
-    }
     decoderPresetView = true;
     decoderPresetIndex = 0;
     decoderLastTunedPreset = -1;
@@ -2406,35 +2252,55 @@ bool decoderFrequencyTick(uint32_t now)
 
 void drawDecoderFrequencyMenu()
 {
-  if(!decoderPresetView) {
-    DecoderMenuUi::draw("DECODER FREQUENCIES", decoderCategoryLabels, nullptr,
-                        kDecoderFrequencyCategoryCount + 1, decoderCategoryIndex,
-                        "TURN: SELECT", "CLICK: OPEN");
-    return;
+  const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF, green = 0x07E0;
+  spr.fillSprite(bg);
+  spr.drawRoundRect(3, 3, 314, 164, 5, blue);
+  spr.setTextDatum(TL_DATUM);
+  spr.setTextColor(cyan);
+  spr.drawString("Decoder Frequencies", 12, 8, &lgfx::fonts::Orbitron_Light_24);
+  spr.setTextDatum(TR_DATUM);
+  char counter[16];
+  if(decoderPresetView)
+    snprintf(counter, sizeof(counter), "%u / %u", decoderPresetIndex + 1, kDecoderFrequencyCategories[decoderCategoryIndex].presetCount);
+  else snprintf(counter, sizeof(counter), "%u / %u", decoderCategoryIndex + 1, kDecoderFrequencyCategoryCount);
+  spr.drawString(counter, 307, 12, FONT_SMALL);
+  spr.setFont(FONT_SMALL);
+  for(int row = -2; row <= 2; ++row)
+  {
+    const int selected = decoderPresetView ? decoderPresetIndex : decoderCategoryIndex;
+    const int count = decoderPresetView ? kDecoderFrequencyCategories[decoderCategoryIndex].presetCount : kDecoderFrequencyCategoryCount;
+    const int index = (selected + row + count) % count;
+    const int y = 43 + (row + 2) * 20;
+    if(row == 0) spr.fillRoundRect(8, y - 9, 304, 19, 3, 0x001F);
+    spr.setTextColor(row == 0 ? green : cyan);
+    if(!decoderPresetView)
+    {
+      spr.setTextDatum(MC_DATUM);
+      spr.drawString(decoderCategoryLabels[index], 160, y, FONT_SMALL);
+    }
+    else
+    {
+      const uint8_t presetIndex = kDecoderFrequencyCategories[decoderCategoryIndex].firstPreset + index;
+      const DecoderFrequencyPreset &preset = kDecoderFrequencyPresets[presetIndex];
+      char frequency[28];
+      snprintf(frequency, sizeof(frequency), "%lu.%03lu %s",
+        static_cast<unsigned long>(preset.frequencyKHz / 1000),
+        static_cast<unsigned long>(preset.frequencyKHz % 1000),
+        preset.modulation == USB ? "USB" : preset.modulation == LSB ? "LSB" : "AM");
+      spr.setTextDatum(TL_DATUM);
+      spr.drawString(preset.label, 13, y - 7, FONT_SMALL);
+      spr.setTextDatum(TR_DATUM);
+      spr.drawString(frequency, 306, y - 7, FONT_SMALL);
+    }
   }
-
-  const auto &category = kDecoderFrequencyCategories[decoderCategoryIndex];
-  // Keep the large preset display buffers off the loopTask stack.
-  static char storage[kDecoderFrequencyPresetCount][40];
-  static char valueStorage[kDecoderFrequencyPresetCount][20];
-  static const char* labels[kDecoderFrequencyPresetCount];
-  static const char* values[kDecoderFrequencyPresetCount];
-  for(uint8_t i = 0; i < category.presetCount; ++i) {
-    const uint8_t presetIndex = category.firstPreset + i;
-    const DecoderFrequencyPreset &preset = kDecoderFrequencyPresets[presetIndex];
-    const char* name = preset.label;
-    if(!strncmp(name, "CW ", 3)) name += 3;
-    else if(!strncmp(name, "FT8 ", 4) || !strncmp(name, "FT4 ", 4)) name += 4;
-    else if(!strncmp(name, "RTTY ", 5)) name += 5;
-    snprintf(storage[i], sizeof(storage[i]), "%s", name);
-    snprintf(valueStorage[i], sizeof(valueStorage[i]), "%lu.%03lu %s",
-             static_cast<unsigned long>(preset.frequencyKHz / 1000),
-             static_cast<unsigned long>(preset.frequencyKHz % 1000),
-             preset.modulation == USB ? "USB" : preset.modulation == LSB ? "LSB" : "AM");
-    labels[i] = storage[i];
-    values[i] = valueStorage[i];
+  spr.setTextColor(cyan);
+  spr.setTextDatum(TL_DATUM); spr.drawString("ROTATE: SELECT", 10, 151, FONT_SMALL);
+  spr.setTextDatum(TR_DATUM); spr.drawString("HOLD: BACK", 310, 151, FONT_SMALL);
+  spr.setTextDatum(MC_DATUM);
+  if(decoderPresetView)
+  {
+    spr.setTextColor(decoderLastTunedPreset == decoderPresetIndex ? green : cyan);
+    spr.drawString(decoderLastTunedPreset == decoderPresetIndex ? "TUNED" : "AUTO TUNE IN 2 SECONDS", 160, 137, FONT_SMALL);
   }
-  const char* status = decoderLastTunedPreset == decoderPresetIndex ? "TUNED" : "AUTO TUNE IN 2 SEC";
-  DecoderMenuUi::draw("DECODER PRESETS", labels, values, category.presetCount,
-                      decoderPresetIndex, "TURN: SELECT", "CLICK: OPEN", status);
+  else { drawXXLTextCentered("CLICK: OPEN",160,137,cyan,FONT_SMALL); }
 }

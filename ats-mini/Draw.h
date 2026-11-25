@@ -33,7 +33,6 @@
 #define BLE_OFFSET_Y     0    // BLE y offset
 
 void drawMessage(const char *msg);
-void drawCleanLoadingMessage(const char *msg);
 void drawZoomedMenu(const char *text, bool force = false);
 void drawScanGraphs(uint32_t freq);
 void drawScreen();
@@ -60,8 +59,6 @@ void drawLayoutTEF6686();
 void drawLayoutTinyRadio();
 void drawLayoutHJB();
 
-void drawNewsScreen();
-uint8_t newsPageCountForCurrentItem();
 void drawAbout();
 void drawAboutHelp(uint8_t arrow);
 

@@ -1,193 +1,25 @@
-## 2026-11-25 – Build #90: Panic-/Core-Dump-Konfiguration untersucht
-
-- Analyse des originalen Build-#90-Artefakts (Actions Run 45557561983, Commit 29a525b70719d6dad30c88b8cc116d6be9913c5a; ELF-SHA256 beginnt mit `35d1c24d4`). Das MAP enthält den ESP-IDF-Panic-Handler einschließlich `panic_print_registers`, `panic_print_backtrace` und `esp_panic_handler`. Der Build enthält außerdem `libespcoredump.a` mit Flash-Core-Dump-Funktionen, darunter `esp_core_dump_init`, `esp_core_dump_store`, `esp_core_dump_image_get`, `esp_core_dump_image_erase` und `esp_core_dump_flash_write_data`; der Core-Dump-Init-Hook ist ebenfalls gelinkt. Das belegt, dass die Core-Dump-Infrastruktur im Build enthalten ist. Ob sie im konkreten Fehlerfall erfolgreich einen Dump auf Flash schreibt, muss durch Auslesen der Partition bestätigt werden.
-- Im Repository gibt es keine versionierte `sdkconfig` oder `sdkconfig.defaults`; der Build-Workflow setzt auch keine expliziten `CONFIG_ESP_SYSTEM_PANIC_*`- oder `CONFIG_ESP_COREDUMP_*`-Overrides. Die ESP-IDF-Kconfig-Werte stammen somit aus dem vorgefertigten Arduino-ESP32-3.3.12-/ESP-IDF-5.5.5-Paket. Der Workflow setzt nur `USE_ESP_IDF_LOG` sowie `CONFIG_ASYNC_TCP_STACK_SIZE=32768`; diese Optionen konfigurieren nicht den Panic-Handler.
-- Der Build-#90-MAP enthält die Register-Ausgabe-Funktion. Die ESP-IDF-Standardoption `CONFIG_ESP_SYSTEM_PANIC_PRINT_REBOOT` ist laut ESP-IDF die Option, die Register, Backtrace und anschließenden Neustart ausgibt. Das Vorhandensein von Backtrace, ELF-SHA und Reboot-Zeile passt zu diesem Ablauf; dass im übermittelten Mitschnitt Guru-Meditation-Kopf und Register fehlen, kann an einer unvollständigen Übertragung/USB-Ausgabe oder daran liegen, dass der Ausschnitt nicht alle unmittelbar vorausgehenden Zeilen enthält. ESP-IDF dokumentiert, dass Panic-Ausgaben über USB-CDC bei einem Crash nicht in jedem Fall vollständig ankommen. Daher ist ein UART0-Mitschnitt eine mögliche Alternative, falls der Flash-Dump nicht verfügbar ist.
-- Wichtige Partitionstabellen-Abweichung: Die im Commit #90 vorhandene `ats-mini/partitions.csv` (Blob SHA `7d2ce168e47d44905528ec8350853d754bbf3cdf`) definiert eine 8-MB-Tabelle mit `coredump` bei `0x7F0000`, Größe 64 KB. Das Gerät meldet zur Laufzeit dagegen eine 16-MB-Tabelle mit `coredump` bei `0x00FDF000`, Größe 128 KB, sowie weiteren Partitionen (`ffat`, `recovery`, größere App-Slots). Der Build-Workflow veröffentlicht nur App-BIN, ELF und MAP, keine neue Partitionstabelle. Die aktive Partitionstabelle des Geräts ist daher nicht identisch mit der aktuell eingecheckten CSV; für jeden Lesezugriff muss die tatsächlich vom Gerät gemeldete Adresse verwendet werden. Keine Partitionstabelle flashen oder ändern.
-- Empfohlener nächster Schritt ist ein ausschließlich lesender Flash-Read der aktiven Core-Dump-Partition direkt nach dem Reset, bevor erneut geflasht wird: `uvx --from esptool esptool.py --chip esp32s3 --port COMx --baud 921600 read_flash 0xFDF000 0x20000 coredump.bin`. `COMx` durch den tatsächlichen Windows-COM-Port ersetzen. Der Befehl liest 128 KB ab der gemeldeten Partition und verändert den Flash nicht. Die Datei anschließend zur Analyse bereitstellen. Falls sie leer/unerkannt ist, als nächsten Schritt den Panic-Output über UART0 prüfen.
-- Keine Firmware- oder Konfigurationsdatei verändert, kein Build gestartet, kein Flash-/Hardwareeingriff durch den Assistenten. FT8/FT4 bleibt unangetastet. Nur diese Handoff-Dokumentation wird auf `development` ergänzt; `main` und Backup bleiben unverändert.
-
----
-
-## 2026-11-25 – Build #90: zweiter FT8-Test mit aktiviertem Extra-USB-LOG
-
-- Nutzer hat Build #90 erneut getestet; Extra USB-LOG war in den Settings aktiviert und wird beim Boot wiederhergestellt. Im Bootlog stehen `[BOOT][SETTINGS] loaded=1 usb_log_enabled=1` und `[LOG] Extra USB diagnostics enabled`.
-- Die Audio-Task-Diagnose zeigt weiterhin stabile Werte. Bei `elapsed_ms=33000`: `total_samples=131793`, `heap_free=150952`, `heap_min=150868`, `task_stack_high_water=1888`, ein Subscriber und 4000 Hz. Die SYS-Health-Meldung bei 60 s meldet ebenfalls 150952 Byte freien Heap, 150868 Byte Minimum, 10 Tasks und `slow_loops=0`.
-- Der Reset erfolgt um 07:23:25.482. Aus dem Audio-Task-Zeitstempel bei 33 s ergibt sich eine Laufzeit von ungefähr 46,6 s seit Start des Audio-Capture-Tasks.
-- Neuer Backtrace: `0x420310d8:0x3fcc7290 0x42031281:0x3fcc7350 0x403850bd:0x3fcc7370`. Mit derselben Build-#90-ELF liegt der erste Eintrag erneut in `AudioCaptureService::sampleTask()` (im Bereich der bereits identifizierten Sampling-Schleife); danach folgen `AudioCaptureService::taskEntry()` und FreeRTOS `vPortTaskWrapper`. Im Unterschied zum vorherigen Mitschnitt ist kein separater ESP-Timer-Frame im Backtrace enthalten. Die Ursache ist weiterhin nicht bewiesen.
-- Auch dieser Mitschnitt enthält keinen Panic-/Exception-Kopf (kein Guru-Meditation-/Exception-Typ, keine Register/EXCVADDR), sondern nur den Backtrace und den anschließenden Software-Reboot. Der genaue Auslöser bleibt daher offen.
-- Zusammen mit den vorigen Build-#90-Tests bestätigt dies den wiederkehrenden Absturzkontext im gemeinsamen Audio-Capture-Task bei stabil erscheinendem Heap und ausreichendem Stack-Watermark. Kein belastbarer Hinweis auf einen FT8-Decoderfehler; FT8/FT4-Code bleibt unangetastet.
-- Nächster Schritt: keine weitere Änderung auf Verdacht. Die Panic-Ausgabe bzw. mögliche Core-Dump-Konfiguration gezielt untersuchen; bis dahin keine Firmware-Änderung und kein neuer Build. Nur `development` ist Arbeitszweig; `main` und `backup/development-2026-11-24` bleiben unverändert.
-
----
-
-## 2026-11-25 – FT8-Hardwaretest Build #89: Reset und Backtrace-Auswertung
-
-- Nutzer hat Build #89 auf dem ATS Mini getestet; beim Start von FT8 tritt reproduzierbar ein Reset auf. FT8-Start und DSP-Initialisierung werden zunächst erfolgreich protokolliert: `mode=FT8`, `sample_rate=4000`, `block_samples=24`, `initialized=1`.
-- Der Reset erfolgt im vorliegenden Mitschnitt etwa 8,5 Sekunden nach `[FTX][START]`. Der Exception-/Guru-Meditation-Kopf fehlt im Log; deshalb ist der konkrete Exception-Typ noch nicht belegt.
-- Build-Zuordnung wurde verifiziert: GitHub Actions Run 45490746057, Build-Artefakt-ID 14965992323, Commit `b1a3303fc9e42c7af615885f54000efc53ab2e3f`. Das Artefakt enthält BIN, ELF und MAP. Die vollständige SHA-256 der ELF lautet `2a249ac82b919a2b3e0915ffcc804d4a20b4f54d6890cabadb9116bf7d56f4a1`; sie stimmt mit dem im Gerätelog ausgegebenen Präfix `2a249ac82` überein. Der Backtrace wurde somit mit der exakt passenden ELF-Datei aufgelöst.
-- Symbolisierte Backtrace-Kette:
-  - `0x40389dbb`: `systimer_ll_get_counter_value_low` (ESP-IDF System-Timer)
-  - `0x40377b4e`: `esp_timer_impl_get_time`
-  - `0x420310c0`: `AudioCaptureService::sampleTask()`, `ats-mini/src/audio/AudioCaptureService.cpp:119`
-  - `0x42031255`: `AudioCaptureService::taskEntry()`, Zeile 77
-  - `0x403850bd`: FreeRTOS `vPortTaskWrapper`
-- Zeile 119 liegt in der Sample-Takt-Schleife `while (esp_timer_get_time() < next) taskYIELD();`. Der nachgewiesene Absturzkontext liegt damit im gemeinsamen Audio-Capture-Task beim Abfragen des System-Timers – nicht im FT8-LDPC-/DSP-Decodepfad. Das beweist noch nicht, warum der Timerzugriff dort abstürzt; dafür fehlt der Exception-Kopf mit Typ und Registern.
-- Zusätzlich erscheint unmittelbar vor dem FT8-Start `ARDUINO: Pin is not configured as analog channel`. Quellprüfung von Arduino-ESP32 3.3.12 zeigt: `analogSetPinAttenuation(kPin, ADC_11db)` meldet genau diesen Fehler, wenn der ADC-OneShot-Bus für den Pin noch nicht eingerichtet ist. Im Build-#89-Code wird diese Funktion vor dem ersten `analogRead(kPin)` aufgerufen; danach folgt außerdem `pinMode(kPin, INPUT)`. Das ist eine fehlerhafte/unnötige ADC-Initialisierungsreihenfolge und sollte isoliert korrigiert werden. Der Warnhinweis ist jedoch nicht als Ursache des Resets bewiesen.
-- Nächster Diagnose-/Fix-Schritt: ausschließlich den gemeinsamen `AudioCaptureService` untersuchen (ADC-Pin initialisieren, Timer-Sampling-Schleife robuster gestalten und Stack-/Task-Watchdog-Diagnose ergänzen). FT8/FT4-DSP, Slot-Synchronisation und Decoderlogik bleiben unangetastet. Vor jeder Quelländerung aktuelle Dateien und SHAs aus GitHub holen; nur `development` ändern.
-- Kein Firmware-Code geändert, kein neuer Build gestartet und kein weiterer Hardwaretest durch den Assistenten durchgeführt.
-
----
-
-## 2026-11-24 – Build #89 erfolgreich, Backup gesichert, nächster Hardwaretest
-
-- GitHub Actions Build #89 (Run-ID 45490746057) wurde auf development mit Commit b1a3303fc9e42c7af615885f54000efc53ab2e3f ausgeführt und erfolgreich abgeschlossen.
-- Run: https://github.com/firetvstick2k2-afk/ats-mini-dev/actions/runs/45490746057
-- Das Repository wurde vom Nutzer für diesen Test auf Public gestellt. Der Build lief in diesem öffentlichen Repository erfolgreich durch.
-- Das Build-Artefakt Mini_OS-build-89-ospi-de wurde von GitHub Actions veröffentlicht (Artefakt-ID 14965992323, Ablaufdatum 2026-12-08). Laut Nutzer sind Firmware-BIN sowie die zugehörigen ELF- und MAP-Dateien enthalten. Für eine Backtrace-Analyse müssen BIN, ELF und MAP exakt aus demselben Build stammen.
-- Der komplette JS8-Decoder einschließlich GPL-Lizenzdatei und Tests wurde zuvor mit Commit b1a3303fc9e42c7af615885f54000efc53ab2e3f entfernt. Build #89 bestätigt, dass dieser bereinigte Stand kompiliert und ein Artefakt veröffentlicht werden kann.
-- Backup-Branch backup/development-2026-11-24 wurde nach dem erfolgreichen Build erstellt und verifiziert. Er zeigt exakt auf Commit b1a3303fc9e42c7af615885f54000efc53ab2e3f.
-- Aktive Arbeitsregel: ausschließlich auf development weiterarbeiten. Das Backup bleibt unangetastet und wird nur als Rückfallebene aufbewahrt. main bleibt ebenfalls unangetastet; nur die ausdrückliche Anweisung „Bitte Main überschreiben“ erlaubt eine Änderung an main.
-- Der Backup-Branch ist eine ausdrücklich genehmigte einmalige Ausnahme zur früheren Regel „nur main und development“. Keine weiteren Branches anlegen.
-- Vereinbarte Testreihenfolge für den nächsten Hardwaretermin: **1. FT8 als allerersten Decoder testen und dabei das Logging aktivieren. 2. Das FT8-Log gemeinsam auswerten; bei Absturz oder Auffälligkeit ausschließlich die zu Build #89 gehörenden ELF- und MAP-Dateien zusammen mit dem Log verwenden. 3. Danach die übrigen Decoder einzeln testen. 4. Den Band Opening Monitor anschließend als separaten Test prüfen.**
-- FT8/FT4 bleibt dabei unangetastet: zunächst ausschließlich testen und beobachten, keine Änderungen am Decoder vornehmen, solange kein konkreter Fehler nachgewiesen ist. FT8 ist der erste Testschritt, nicht eine Freigabe zur Codeänderung.
-- Build #89 auf dem ATS Mini flashen und testen; Logging beim FT8-Test aktivieren und das Log sichern. Bei einem Absturz oder auffälligem Verhalten die zu Build #89 gehörenden ELF- und MAP-Dateien zusammen mit dem Log sichern und auswerten. Der Assistent hat weder geflasht noch einen Hardwaretest durchgeführt.
-- Beim Log-/Backtrace-Test keine andere Revision flashen und keine ELF/MAP-Dateien eines anderen Builds verwenden.
-
----
-## 2026-11-24 – WLAN-Info ins WLAN-Menü verschoben (aktueller Stand)
-
-- Ziel bleibt ausschließlich `firetvstick2k2-afk/ats-mini-dev`, aktive Arbeit ausschließlich auf Branch `development`. `main` blieb unverändert. Der einmalige Backup-Branch `backup/development-2026-11-24` wurde nach Build #89 erstellt und bleibt unangetastet.
-- Die Status-Popups in `ats-mini/Draw.cpp` sind jetzt kompakter und dynamisch breit: Breite richtet sich nach dem Text, die Meldung wird zentriert und mit gut lesbarer `FONT_SMALL` dargestellt. Das Overlay löscht den darunterliegenden Bildinhalt nicht; Layout bzw. Menü bleiben ringsum sichtbar.
-- Der zuvor vorhandene WLAN-Modus-Eintrag ist jetzt eindeutig als `WLAN-MODUS` (EN: `Wi-Fi Mode`, IT: `Modalità Wi-Fi`) beschriftet und behält unverändert die bestehende Modusauswahl.
-- `WLAN-INFO` ist jetzt direkt als zusätzlicher Auswahlpunkt im Untermenü `WLAN-MODUS` integriert (EN: `Wi-Fi Info`, IT: `Info Wi-Fi`). Der separate Eintrag in den allgemeinen Einstellungen wurde entfernt. Die WLAN-Modi behalten ihre bisherigen numerischen Werte; ein eigener Menüindex verhindert, dass die Info-Auswahl versehentlich an `netInit()` übergeben wird.
-- Die Info-Auswahl öffnet das read-only Overlay über dem aktiven Radio-Layout und zeigt tatsächlichen WLAN-Modus, Verbindungsstatus, SSID, IP-Adresse, bei aktivem AP zusätzlich AP-IP/Clientzahl, bei STA-Verbindung RSSI sowie `mini-os.local`. Klick führt zurück ins WLAN-Untermenü.
-- Klick auf der Info-Anzeige führt zurück ins WLAN-Untermenü. Der Info-Bildschirm wird nicht durch den allgemeinen Menü-Timeout geschlossen.
-- Änderungen an `ats-mini/Draw.cpp`, `ats-mini/Menu.h`, `ats-mini/Menu_english.cpp.src`, `ats-mini/Menu_german.cpp.src`, `ats-mini/Menu_italian.cpp.src` und `ats-mini/ats-mini.ino`.
-- Ursprüngliche WLAN-UI-Commits: `939c2a82ab6479e5e01910f0d4995ee018d54f11`, `e224c23b012629c2685545e08f9f00e39f512b9e`, `5b688036e4ba5eda6e8cb25c4b2692c4f687cf21`, `aa03c11cf5d654d8f9568c4f27d98da6dd54eed4`, `3f69746759978351393a1537eecf7d084c02d91f`, `22cbc2650ed94e7923ab7e4378258d74875c25cc`. Verschiebung ins WLAN-Untermenü: EN `5f1224205fcf487a4f73e82831c2ec40117b8dac`, DE `d4b78ca034e2e5a3fed5a6d2bd066d6ea2df7f84`, IT `be97e0bb802c1bf3f7f82c75549542436ad51bb3`.
-- Korrektur zur Statusverwaltung: `statusTick(millis())` wird bereits am Ende von `loop()` in `ats-mini/ats-mini.ino` aufgerufen und löst bei Ablauf ein Redraw aus. `statusShow()`/`statusTick()` und die WLAN-Ablauflogik in `Network.cpp` wurden daher nicht verändert.
-- `drawStatus()` bleibt als bestehender Legacy-Renderer unverändert. Der sichtbare Status wird über `drawStatusOverlay()` gerendert.
-- Keine Änderungen an WLAN-Zugangsdaten, Verbindungsmodi, AP-Adresse, mDNS-/Webserver-Initialisierung, NTP, Radio-Layouts oder Decoder-Funktionen.
-- Kein Compile, kein GitHub-Actions-Lauf, kein Flash und kein Hardwaretest durch den Assistenten. Der Nutzer startet den Build selbst.
-- Build #83 wurde vom Nutzer gestartet; Status-Popups wurden auf Hardware als funktionierend und optisch gut bestätigt. Die WLAN-Menü-/WLAN-Info-Integration und die Popup-Auswahlkorrektur sind inzwischen erledigt; die frühere offene Prüfliste ist geschlossen.
-
----
-
-## 2026-11-24 – Rücksetzung auf letzten bestätigten Hardwarestand
-
-- `development` wurde auf den letzten vom Nutzer bestätigten funktionierenden Stand Build #69 zurückgesetzt: `7825f22feda8d095a542bf819a07f9bf62c23a7c`. `main` blieb unangetastet.
-- Als einzige Firmware-Ausnahme wurde anschließend die About-Anzeige isoliert wieder aufgenommen: Commit `cb0b305acdbb9fc7d79d2b7d0c8d0901fb510b7a` (`ats-mini/About.cpp`). Die vorhandene grafische Space-/Globus-Radio-Mast-Darstellung aus Build #69 blieb erhalten; geändert wurden nur Versionslabel `V1.00`, Repository-Adresse und Credit-Text.
-- Keine Wetterdienst-, WLAN-, Decoder- oder Layout-Änderungen aus den späteren Commits übernommen. Kein Build/Actions-Lauf/Flash durch den Assistenten; Hardwaretest durch den Nutzer steht aus.
-
----
-
-## Band Opening Monitor – aktueller Quellstand Build #89 (Commit b1a3303)
-
-**Status: Funktion im Quellstand vorhanden; separater Hardwaretest durch den Nutzer noch offen.**  
-Geprüft direkt in `ats-mini/src/radio/BandOpeningService.cpp/.h` aus dem exakt für Build #89 verwendeten Commit `b1a3303fc9e42c7af615885f54000efc53ab2e3f`.
-
-- **HF-AFU-Bänder:** Map For HAM `solar.json`, Feld `bands_detail`, liefert direkte Tag-/Nachtbewertungen für 160, 80, 60, 40, 30, 20, 17, 15, 12 und 10 m.
-- **SWL-Kurzwellenbänder:** Map For HAM `bands` liefert vier Gruppenwerte. Die Firmware übernimmt sie als Näherungen und kennzeichnet die betroffenen Zeilen mit `SWL ~`:
-  - `80m-40m`: 90 m, 75 m, 49 m, 41 m
-  - `30m-20m`: 31 m, 25 m, 22 m
-  - `17m-15m`: 19 m, 16 m, 15 m BC
-  - `12m-10m`: 13 m
-  Das sind Gruppen-Näherungen, keine individuellen Messungen der jeweiligen Rundfunkbänder.
-- **11 m CB:** wird aus den benachbarten 10-m- und 12-m-AFU-Werten abgeleitet und mit `CB ~` markiert. Gleiche Nachbarwerte werden übernommen; bei unterschiedlichen bekannten Werten wird vorsichtig `Fair/MITTEL` verwendet; fehlt ein Nachbarwert, bleibt der Status unbekannt.
-- **LW/MW:** sind im Build-#89-Quellstand nicht mehr ohne Datenquelle. Eine separate Abfrage an `db1.wspr.live` nutzt WSPR-Aktivität der LF-/MF-Bereiche als ausdrücklich gekennzeichnete Propagations-Proxys (`LF ~` / `MF ~`), nicht als direkte LW-/MW-Rundfunkmessung. Die Daten werden alle 15 Minuten aktualisiert und nach sechs Stunden verworfen.
-- **2 m:** öffentliche SQ3SWG-API: `/api/v1/public/propagation` (europäische höchste Sporadic-E-MUF) sowie `/spots?band=144&hours=6&limit=30`. Status: `GUT` bei Es-MUF >= 144 MHz oder mindestens 3 Spots in 6 h; `MITTEL` bei 1–2 Spots; sonst `KEINE DATEN` (nicht fälschlich „geschlossen“).
-- **70 cm:** SQ3SWG `/spots?band=432&hours=6&limit=30`; `GUT` bei mindestens 3 Spots, `MITTEL` bei 1–2 Spots, sonst `KEINE DATEN`.
-- **UKW/FM:** genau wie vom Nutzer erinnert: Die Firmware übernimmt den 2-m-Status direkt für die UKW/FM-Zeile und kennzeichnet den Typ mit `2m ~`. Das ist eine persönliche Näherung/Indikation für mögliche FM-DX-Bedingungen, ausdrücklich keine direkte UKW-Messung oder eigenständige FM-MUF-Quelle. Die Quellcode-Kommentare benennen diese Einschränkung ausdrücklich.
-- **Aktualisierung:** HF/Map For HAM etwa alle 5 Minuten; SQ3SWG VHF/UHF etwa alle 15 Minuten; WSPR LF/MF etwa alle 15 Minuten. SQ3SWG-Abfragen werden mit mindestens 1,1 Sekunden Abstand ausgeführt. Die VHF-/WSPR-Daten haben eigene Zeitstempel und Verfallsregeln.
-- **Anzeige:** Bandmonitor ist in Build #89 integriert (`CMD_BAND_OPENING`, eigene Anzeige in `Draw.cpp`, Seiten-Navigation im Hauptloop). Er wird beim Öffnen gestartet und fordert WLAN für die Datenabfrage an; beim Verlassen wird die WLAN-Aufräumlogik ausgeführt.
-- **Wichtiger Prüfpunkt:** Die Funktion und die oben genannten Quellen/Zuordnungen sind im Build-#89-Quellstand vorhanden. Ob alle Endpunkte am Gerät aktuell erreichbar sind und ob die angezeigten Werte plausibel aktualisiert werden, muss der Nutzer separat auf Hardware prüfen. Besonders kontrollieren: 2 m, 70 cm, UKW/FM mit `2m ~`, SWL-Gruppenwerte, 11 m `CB ~`, sowie LW/MW `LF ~`/`MF ~`.
-
-## PSK31 BPSK RX — initial integration (2026-11-23)
-
-- Development priority: **PSK31 → WWV → HF-DSC → NCDXF/IARU**.
-- PSK31 is being added as a standalone BPSK31 receive module under `ats-mini/src/psk31/`, using the existing shared `AudioCaptureService` subscriber interface (4 kHz / GPIO11). It does not create another ADC reader.
-- **Isolation requirement:** do not modify FT8/FT4 decoder DSP, services, timing, synchronization, logging or UI behavior. Their implementation files are intentionally excluded from this feature. The only shared application changes are the new decoder command/menu registration and dispatch.
-- Initial receiver design: fixed 1000 Hz audio down-conversion, 31.25 baud differential BPSK decisions, PSK31 Varicode framing on `00`, bounded text storage, pause/resume and clear/reset controls.
-- **Build #68:** GitHub Actions run [45131502744](https://github.com/firetvstick2k2-afk/ats-mini-dev/actions/runs/45131502744) completed successfully on 2026-11-23. The `build ospi-de` job passed; artifact `Mini_OS_#68.bin` was produced. Built revision: `ab89441be19bd22d1d79e4953a1e712948b550fe` (`Fix FM MUF numeric string parsing terminator`). This confirms compilation only; the user still needs to flash the artifact and validate PSK31/HF Band Monitor behavior on the device. No flash or hardware test has been performed by the assistant.
-
 # ATS Mini Development Handoff
 
-## Verbindliche Branch-Regel (aktualisiert 2026-11-24)
+Last updated: 2026-11-21 (RTTY preset preview submenu)
+Repository: https://github.com/firetvstick2k2-afk/ats-mini-dev (active development repository); Mini_OS reference: https://github.com/firetvstick2k2-afk/Mini_OS
+Active work branch: `development` (the sole development branch; never modify `main` except for a completed, tested feature explicitly approved for promotion)
 
-- Sämtliche Entwicklungsarbeit, Codeänderungen und Dokumentationsänderungen erfolgen ausschließlich direkt auf `development`.
-- Der einmalig genehmigte Sicherungsbranch `backup/development-2026-11-24` zeigt auf den nach Build #89 erfolgreich gebauten Commit `b1a3303fc9e42c7af615885f54000efc53ab2e3f`. Dieser Backup-Branch bleibt unangetastet und wird ausschließlich als Rückfallebene aufbewahrt.
-- Keine weiteren Branches anlegen. Der Backup-Branch ist die ausdrücklich genehmigte einmalige Ausnahme zur früheren Zwei-Branch-Regel.
-- **Verbindliche Main-Übernahmeregel:** Erst wenn der Nutzer ausdrücklich sagt **„Bitte Main überschreiben“** (oder unmissverständlich dieselbe Anweisung erteilt), wird `main` vollständig durch den aktuellen Stand von `development` ersetzt.
-- Diese Übernahme ist eine vollständige **1:1-Kopie**: Der gesamte Inhalt und die gesamte Historie/der Branch-Zustand von `main` werden auf den Stand von `development` gesetzt. Es wird nichts aus dem bisherigen `main`-Stand zusammengeführt oder zusätzlich beibehalten. Abweichungen, Widersprüche oder ältere Inhalte in `main` sind dabei ausdrücklich kein Hinderungsgrund.
-- Ohne diesen ausdrücklichen Nutzerauftrag bleibt `main` unverändert. Eine Promotion darf niemals automatisch oder aufgrund einer eigenen Einschätzung erfolgen.
-- Bei einer Main-Übernahme werden keine weiteren Branches angelegt; der vorhandene Backup-Branch bleibt unangetastet.
-- Vor einer Übernahme den aktuellen Stand beider Branches prüfen und danach verifizieren, dass `main` exakt denselben Commit/Dateistand wie `development` hat.
-- Diese Vorgabe ist dauerhaft und gilt für alle zukünftigen Arbeiten im Ziel-Repository ohne zeitliche Ausnahme.
+## Latest bugfix: FT8/FT4 logging in offline mode (2026-11-21)
+- User-reported issue: FT8 Actions > Logging stayed OFF and could not be enabled.
+- Root cause: `ftxLogStart()` rejected offline synchronization and required a valid UTC date; `ftxLogMessage()` also discarded messages without valid UTC. Switching to offline mode additionally stopped and cleared the active log.
+- Fixed in commit `4b3a3e8d46e6061235349d15bf4cad9e4bf8d84e`: logging can start without UTC, uses a unique `FT8_UNTIMED` / `FT4_UNTIMED` filename when no date is available, writes unknown timestamps for offline receptions, and remains active across online/offline sync changes.
+- Changelog fragment: `changelog/+ft8-offline-logging.fixed.md`.
+- Source review only. No compile, GitHub Actions run, or hardware test was performed; user must verify Logging ON, actual file creation, offline reception entries, and online/offline switching on device.
 
-
-## RSS-Nachrichtenansicht – Textüberlauf und Trennlinie (2026-11-22)
-
-- Nutzer hat nach dem ersten Hardwaretest die deutlich bessere Lesbarkeit bestätigt, aber am rechten Ende der drei Textzeilen und am Ende des Lauftextes abgeschnittene/unerwünschte Zeichenfolgen gemeldet (Foto vom ATS Mini).
-- Ursache der sichtbaren Überläufe: RSS-Titel und Textzeilen wurden mit einer festen Zeichenanzahl statt anhand der tatsächlichen Pixelbreite aufgeteilt. Bei der kräftigen FreeSans-Bold-Schrift können 28 Zeichen breiter als der verfügbare Displaybereich sein.
-- ats-mini/Draw.cpp geändert: Headline-Ticker und Artikelzeilen werden jetzt anhand von spr.textWidth() innerhalb der verfügbaren Breite aufgebaut; die Seitenberechnung verwendet dieselbe pixelbreitenbasierte Umbruchfunktion. Drei Zeilen pro Seite bleiben erhalten.
-- Eine dünne horizontale Trennlinie wurde direkt unter dem Headline-Lauftext ergänzt. Footer-Hinweis gekürzt, damit er nicht mit der Seitenanzeige kollidiert.
-- Commit: 1b376c207bd3d8e486adf2ac1ff0fc063fe1f327.
-- Source-only Änderung auf development; noch kein Build oder Hardwaretest nach diesem Fix. Beim nächsten OSPI-DE-Build besonders prüfen: vollständiger Lauftext ohne abgeschnittene Enden, keine Zeichenüberläufe am rechten Rand der drei Artikelzeilen, Seitenwechsel und sichtbare Trennlinie.
-
-
-## Wichtige Vorgabe: Lesbarkeit und visuelle Gestaltung für den Nutzer (2026-11-22)
-
-- Der Nutzer hat eine eingeschränkte Seh-/Lesefähigkeit und trägt eine Brille (+1,5 Dioptrien beidseitig). Er beschreibt keine grundsätzlichen Probleme mit der Farberkennung; entscheidend sind **gute Erkennbarkeit, klare Schrift und möglichst geringe Augenanstrengung**.
-- Diese Vorgabe gilt für **alle sichtbaren Elemente und Oberflächen** der Firmware: Menüs, Statusanzeigen, Dialoge, Decoder- und Nachrichtenansichten, Wetter-/Mondkalenderseiten, Keypads, Hinweise, Grafiken und zukünftige Layouts. Bei jeder visuellen Änderung die Lesbarkeit aktiv mitprüfen.
-- Seine bevorzugte Referenz ist der dunkle Chat-Darstellungsstil aus dem am 2026-11-22 gesendeten Screenshot: tiefschwarzer Hintergrund, gut erkennbare weiße bzw. leicht abgedunkelte Schrift, klare kräftige Buchstaben und großzügige Zeilen-/Elementabstände. Das Hauptmenü wurde aus demselben Grund bereits bewusst in Schwarz-Weiß gestaltet.
-- Helle, grelle oder leuchtende Darstellungen strengen ihn stärker an. Neonfarben, unnötige Leuchteffekte, dünne Schrift, zu kleine Beschriftungen und zu dicht gepackte Inhalte vermeiden, sofern der Nutzer nicht ausdrücklich etwas anderes möchte.
-- **Lesbarkeit hat Vorrang vor Informationsdichte und kompakter Darstellung.** Lieber größere/kräftigere Schrift, mehr Abstand und zusätzliche Seiten als kleine Schrift oder zusammengedrängte Inhalte. Bei RSS-Nachrichten sind auch vier oder mehr Seiten mit nur drei Textzeilen pro Seite ausdrücklich willkommen.
-- Farben sind nicht pauschal verboten: Der Nutzer sagt, dass er normalerweise keine Probleme mit Farben hat. Nicht aus der Sehschwäche auf eine Farbsehschwäche schließen. Farben nur so einsetzen, dass Text und Symbole klar unterscheidbar bleiben und die Darstellung nicht unnötig blendet.
-- Wo möglich, vorhandene Schriftarten auf ihre tatsächliche Strichstärke und Lesbarkeit bei 320×170 Pixeln prüfen. Kontrast, Schriftgröße, Gewicht, Zeilenabstand, Abstände und Hintergrund gemeinsam betrachten; Farbe allein löst keine unscharfe oder anstrengende Darstellung.
-- Visuelle Änderungen möglichst zunächst gezielt und isoliert umsetzen. Die endgültige Beurteilung erfolgt durch den Nutzer auf dem echten ATS-Mini-Display mit seiner Brille. Bei Bedarf anhand seiner Fotos und Rückmeldungen iterieren; keine subjektive Lesbarkeit behaupten, bevor er sie bestätigt hat.
-- Die RSS-Nachrichtenansicht wurde am 2026-11-22 als erster konkreter Schritt auf monochrom, tiefschwarz und kräftigere weiße Schrift mit drei Textzeilen pro Seite umgestellt. Diese Änderung ist noch vom Nutzer zu bauen und auf Hardware zu beurteilen.
-
-
-Last updated: 2026-11-25
-
-## Current project status
-
-- **Repository:** [firetvstick2k2-afk/ats-mini-dev](https://github.com/firetvstick2k2-afk/ats-mini-dev)
-- **Active branch:** `development`. All development work, commits and pushes belong here.
-- **Main branch:** remains unchanged unless the user explicitly orders “Bitte Main überschreiben”. On that exact instruction, replace the entire `main` branch with the current `development` state as a 1:1 copy; do not merge or preserve conflicting/older `main` content.
-- **Branch policy:** all development and documentation work is done exclusively on `development`. The one-time approved backup branch `backup/development-2026-11-24` is immutable and must not be changed. Do not create any additional branches.
-- **Build workflow:** `.github/workflows/build.yml` currently uses `workflow_dispatch` only. A push does not start a firmware build. Do not start a workflow/build unless the user asks for it.
-- **Build tracking (binding):** Before asking the user to start a firmware build after source changes, inspect the current GitHub Actions workflow/run history and identify the next build/run number. State the exact suggested run number (for example, “Please start Build #60”) so the user can compare it with the latest run and notice if a build was skipped. After the user reports starting a build, record that build number and, whenever the workflow data is accessible, verify the actual Actions run ID/status rather than assuming the user-facing build number equals GitHub's run ID. Never invent a run number or claim a workflow check that was not possible. Update this handoff with the build number, run ID/link if known, commit/revision built, and result when available.
-- **Commit/push permission:** the assistant is authorized to commit and push completed, reviewed changes directly to `development`. No additional approval is needed for ordinary development commits or handoff updates.
-- **Handoff rule:** keep this file current after meaningful changes, decisions, test results and newly agreed next steps. It is the primary source of truth when opening a new chat.
-
-## Current implementation checkpoint — 2026-11-22
-
-### Decoder menus and receiver pages
-- CW, FT8/FT4 and RTTY action/preset menus have been brought into a consistent black, cyan and white visual style. Selected rows use a thin cyan outline; normal text is white. Decoder main-page layouts retain their own content.
-- Preset screens show five visible frequency rows with decoder-specific titles, page counters, tuning status and encoder hints. The shared decoder frequency category screen is a separate three-row view.
-- CW page opening refreshes the displayed frequency from the receiver's live frequency, so it should not reuse a stale value from an earlier session. Hardware confirmation of this specific case is still pending.
-- CW AUTO Tone uses adaptive signal/noise analysis and a 10 Hz search resolution. Treat tone stability and actual decoding as unverified until tested with a stable on-air CW signal.
-- RTTY retains AUTO tone-pair/polarity/BFO behavior and selectable baud rates. The latest simplified RTTY page/menu changes still need the user's device feedback.
-- FT8/FT4 and RTTY preset selection use a 2-second preview before committing. **CW preset scrolling is intentionally not yet converted to that same 2-second preview.** Do this after the user's current build/test cycle, matching the FT8/FT4 and RTTY behavior: preview while browsing, restore the original tuning when scrolling away/canceling, and commit only on click.
-
-### Immediate test focus
-1. Build #89 flashen und den aktuellen bereinigten Stand auf Hardware testen (Nutzer startet den Test manuell).
-2. Band Opening Monitor separat prüfen: Quellenabruf, Aktualisierung und die im Abschnitt oben dokumentierten Ableitungen (insbesondere UKW/FM `2m ~`).
-3. Decoder-Rückmeldungen sammeln: CW-Seiteneinstieg/AUTO Tone, FT8/FT4 und RTTY-Preset-Vorschau sowie PSK31-Empfang.
-4. CW-Preset-Scrollen mit 2-Sekunden-Vorschau ist eine spätere, ausdrücklich geplante Verbesserung nach dem aktuellen Testzyklus.
-5. Tatsächliche Build- und Hardwareergebnisse dokumentieren; Quellcodeprüfung ersetzt keinen Gerätetest.
-
-### Working rules
-- Fix user-reported bugs before continuing the feature roadmap.
-- Keep new features isolated where practical; check side effects before reusing shared receiver/scanner primitives.
-- Preserve Dual RX, Web Spectrum, Clean Layout and especially Layout-TEF6686 unless a change explicitly requires otherwise.
-- Do not claim a build, flash or hardware test passed without evidence from the workflow or user/device feedback.
-- Keep the historical log below as a record of earlier work. Old “next steps”, build instructions and status notes inside dated historical entries describe the situation at that time; they are not current instructions.
-
----
-
-## Historical implementation log
+## Working agreement
+- Keep this file current after every meaningful feature or code change. Use it as the handoff reference when starting a new chat.
+- **Bugfix priority:** when the user reports a bug during planned feature work, pause the roadmap and handle that bug first; after the fix, resume the previous highest-priority task (currently JS8Call).
+- New features must be isolated from existing features wherever practical. If implementing a feature would require changing shared feature-specific logic, duplicate that logic into a new module/state/handler for the new feature rather than refactoring the established feature.
+- Preserve Dual RX, existing Web Spectrum behavior, Clean Layout and especially Layout-TEF6686 unless a change is explicitly required.
+- Shared low-level radio/scanning primitives may be reused only after checking their side effects and compatibility.
+- Branch policy (user-confirmed 2026-11-21): use only `development` for all development. Do not create feature/test branches. The user intends to keep only `main` and `development`; old branches are not sources for recovery/merging—if something is needed later, recreate it in `development`.
+- Promotion policy (user-confirmed 2026-11-21): when a feature is complete, builds successfully and is verified working, promote it to `main`. `main` is the stable approved state; never update it prematurely.
+- Build workflow: pushes to `development` trigger the OSPI-DE BIN build; `workflow_dispatch` remains available. Do not claim a build/device test passed unless verified.
 
 ## Previous task: native VHF Spectrum Scanner
 ### Intended user experience
@@ -236,7 +68,52 @@ Last updated: 2026-11-25
 - Native VHF scanning no longer calls `Scan.cpp`; the web scanner's existing global result buffer is untouched.
 - GitHub Actions workflow was changed earlier to `ubuntu-24.04` for both jobs after an Ubuntu runner/Python issue. Do not revert without a reason.
 
-## Future layout idea: GNBD miniradio (requested 2026-10-28)
+## Immediate next steps
+1. User launches the manual GitHub Actions workflow on `development` and checks all four OSPI/QSPI × German/English builds.
+2. After the fix commit `db8c1f7fe7ab23911d7a65ea53b779ebb893f8c3`, rerun the manual workflow on `development`. If another build fails, use the exact compiler output to fix only the affected code and update this handoff.
+3. After a successful build, flash/test the ATS Mini V4: start/end entry, invalid range, cancel without retune, full sweep/status, graph navigation, short-click tune, long-press exit, and confirm Web Spectrum + Dual RX still work.
+4. Do not merge/copy to `main` unless the user explicitly asks.
+
+## Validation checklist (must be checked before asking user to build)
+- [x] VHF start and end are entered in separate scanner-owned stages (source reviewed).
+- [x] Dot/comma decimal parsing works up to two decimal places (source reviewed).
+- [x] Range and ordering validation reject invalid values before radio changes (source reviewed).
+- [x] Input cancel/validation errors do not retune; scan restores prior state before graph navigation (source reviewed).
+- [x] Encoder navigation and short-click selection are wired to scanner-specific handlers (source reviewed; hardware test pending).
+- [x] Long press cancels keypad or exits graph without tuning; Dual RX handling block remains unchanged (source reviewed).
+- [x] ALL Band submenu item cannot start VHF scanning (source reviewed).
+- [x] Existing Dual RX-specific keypad and state logic were not modified for the scanner (source review; hardware regression test pending).
+- [x] Native scanner no longer shares Web Spectrum sample buffer (source reviewed; hardware regression test pending).
+- [ ] Native sweep tune-complete polling and timeout behavior reviewed against existing scan loop.
+- [x] First build failure fixed at source level: `Utils.h` is now included for `muteOn` and `MUTE_TEMP`; rebuild pending.
+- [x] Native sweep configures a covering FM band and restores previous band/frequency/mode/BFO after scanning (source reviewed; hardware test pending).
+- [x] German and English menu templates have VHF/All Band labels and guarded click handling (source reviewed).
+- [x] VHF keypad uses matching geometry/colors/fonts and `CLOSE` label (visual confirmation requires device test).
+- [x] VHF keypad exposes only fixed FM and MHz; no mode or kHz switching (source reviewed).
+- [x] Future ALL Band requirement is documented; implementation is intentionally not present yet.
+- [x] Build workflow uses `workflow_dispatch`; no workflow was triggered by the assistant.
+- [x] Handoff updated with actual changes and remaining build/device validation.
+
+## Changes made in this session
+- Added `DEVELOPMENT_HANDOFF.md` on `development` (initial handoff commit `bee78177301f4d2be6759f40f5de46ed0c55522f`).
+- Added `CMD_SPECTRUM_INPUT` and scanner-specific keypad API/state.
+- Added independent VHF start/end frequency entry and basic range validation in `SpectrumScanner.cpp`.
+- Added keypad drawing dispatch in `Draw.cpp`; added encoder input dispatch in `ats-mini.ino` without changing the Dual RX block itself.
+- Updated English/German menu click handling so only VHF item starts scanner; German submenu localized.
+- Updated `Network.cpp` to ignore web-spectrum command processing during native scanner input.
+- Additional commits: `b1b657d3355526920328069a31735eeab1babfa3` (corrected label line breaks), `1c6861a7427736b7670afbe82a870d7892e174f1` (web-spectrum command isolation), `7d5d86e1a54f7db04ad28709a180c4ec0fac5c5d` (consume menu-opening click so it cannot enter a keypad digit). The handoff itself was updated in `90effb849c89d8b4c867808c5aaf6e13a572ebbd` before these final edits.
+- Still required before user build: finish the source-level review of the isolated native sweep and all encoder/UI state transitions. No compile or hardware test has been run.
+
+
+## Build readiness
+- First manual build attempt failed in `build ospi-de` on undeclared `muteOn`/`MUTE_TEMP`; the fix is committed as `db8c1f7fe7ab23911d7a65ea53b779ebb893f8c3` (added `Utils.h`, clarified a warning-prone condition). Rerun the manual workflow on `development` before flashing.
+- Ready for the user to click **Run workflow** on the `development` branch.
+- The workflow matrix builds OSPI/QSPI firmware in both German and English (four builds).
+- This is a source-level review only. Do not describe the build as passing until GitHub Actions completes successfully.
+- Current relevant source commit: `07bac5f4b21d4ca70bdb6e62a74071758360e425`; latest handoff updates continue after it.
+
+
+## Future layout reference: GNBD miniradio (requested 2026-10-28)
 - User wants to recreate the screenshot's receiver layout as close to 1:1 as possible in the ATS Mini V4 firmware, using the reference source at https://github.com/GNBD/ats-mini-dualboot/tree/main/GNBD%20miniradio.
 - The supplied screenshot is the visual target: dark near-black background, compact top status bar with time/signal/battery, VHF FM heading, large frequency digits, RSSI/SNR horizontal meters, right-side compact receiver settings, large RDS panel at bottom-left, and small SIG graph panel at bottom-right.
 - Specific adjustment requested: raise the “MHz” unit slightly higher relative to the frequency digits.
@@ -258,7 +135,7 @@ Last updated: 2026-11-25
 
 
 ## Future layout reference: lsongdev/tinyradio (requested 2026-10-29)
-- The TinyRadio-inspired layout was integrated into the firmware well before Build #89 and is considered complete by the user. Do not keep it in the active layout TODO list or reopen it without a new request.
+- User wants the additional display layout shown near the bottom of https://github.com/lsongdev/tinyradio added to the project's layout TODO list. User jokingly notes they are a layout fan.
 - The repository is an AM/FM/SSB SI4732 receiver firmware project for ATS Mini and GeekNest V5A. Inspect the specific screenshot/image near the bottom of the linked repository page and its corresponding implementation before planning a port.
 - Treat this as a separate future layout option, not a replacement for the TEF6686 default layout or the previously requested GNBD miniradio-inspired layout. Preserve existing layouts and isolate the implementation where possible.
 - Priority: after current VHF Spectrum scanner build and menu/input bugs are resolved. Confirm which exact bottom-of-page layout the user means if the repository page contains multiple candidates.
@@ -705,7 +582,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
 
 ## GitHub Actions build narrowed to OSPI-DE (2026-11-20)
 
-- At that time, the user requested that future builds generate only the German OSPI target. The manual run `44690333439` completed successfully before this change; all six matrix jobs succeeded, including `build ospi-de`.
+- User requested that once the currently running six-way build completed, future builds should generate only the German OSPI target. The manual run `44690333439` completed successfully before this change; all six matrix jobs succeeded, including `build ospi-de`.
 - Confirmed uploaded OSPI-DE artifacts from run `44690333439`: `ats-mini-dev-v1.30-165-g54a7d0d-ospi-de`, `ats-mini-v1.30-165-g54a7d0d-ospi-de-ota.bin`, and `sketches-report-ospi-de`. The run produced 18 artifacts total across all six targets. Artifact retention reported expiry on 2027-02-18.
 - Updated `.github/workflows/build.yml` on `development`: matrix language is now only `de`; board matrix retains only `esp32s3-ospi` with suffix `ospi`. QSPI, English and Italian matrix entries were removed. All build steps, artifact upload logic, manual trigger, and release logic were otherwise left unchanged.
 - Workflow change commit: `fefad16d8f2c6ae5a8932528f1acff2cf68abc19`.
@@ -811,7 +688,7 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Reviewed `.github/workflows/build.yml` on `development`. The prior workflow fetched the full Git history and all tags, then ran a costly disk-cleanup step before compiling. Neither is needed for a normal manually dispatched development build.
 - Updated the development workflow: shallow checkout (`fetch-depth: 1`, no tag fetch); use the short commit SHA as the fallback build slug (an explicitly supplied revision is still preserved); remove the disk-cleanup step; cache `~/.arduino15` so Arduino CLI packages, ESP32 platform files, and libraries can be reused across runs.
 - Workflow commit: `d421dcc0f5ac2e1398435d7ffa6039cb5fa8d6bd`.
-- This was an expected speed improvement, not yet measured. The first run after the change may still need to populate the cache; compare subsequent successful OSPI-DE runs. Do not change `main`.
+- This is an expected speed improvement, not yet measured. The first run after the change may still need to populate the cache; compare the next two successful OSPI-DE runs. Do not change `main`; user builds manually and does not want Actions triggered automatically.
 - Earlier FT8 stack-size correction: commit `5552f57f7ca66acf46ca92fb6b2ee8d6657f47f8` fixed a malformed line-comment that had hidden the `kWorkerStackBytes = 16384` definition, and retained the before/after stack high-water diagnostics. The prior note's commit `21d6db...` was not the final corrected source state.
 
 ## Verbindliche Portierungsquelle Mini_OS → ATS Mini Dev — 2026-11-20
@@ -1126,114 +1003,319 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - No code has been written, no build/Actions run, no flash and no hardware test performed. User will port/test after current ATS Mini Dev ports.
 
 
-## JS8 removal — 2026-11-24
+## JS8Call Receive-Only Decoder – added 2026-11-21
 
-- Auf ausdrücklichen Wunsch wurde der komplette JS8-Zweig einschließlich Firmwareintegration, Tests, Projektdokumentation sowie der zugehörigen GPL-Lizenz- und Herkunftsdateien aus `development` entfernt.
-- FT8/FT4, CW, RTTY, NAVTEX und PSK31 bleiben unverändert. Es wurde kein Build gestartet; der nächste manuelle Build soll prüfen, ob die Entfernung die Firmware wieder kompilierbar macht.
+- New top-priority project: native JS8Call receive-only decoder; no transmit UI, encoder, PTT or TX path.
+- Work only on `development`; leave `main` untouched. Do not compile or start Actions unless the user explicitly asks.
+- Research/architecture plan: `JS8CALL_RECEIVE_DECODER.md`.
+- Existing shared audio input: `ats-mini/src/audio/AudioCaptureService.h/.cpp`, GPIO11, 4 kHz, 24-sample blocks; JS8 should subscribe to this service and must not create a second ADC sampler.
+- JS8 is related to FT8 but has its own 8-FSK synchronization/Costas patterns, channel decoding and six frame classes. Do not reuse FT8 payload parsing as if it were JS8.
+- First milestone is JS8 NORMAL, then SLOW/FAST; JS8 40/60 only after performance validation. USB and accurate 15/10/6/30-second frame timing matter.
+- Preserve existing FT8/FT4, CW, RTTY and all radio layouts/presets. Preserve the LILYGO GPIO11/SPI exclusion.
+- Licensing: ATS Mini is MIT; JS8Call reference source is GPLv3. Do not directly copy upstream GPL source into this repo without an explicit licensing decision.
+- No build or hardware test has been performed for JS8; user will perform firmware build and on-device reception tests.
 
-## WLAN-Menü-Popup-Korrektur – ERLEDIGT (2026-11-24)
+## Korrigierte verbindliche Entwicklungsreihenfolge — 2026-11-21
 
-- Ursache: Das WLAN-Modus-Popup verwendete den übernommenen Index `wifiModeIdx` statt des temporären Navigationsindex `wifiMenuIdx`. Dadurch änderte der Encoder die interne Auswahl, während die sichtbare Popup-Zeile stehen blieb.
-- Korrektur ausschließlich in den drei Sprachvorlagen im Zweig `CMD_WIFIMODE`: Die Anzeige verwendet jetzt `wifiMenuIdx`; der Sonderindex `ITEM_COUNT(wifiModeDesc)` wird vor dem Arrayzugriff abgefangen und zeigt das jeweilige lokalisierte Info-Label.
-- Deutsch: `ats-mini/Menu_german.cpp.src` enthält die Korrektur bereits (aktueller Blob-SHA: `f363a715c350b3de2b64b7f1ce04c82a8e7570cf`). Englisch und Italienisch wurden jetzt korrigiert: `ats-mini/Menu_english.cpp.src` Commit `598576c272263d86aff0a1d1a5e542e19ec775a8`; `ats-mini/Menu_italian.cpp.src` Commit `784786bd7f71600d0127a17cadd7ef469ef96089`.
-- Labels für den Sonderindex: Deutsch `WLAN-INFO`, Englisch `Wi-Fi Info`, Italienisch `Info Wi-Fi`.
-- Korrektur abgeschlossen und als erledigt dokumentiert. Der frühere offene Diagnose-/Arbeitsauftrag wurde entfernt.
+**Korrektur nach ausdrücklicher Klarstellung des Nutzers:** JS8Call ist Priorität **Nr. 1**. Danach folgt FM DX. Diese Reihenfolge ersetzt alle älteren Prioritätslisten und die unmittelbar vorherige, fehlerhafte Reihenfolge in diesem Handoff.
 
+1. **JS8Call – nativer Empfangsdecoder**
+   - Ausschließlich Empfang: keine Sendefunktion, kein Encoder, keine PTT, kein TX-Menü und keine TX-Hardware.
+   - Der technische Plan liegt in `JS8CALL_RECEIVE_DECODER.md`; die Firmware-Implementierung ist noch nicht begonnen.
+   - Zunächst JS8 NORMAL, danach SLOW/FAST; JS8 40/60 erst nach Leistungsprüfung.
+   - Bestehende Audio-Infrastruktur nach Prüfung verwenden und abonnieren, keinen zweiten ADC-Sampler starten. LILYGO-GPIO11/SPI-Ausschluss erhalten.
+   - ATS Mini ist MIT-lizenziert, JS8Call-Referenzcode GPLv3. Keine direkte GPL-Codeübernahme in das Repository ohne vorherige Lizenzentscheidung; unabhängige Implementierung anhand der Protokolldokumentation bevorzugen.
+   - FT8/FT4, CW, RTTY und bestehende Layouts schützen.
+2. **FM DX**
+   - Eigener FM-DX-Menümodus mit den tatsächlich vom SI4735 unterstützten Bandbreiten und AUTO.
+   - Fokus auf bestmögliche Selektivität/Trennschärfe; keine nicht unterstützten TEF6686-Bandbreiten vortäuschen.
+   - Im Anschluss separater Audio-FFT-Prototyp: weiße, schmale Peaks auf dunklem Hintergrund, schnelle Reaktion und weicher Abfall. Eigenes Testlayout, vorhandene Layouts unverändert lassen. Auch demoduliertes FM-Audio (Sprache/Musik) untersuchen. Erst den tatsächlichen Audio-Datenpfad prüfen und vorhandene Samples wiederverwenden, keinen zweiten ADC-Capture starten.
+3. **Wetter portieren** – aus Mini_OS, Branch `dev/first-build-preparation`.
+4. **Newsticker portieren** – aus Mini_OS, demselben Quellbranch.
+5. **Mondphase portieren** – aus Mini_OS, demselben Quellbranch.
+6. **NAVTEX** – eigener SITOR-B/CCIR-476-Empfangsdecoder mit Synchronisation, FEC, Nachrichtenrahmen, 518/490/4209.5-kHz-Presets, Live-Text und LittleFS-Archiv. Vollständige und unvollständige Nachrichten unterscheiden; Duplikate erkennen.
+7. **Übrige Decoder** – danach WEFAX, DSC, SSTV, PSK31/63, Olivia/Contestia und weitere geeignete Empfangsmodi.
 
-## 2026-11-24 — ELF- und MAP-Dateien als Build-Artefakte
-
-- Anlass: Für die Auflösung des FT8-Absturz-Backtraces wird die zur Firmware passende ELF-Datei benötigt; die MAP-Datei ergänzt die Linker-/Symbolübersicht. Bisher veröffentlichte der manuelle GitHub-Actions-Build nur die Firmware-BIN.
-- Verifiziert: Arduino-ESP32 3.3.12 erzeugt beim Linken standardmäßig die MAP-Datei über compiler.c.elf.flags und die ELF-Datei über den Linker-Aufruf. Die erwarteten Dateien im Build-Verzeichnis heißen ats-mini.ino.elf und ats-mini.ino.map.
-- Geändert: .github/workflows/build.yml prüft jetzt, ob BIN, ELF und MAP vorhanden sind, kopiert alle drei in das Build-Artefakt und lädt sie einzeln hoch. Bei einem versionierten Release werden ebenfalls alle drei Dateien angehängt.
-- Die Änderung betrifft ausschließlich die Build-Artefakt-Verpackung; keine Firmware-Quelldatei, keine Decoderlogik und keine FT8/FT4-Datei wurde verändert.
-- Commit auf development: 2fd266b73a2da513d62c73349100ed229269c31b.
-- Kein Build und keine GitHub Actions wurden gestartet. Beim nächsten ausdrücklich angeforderten manuellen Workflow-Lauf muss geprüft werden, ob alle drei Dateien im Artefakt vorhanden sind. Für den Backtrace müssen ELF/MAP exakt aus demselben Build wie die geflashte BIN stammen.
-
-
-## 2026-11-24 — Neubuild-Workflow korrigiert (Actions-Lauf 45476742772)
-
-- Der Nutzer meldete den fehlgeschlagenen manuellen Lauf 45476742772 auf development (Run #85, Commit cf85f4fbbcc02cc47745928b7f6731eebf7e2a13).
-- Der Lauf endete vor dem Compile-Schritt. In den Jobdaten blieb „Cache Arduino packages and libraries“ als letzter ausgeführter Schritt stehen; Compile und Artefakt-Vorbereitung starteten nicht. Der Joblog-Endpunkt lieferte für diesen abgeschlossenen Lauf keinen lesbaren Loginhalt, daher ist die exakte Cache-Backend-Fehlermeldung nicht verfügbar.
-- Ursprüngliche Änderung: Cache-Schritt ist nun nicht mehr build-blockierend (`continue-on-error: true`); Cache-Key hängt nur von sketch.yaml ab.
-- Compile-Schritt wurde von arduino/compile-sketches Action auf einen direkten arduino-cli-Aufruf umgestellt. Arduino CLI 1.4.1 wird mit arduino/setup-arduino-cli@v2 installiert; Plattform ESP32 3.3.12 und die sechs in sketch.yaml definierten Bibliotheken werden explizit installiert. Build erfolgt mit Profil esp32s3-ospi in `ats-mini/build/esp32.esp32.esp32s3`, damit die Folgestufe BIN/ELF/MAP am gleichen festen Ort vorfindet.
-- Bestehende Prüfung/Kopie und Upload der drei Artefakte BIN, ELF und MAP bleiben bestehen; Release-Anhänge bleiben ebenfalls alle drei Dateien.
-- Workflow-Commit auf development: 62b2d92a65aa821e9fd8dba2bc9afdebab20a2e0.
-- Keine Firmware-Quelldateien oder Decoder geändert. FT8/FT4 unangetastet; main unverändert.
-- Noch kein Build/Actions-Lauf nach dieser Korrektur gestartet. Der nächste manuelle Lauf auf development muss Installations- und Compile-Schritte verifizieren sowie das Vorhandensein aller drei Dateien bestätigen.
-
-
-## 2026-11-24 — Cache vollständig aus dem Firmware-Neubuild entfernt (Actions-Lauf #86)
-
-- Zweiter Lauf nach der ersten Workflow-Korrektur: Actions Run 45477705980 (#86), Branch development, HEAD 977439d0fb0809a8ed02e28f5029dcad29622297, Ergebnis failure.
-- Jobzusammenfassung zeigt erneut den Arduino-Cache-Schritt als letzten gestarteten Schritt; Install Arduino CLI und Compile starteten nicht. Der Download des Joblogs über den GitHub-API-Connector lieferte BlobNotFound, daher liegt die genaue Runner-Fehlermeldung nicht vor.
-- Konsequenz: Den optionalen actions/cache-Schritt vollständig aus .github/workflows/build.yml entfernt, nicht nur continue-on-error gesetzt. Cache ist für die Funktion des Builds nicht erforderlich.
-- Arduino-CLI-Installation, explizite ESP32-/Bibliotheksinstallation, direkter Compile mit festem Build-Pfad sowie BIN/ELF/MAP-Verpackung bleiben unverändert.
-- Workflow-Commit auf development: 6e50940c81584b272ce5c93589b50f13bed853b9.
-- Keine Decoder-/Firmware-Quelldateien geändert. FT8/FT4 unangetastet. main nicht geändert.
-- Noch kein Build gestartet; nächster manueller Lauf muss zeigen, ob Install Arduino CLI und Compile jetzt erreicht werden und alle drei Artefakte entstehen.
+### Verbindliche Arbeitsregeln
+- Ausschließlich `firetvstick2k2-afk/ats-mini-dev`, Branch `development`; `main` bleibt unangetastet.
+- Keine NAVTEX- oder weiteren Decoderarbeiten vor den Punkten 1–5.
+- Nutzer startet Builds/Actions manuell und testet auf dem ATS Mini V4. Assistant startet keine Builds/Actions und behauptet keine Hardwareprüfung.
+- Nach jedem wesentlichen Arbeitsschritt beide Handoff-Dateien aktualisieren.
 
 
-## Projektstatus – Bereinigung nach Build #89 (2026-11-24)
-
-- **ALL Band Spectrum:** vom Nutzer auf Hardware als zuverlässig funktionierend bestätigt – ERLEDIGT.
-- **Web ALL Band Scanner:** vom Nutzer auf Hardware als zuverlässig funktionierend bestätigt – ERLEDIGT.
-- **TinyRadio-Layout:** bereits seit längerer Zeit integriert – ERLEDIGT; kein aktiver TODO-Punkt.
-- **Band Opening Monitor:** im Build-#89-Quellstand enthalten. Quellen und Zuordnungen wurden geprüft; separater Hardwaretest bleibt offen. Insbesondere wird UKW/FM aus dem 2-m-Status abgeleitet und als `2m ~` gekennzeichnet. Details siehe Abschnitt „Band Opening Monitor – aktueller Quellstand Build #89“.
-- **GNBD-Miniradio-Layout:** bleibt als zukünftige Layoutidee vorgemerkt; nicht mit dem bereits integrierten TinyRadio-Layout verwechseln.
-
-## 2026-11-25 – Audio-Resetdiagnose: ADC-Attenuation isoliert und Frühdiagnose erweitert
-
-- Ausgangspunkt ist Build #89: Der symbolisierte Backtrace führt in `AudioCaptureService::sampleTask()` beim System-Timerzugriff. Der konkrete Panic-Typ war im bisherigen Mitschnitt nicht enthalten.
-- Auf `development` wurde ausschließlich die explizite Zeile `analogSetPinAttenuation(kPin, ADC_11db)` aus `AudioCaptureService.cpp` entfernt. `analogReadResolution(12)`, Pin 11, Sample-Rate, Task-Priorität, Sampling-Schleife und Decoder bleiben unverändert. Damit wird zunächst genau die Attenuation-Konfiguration isoliert; es ist kein vollständiger Rollback von Commit `3794ced`.
-- Die Audio-Task-Gesundheitsmeldung wird während der ersten 20 Sekunden alle 2 Sekunden ausgegeben, danach alle 15 Sekunden. Sie enthält zusätzlich Laufzeit, kumulative Sample-Anzahl und Blockfüllstand sowie Heap- und Stack-Werte. Das soll insbesondere den bisherigen Reset nach ca. 8,5 Sekunden besser eingrenzen.
-- Die Boot-Resetursache (`esp_reset_reason()`) wird nun über den unabhängigen Standard-USB-Logpfad ausgegeben, damit sie nicht beim Deaktivieren von USB-LOG aus der Diagnose-Warteschlange gelöscht wird. Die ESP-IDF-Panic-Ausgabe mit Exception-Typ, Registern und Backtrace muss weiterhin vollständig im seriellen Mitschnitt enthalten sein.
-- `AudioCaptureService.h`, FT8/FT4-Decoderdateien und sonstige Decoderlogik wurden nicht verändert.
-- Änderungen ausschließlich auf `development`; `main` und Backup bleiben unangetastet.
-- Noch kein Build gestartet und kein Hardwaretest durchgeführt. Vor dem nächsten manuellen Build Actions-Nummer prüfen; BIN, ELF und MAP müssen aus demselben Lauf stammen.
-
-## 2026-11-25 – Build #90: FT8-Reset erneut im System-Timer bestätigt
-
-- Nutzer-Hardwaretest Build #90: FT8 startet um 07:13:12.805; DSP initialisiert um 07:13:12.837. Reboot erfolgt um 07:14:01.057, also ca. 48,2 Sekunden nach FT8-Start.
-- Die frühere Arduino-Warnung `Pin is not configured as analog channel` ist im vorliegenden Mitschnitt nicht mehr vorhanden. Die Entfernung von `analogSetPinAttenuation(kPin, ADC_11db)` hat den Reset nicht beseitigt; ein kausaler Zusammenhang mit der früheren Warnung ist damit nicht belegt.
-- Build-Zuordnung bestätigt: Actions Run-ID `45557561983`, Build #90, Commit `29a525b70719d6dad30c88b8cc116d6be9913c5a`, Artefakt-ID `14996273920`. Das Artefakt enthält BIN, ELF und MAP. ELF-SHA256: `35d1c24d40059d342fca89fe7fbe83558c1071ba3b7ca7cf04d12bb04020598a`; stimmt exakt mit dem Log-Präfix `35d1c24d4` überein.
-- Symbolisierter Build-#90-Backtrace:
-  - `0x40389daf`: `systimer_hal_get_counter_value` / `systimer_ll_is_counter_value_valid`
-  - `0x40377b4e`: `esp_timer_impl_get_time`
-  - `0x420310db`: `AudioCaptureService::sampleTask()`, `AudioCaptureService.cpp:124`
-  - `0x42031281`: `AudioCaptureService::taskEntry()`, Zeile 76
-  - `0x403850bd`: FreeRTOS `vPortTaskWrapper`
-- Zeile 124 ist erneut die enge Warteschleife `while (esp_timer_get_time() < next) taskYIELD();`. Damit ist derselbe Absturzkontext wie bei Build #89 belegt. Der eigentliche Panic-/Exception-Kopf mit Exception-Typ und Registern fehlt auch diesmal; die konkrete Fehlerursache ist noch offen.
-- Im Mitschnitt steht ausdrücklich `Extra USB-LOG is OFF`. Daher sind die neuen `atsDebugLogf()`-Audio-Task-Meldungen (2-Sekunden-Frühdiagnose, kumulative Samples, Heap und Stack) in diesem Test nicht sichtbar. Der Reset-Grund erscheint dank Standard-USB-Pfad dennoch.
-- Nächster Test sollte USB-LOG in den Geräteeinstellungen aktivieren, damit die Audio-Task-Gesundheitsmeldungen vor dem Reset erfasst werden. Zusätzlich vollständige Panic-Ausgabe sichern. Keine weitere Codeänderung vor Auswertung dieser Daten; FT8/FT4-Decoder bleibt unangetastet.
-- Hardwaretest durch Nutzer; Assistent hat nur das vorhandene Build-Artefakt analysiert. Kein neuer Build gestartet.
+## JS8Call implementation preparation — 2026-11-21
+- Rechecked the live `development` branch, `AGENTS.md`, development guide, Makefile, shared audio capture and FT8 engine/UI before continuing.
+- Refined `JS8CALL_RECEIVE_DECODER.md` against the current JS8Call-improved User Guide. Important physical-layer detail: NORMAL uses its legacy-compatible triple Costas pattern; SLOW/FAST/JS8 40 use three distinct Costas arrays. All four established modes use 8 tones and 79 symbols. JS8 60 remains experimental and is deferred.
+- Confirmed the official USB-only and timing requirement: the receive window is aligned to 15/10/6/30-second frame boundaries; an error greater than roughly two seconds can prevent decoding. No synthetic UTC or guessed timing will be used.
+- Added the requested receive-screen behavior to the plan: line-by-line incoming text, automatic upward scrolling in live-follow mode, pause/resume and manual history scrolling. Reception and optional logging must continue independently of the visible scroll position.
+- No JS8 firmware source has been added yet. This is protocol/UI design refinement only; the next implementation step is a clean-room NORMAL physical-layer decoder and independent frame/protocol parser, with reference-vector validation before display integration.
+- Existing shared capture is 4 kHz / 24 samples per callback. The current FT8 engine uses a different monitor/payload pipeline; do not modify it or assume it is directly reusable. The ATS Mini Makefile uses wildcard source/header lists for `src/audio`, `src/ftx`, and `src/rtty`; add `src/js8` explicitly when new files are created.
+- No compile, GitHub Actions run, flash, or hardware test was performed.
 
 
-## 2026-11-25 – Decoderumfang für die Fehlersuche reduziert
-
-- Auf `development` wurden NAVTEX und PSK31 vollständig aus der Firmware-Integration entfernt: Menüeinträge und Start-/Bedien-/Tick-/Renderpfade sowie die jeweiligen Decoder-, Service- und UI-Quelldateien.
-- Die Decoder-Untermenüs sind in Deutsch, Englisch und Italienisch wieder synchron und enthalten nur noch Zurück, Decoder-Frequenzen, CW, RTTY und FT8/FT4.
-- JS8 bleibt entfernt und wird nicht wieder aufgenommen. Frühere JS8-Entwicklungsnotizen in diesem Handoff sind historische Einträge und beschreiben nicht den aktuellen Repository-Stand.
-- Unverändert bleiben CW, RTTY, FT8/FT4, `AudioCaptureService`, `FtxDecoderService`, WLAN, Hauptmenü, Programme, Layouts und die übrigen Radiofunktionen. Die gemeinsamen Audio-Dienste wurden ausdrücklich nicht geändert.
-- `CMD_NAVTEX` und `CMD_PSK31` wurden aus `Menu.h` entfernt; die nachfolgenden Command-IDs bleiben unverändert.
-- Ziel ist ein reduzierter Testumfang für die weitere Ursachenanalyse der FT8-Resets. Das Entfernen der Decoder beweist noch keine Ursache.
-- Ausschließlich Quell-/Dokumentationsänderung auf `development`. Kein Build, kein GitHub-Actions-Lauf, kein Flash und kein Hardwaretest gestartet. Nutzer startet den nächsten Build manuell.
+## JS8Call technical baseline update (2026-11-21)
+- Continued JS8 receive-only planning on `development`; no firmware code, build, Actions run, flash or hardware test in this step.
+- Verified against the current public JS8Call source: 79 channel symbols = 21 sync symbols (three 7-symbol Costas blocks) + 58 data symbols; LDPC(174,87); 87 information bits comprise 75 payload bits plus CRC-12; CRC polynomial 0xC06 with JS8 XOR value 42. CRC validation is required before payload parsing.
+- Verified sample-rate constraint: upstream source processes 12 kHz, while ATS Mini `AudioCaptureService` supplies 4 kHz. Nominal 4 kHz symbol lengths are 640 samples NORMAL, 1,280 SLOW, 400 FAST and 200 JS8 40. These are planning calculations only; filter/passband, timing and frequency stability must be measured on actual captured reference signals before choosing DSP constants.
+- AUTO/MULTI speed detection remains a planned feature after individual modes are validated. Accept a speed only after mode-specific synchronization, channel decode and CRC validation. Benchmark parallel mode decoding against a lower-cost candidate scheduler; do not overload the ESP32-S3.
+- Source provenance was recorded in `JS8CALL_RECEIVE_DECODER.md`. Do not copy GPL-licensed JS8Call implementation code or tables into this MIT repository without an explicit licensing decision.
+- Next technical gate: obtain/prepare legally usable JS8 NORMAL reference recordings and an independently generated host-side validation path; then implement and verify the physical layer before integrating UI or logging.
 
 
-## 2026-11-25 – AudioCaptureService auf Build-#27-Basis zurückgesetzt
-
-- Für die gezielte FT8-Reset-Fehlersuche wurde ausschließlich `ats-mini/src/audio/AudioCaptureService.cpp` exakt auf den bekannten funktionierenden Stand von Build #27 zurückgesetzt.
-- Referenz: Build #27 Commit `eaffd59bd1dea50ebe2fd56d223c04c3fcd7f5a7`, ursprünglicher Datei-Blob-SHA `3dbef5b8c3b1ba14b38126e83f9b9b68e2198a20`.
-- Neuer Commit auf `development`: `ab302bc629e23372acd57f0bc613ba1c24fd0c4b`; wiederhergestellter Datei-Blob-SHA: `3dbef5b8c3b1ba14b38126e83f9b9b68e2198a20`.
-- Damit sind die nach Build #27 ergänzten Audio-Capture-Diagnosemeldungen und `analogReadResolution(12)` in dieser Quelldatei nicht mehr enthalten. Die vorhandene Sample-Taktung einschließlich `taskYIELD()` entspricht wieder dem bekannten Build-#27-Stand.
-- `ats-mini/src/ftx/FtxDecoderService.cpp` wurde nicht verändert (Blob-SHA weiterhin `7ce2c390b6105e449a9842215d7d95d9c61bea0c`). Header, DebugLog-System, Decoderumfang und sonstige Firmware-Funktionen wurden nicht verändert.
-- Ausschließlich Branch `development`; `main` und Backup-Branch bleiben unangetastet. Kein Build und kein Flash gestartet. Nutzer startet Build und Hardwaretest manuell.
-- Testziel: prüfen, ob der bekannte Audio-Capture-Stand den Reset verhindert und FT8 weiterhin dekodiert. Ein erfolgreicher Test würde den Fehler auf Änderungen seit Build #27 im Audio-Capture-Pfad eingrenzen, aber noch nicht die einzelne Ursache beweisen.
+## JS8 NORMAL 4 kHz receive-chain gate (2026-11-21)
+- Follow-up to JS8 baseline research: the ATS Mini capture is 4 kHz, Nyquist 2 kHz, while upstream JS8's baseline window extends to 2.5 kHz. Do not port its 12 kHz FFT/filter constants or baseline window unchanged.
+- NORMAL at 4 kHz is 640 samples/symbol, 160 ms/symbol, eight orthogonal tone bins spaced 6.25 Hz. Confirm the receiver's actual audio center/passband and GPIO11 capture response on the hardware; a center near 1 kHz is only an initial measurement target, not an assumed setting.
+- A 15-second mono int16 raw ring window is 120,000 bytes. Keep AudioCaptureService callbacks producer-only and short; DSP, sync search, LDPC and parser belong in a worker. Count overruns and reject frames with audio gaps.
+- New validation gates in `JS8CALL_RECEIVE_DECODER.md`: deterministic NORMAL vectors; host-side 4 kHz DSP tests with timing/carrier/noise offsets; independently verified LDPC bit ordering and CRC vectors; host performance/RAM tests; only then firmware integration.
+- Offline phase acquisition must use validated JS8 sync candidates and a monotonic 15-second phase grid, never fake UTC from the capture callback's wall-clock timestamp. Do not display OFFLINE LOCK before physical-layer validation passes.
+- Source-only documentation update. No firmware code, build, Actions, flash or hardware test performed.
 
 
-## 2026-11-25 – AudioCapture-Task-Priorität für FT8-Stabilitätstest angepasst
+## JS8 audio capture source audit — 2026-11-21
+- Inspected the actual AudioCaptureService implementation. GPIO11 uses software-timed analogRead(), not I2S/DMA; 4 kHz is the scheduler target, not yet a verified low-jitter hardware sample clock.
+- Blocks contain 24 samples (nominally 6 ms). The callback timestamp is wall-clock gettimeofday() back-calculated at delivery, not a per-sample monotonic timestamp. The capture task yields and resets its timing base every 2,000 samples.
+- Next JS8 step is a non-invasive JS8-owned capture diagnostic subscriber: monotonic callback cadence/drift estimate, queue gaps/overruns, ADC min/max/DC/RMS/clipping, then spectral checks with controlled 4 kHz tones and lawful JS8 NORMAL recordings.
+- Keep the callback producer-only; do analysis in a worker. Do not alter the shared sampler or existing FT8/CW/RTTY consumers before measurements. Preserve the LILYGO GPIO11/SPI exclusion.
+- Updated detailed plan: JS8CALL_RECEIVE_DECODER.md section 2c. No firmware code, build, Actions, flash or hardware test in this step.
 
-- Auf `development` wurde ausschließlich in `ats-mini/src/audio/AudioCaptureService.cpp` die Priorität des Tasks `audio-capture` bei `xTaskCreatePinnedToCore(...)` von **3 auf 2** reduziert. Neuer Datei-Blob-SHA: `befed6db831f0931544e6e93d9666bcb6f822ca6`; Code-Commit: `d1520249604c161419befac62d0189e0c2f211a5`.
-- Zweck ist ein kontrollierter Diagnoseversuch: Core 0 soll etwas weniger durch den Audio-Capture-Task bevorzugt werden. Das ist keine bestätigte Fehlerbehebung; insbesondere kann die weiterhin aktive Sampling-Schleife mit `taskYIELD()` den Idle-Task weiterhin beeinträchtigen.
-- FT8/FT4-Decoderdatei `ats-mini/src/ftx/FtxDecoderService.cpp` bleibt vollständig unangetastet. FT8-Task bleibt auf Core 1 und Priorität 2. CPU-Takt bleibt bei 80 MHz. Offline Timesync bleibt für den ersten Test unverändert.
-- Testreihenfolge: Nutzer baut und flasht manuell; zuerst FT8 mit Offline Timesync und USB-LOG testen. Keine weiteren Decoder- oder CPU-Taktänderungen gleichzeitig. Bei weiterhin auftretendem Reset danach gezielt den nächsten Diagnosezweig festlegen.
-- Kein Build/Actions-Lauf, kein Flash und kein Hardwaretest durch ChatGPT gestartet. Vor der Aufforderung zum Build Actions-Historie prüfen und die nächste Build-Nummer nennen. Ausschließlich `development`; `main` und Backup bleiben unangetastet.
+
+## Chat-Übergabe / aktueller JS8-Stand — 2026-11-21
+- Nutzer bat um kurze Übergabe, da der Chat träge/voll wird. Beim nächsten Chat direkt hier fortsetzen; keine erneute Grundsatzplanung nötig.
+- Aktive Arbeit ausschließlich im Repository firetvstick2k2-afk/ats-mini-dev, Branch development. Main bleibt unangetastet.
+- Letzter technischer Commit: JS8CALL_RECEIVE_DECODER.md Abschnitt 2c zur tatsächlichen AudioCaptureService-Abtastung, Commit 3de3b88495ddfde2d52d6f763a1392054f28e108.
+- Letzte Handoff-Commits: DEVELOPMENT_HANDOFF.md 29f6ed05530332acfbf305e91aaef273e064fe64; NEW_CHAT_HANDOVER.md 4a96910b5c75ca9e0c1c711e6dca10f4cb38aa1b. Diese beiden Dateien werden mit dieser Übergabe erneut aktualisiert.
+- Wichtiger Befund: GPIO11 wird softwaregetaktet per analogRead() abgetastet, nicht I2S/DMA. 4 kHz ist nur der Sollwert. 24 Samples/Block (nominal 6 ms), gettimeofday()-Zeitstempel bei Übergabe, yield und Zeitbasis-Neustart alle 2.000 Samples. Jitter/Drift sind noch nicht gemessen.
+- Nächster konkreter Schritt: JS8-eigener, nicht-invasiver Diagnostic-Subscriber am bestehenden AudioCaptureService. Worker misst monotone Callback-Abstände/Drift-Schätzung, Queue-Aussetzer/Overruns, ADC min/max/DC/RMS/Clipping; danach kontrollierte 4-kHz-Tontests und legal nutzbare JS8-NORMAL-Aufnahmen. Callback bleibt producer-only.
+- Vor Messdaten keine Änderungen am gemeinsamen Sampler und keine Eingriffe in FT8/FT4, CW oder RTTY. LILYGO GPIO11/SPI-Sperre erhalten. Kein zweiter ADC-Sampler.
+- Danach erst DSP/Synchronisation, LDPC/CRC und Protokollparser unabhängig testen; UI, Presets, Offline-Timing und Logging später. Kein GPLv3-Code direkt in MIT-Repo kopieren.
+- Kein JS8-Firmwarecode vorhanden; kein Build, keine Actions, kein Flash, kein Hardwaretest. Builds/Actions nur auf ausdrücklichen Nutzerwunsch.
+
+
+## JS8 audio monitor — first isolated implementation (2026-11-21)
+- Added ats-mini/src/js8/Js8AudioMonitor.h/.cpp as a JS8-owned, non-invasive subscriber to the existing AudioCaptureService; it does not call analogRead(), create another ADC task, alter the shared sampler, or touch FT8/FT4, CW, RTTY, or any layout.
+- begin() attaches only after the shared capture service is running; the existing LILYGO_SI473X GPIO11/SPI guard is preserved.
+- The capture callback records a monotonic esp_timer_get_time() observation, copies at most one 24-sample block into a bounded 96-block FreeRTOS queue, updates minimal callback/drop counters, and returns. It ignores the wall-clock utcStartMicros for cadence measurement.
+- A separate low-priority worker measures callback-to-callback interval min/max/mean, estimates effective output rate from delivered block cadence and sample counts, detects long gaps/missing-block estimates, and computes per-window ADC min/max, mean/DC, AC RMS and near-rail sample count. It also retains the newest 4,096 raw samples (about 1.024 s at nominal 4 kHz) in a PSRAM-first ring buffer (internal-heap fallback) for a later spectral-analysis stage.
+- Metrics are exposed through copyMetrics() and the raw sample window through copyRecentSamples(). The service is not yet wired to a JS8 menu/UI or decoder lifecycle; it is an isolated diagnostic building block for the next integration step.
+- Important measurement limit: callback cadence estimates the scheduler's delivered block rate; it cannot measure the individual analogRead interval or intra-block sample jitter. Do not call the sample clock stable based on these metrics alone.
+- Makefile wildcard lists now include src/js8/*.h/.cpp.
+- Source-only review; no build, repository checks, GitHub Actions run, flash or hardware measurement was performed. The service is not yet compiler-verified or device-tested.
+- Next: review the menu/UI integration and the monitor lifecycle without compiling yet; then measure with controlled audio input on hardware. Add worker-side spectral/tone analysis and compare against lawful JS8 NORMAL recordings. Do not implement JS8 NORMAL decoding until capture evidence is acceptable.
+
+
+## JS8 test playback harness — 2026-11-21
+- The JS8 RX Monitor now has a short-click test-playback control. A click starts a deterministic synthetic 8-FSK waveform; another click stops it. Long press still exits.
+- Playback is generated at the nominal 4 kHz input rate, with 79 symbols of 640 samples each (160 ms / 6.25 baud), eight tones spaced 6.25 Hz apart around a 1 kHz audio center, and ADC-style unsigned-offset samples centered near 2048. The monitor temporarily unsubscribes only its own live GPIO11 subscriber, processes generated blocks in its existing worker, then resumes live capture automatically.
+- This is intentionally a DSP plumbing / timing / level test waveform, not a protocol-valid JS8 frame: it does not contain verified JS8 NORMAL Costas synchronization, LDPC(174,87), CRC-12 or a decodable message payload. It must not be described as a successful JS8 decode or used to validate decoder sensitivity. It gives us a repeatable 8-FSK signal source while the independent NORMAL encoder/decoder test vectors are developed.
+- Commits: monitor API 25d2723c6a97e92b48671481b1395b279d73d16f; playback worker b889bd8d3dbc36917097823ce79365110b969762; monitor UI controls 0ed599949f1ed0b5f428b36ec501bdad7e9db337; ADC-range correction fa04aa000084fd63524753addd412689600e8436; UI header fd822658bd84d152f8b299ed13788fb266b4343e.
+- Scope remains development only. No build, GitHub Actions run, flash or hardware test was started. The new code is not compiler-verified.
+- Next: source-review the playback lifecycle and timing, add a shared JS8-only sample consumer for the future decoder, then create an independently verified protocol-valid JS8 NORMAL golden frame (sync + payload + LDPC + CRC) and use it for actual decode tests. Do not confuse this synthetic tone sequence with that golden frame.
+
+- UI follow-up: while the synthetic source is active, the monitor now labels it SYNTH / NOMINAL 4 kHz instead of implying GPIO11 is being sampled (commit 6f659ff205a64b6922ee772c5a882e0fe26fb927).
+
+
+## JS8 RX Monitor — pre-build review and first device test (2026-11-21)
+- The monitor is now integrated in the menu/UI: English and German menu item, dedicated Draw.cpp route, short-click test-playback toggle, long-press exit, 250 ms refresh, and exemption from the normal command idle timeout. Encoder rotation is intentionally a no-op on this diagnostic page. The LILYGO GPIO11/SPI guard remains in AudioCaptureService and Js8AudioMonitor.
+- The synthetic playback is generated in the monitor worker, not output through the speaker and not injected into a JS8 decoder. It temporarily removes only the monitor's live subscription, then restores live capture after STOP or the 12.64 s sequence. It remains a generic 8-FSK plumbing stimulus, not a JS8 NORMAL frame.
+- Pre-build source review checked the current AudioCaptureService contract, monitor queue/worker, menu dispatch, display route, Makefile wildcards and board guard. The capture task uses GPIO11 analogRead at a nominal 4 kHz and delivers 24-sample blocks; its callback wall-clock timestamp is ignored by the monitor. The displayed rate is inferred from block delivery timestamps and known block sizes, not per-sample timing. The test playback's 6 ms worker pacing is scheduler-based, not a precision sample clock.
+- First device test procedure after the user starts the manual OSPI build and flashes it: (1) Open MENU → JS8 RX MONITOR. (2) Leave it on LIVE AUDIO MONITOR for 5–10 s. (3) Press the encoder once to start TEST PLAYBACK: 8-FSK; observe the metrics for about 13 s. (4) Let it finish and confirm LIVE AUDIO MONITOR returns automatically. (5) Press-and-hold to exit. Repeat once with a second playback if needed.
+- Best-case synthetic-playback display: source label SYNTH / NOMINAL 4 kHz; estimated output rate near 4,000 Hz; block interval near 6,000 µs; ADC min/max roughly 848/3248; DC mean near 2048; AC RMS near 849; DROP=0, GAP=0, CLIP=0. These are approximate expectations for the generated sine and scheduler-paced blocks, not strict acceptance thresholds. Short-term interval min/max may vary with scheduling.
+- Best-case live-capture display: source label GPIO 11 / NOMINAL 4 kHz; estimated delivered rate near 4,000 Hz; average block interval near 6,000 µs; DROP/GAP/CLIP ideally 0; ADC mean/min/max and AC RMS respond to the actual input signal. A quiet or disconnected input may show a nearly flat ADC value and low AC RMS. A strong clean USB audio signal should produce visible AC RMS without sustained clipping. The monitor does not tune the radio; tune manually to a supported HF JS8 dial frequency in USB (for example 7.078 MHz) if checking a real JS8-band audio signal.
+- What this test does not prove: no JS8 synchronization, no decoded callsign/message, no CRC/LDPC validation, no sensitivity measurement and no per-sample clock-jitter measurement. The synthetic playback is not audible. A successful monitor test is only the capture/worker/metrics gate before implementing and validating the protocol decoder.
+- Build is still pending and must be started manually by the user on development; do not run Actions or touch main. If the screen reports capture failure, metrics never become valid, or the synthetic values are substantially outside the expected range, photograph the display and report whether it was LIVE or SYNTH. If queue drops/gaps or clipping persist, report the counters and values before proceeding to decoder DSP.
+
+- Lifecycle hardening (commits a9ed0983ed0cbe25f4d5d3a8e2676cbc44bad4bd and 917491b5a01dd728d47cc3c0084a6b008dbefd66): each queued audio block carries a source-generation tag. Source switches invalidate in-flight/stale callbacks so a GPIO11 block cannot be mistaken for synthetic playback or leak into the resumed live stream. This is source-reviewed only; no concurrency stress test or build has been run.
+
+- Follow-up to the source-generation guard: generation reads/increments are now serialized with the monitor's portMUX critical section so the UI stop action and worker auto-completion cannot lose a concurrent increment. Commits b707dc93a9b195a934576154d486655e361cf747 and df014139b7e3311072749fdced86d2e8c6ebbfd9. Still source-reviewed only; compile/runtime validation remains pending.
+
+
+## JS8 update — clean display and next decoder test (2026-11-21)
+
+- On development, ats-mini/src/js8/Js8Ui.cpp was redesigned as a pure-black, text-first screen: white primary text, muted secondary text, green status/counters, three compact diagnostic rows and a reserved decoded-message area.
+- The message area explicitly waits for a valid JS8 NORMAL frame. No sample/fake received message is shown.
+- Commit: 959e58308b4982fa96e3a754c7bc4f0249b55597.
+- The short-click waveform remains a generic 8-FSK pipeline stimulus, not a valid JS8 frame and not a decoder test.
+- Next engineering gate: independently generate and validate a protocol-correct JS8 NORMAL golden frame with a known payload, then implement a JS8-only decoder sample path (sync, soft tone decisions, LDPC and CRC) and route that exact vector through it as an on-device self-test. Only show decoded text after the decoder recovers and validates the payload.
+- Keep all work on development; do not touch main. No compile, Actions run, flash or hardware test was performed for the UI change. User starts any build manually.
+
+
+## JS8 clean-room license decision — 2026-11-21
+- Project owner confirmed: preserve the repository's MIT license and develop the JS8 receiver independently. No GPL JS8Call source, direct ports, or parity/generator/permutation tables copied or mechanically extracted from JS8Call may be imported.
+- Protocol research confirmed the public NORMAL frame dimensions, but the official user guide does not publish the complete LDPC construction. A third-party write-up was found whose numeric LDPC tables are explicitly machine-generated from JS8Call reference source; those tables are not an acceptable independent source and were not copied.
+- Do not generate an arbitrary LDPC(174,87) matrix and claim JS8Call compatibility: a different matrix is a different code and will not decode normal JS8Call traffic.
+- Documented next path in JS8CALL_RECEIVE_DECODER.md section 10: independently implement/test the 4 kHz front end, timing/frequency candidate search, NORMAL Costas sync and eight-tone soft decisions using a clearly labeled non-LDPC synthetic fixture. Keep actual payload decode blocked until a lawful independent source for the exact interoperable LDPC construction is established.
+- No firmware code, build, GitHub Actions run, flash or hardware test was performed in this research step. Work remains on development; main untouched.
+- Documentation commit: 746dac66148af67abd18e196d08afc66924c70de.
+
+
+## JS8 NORMAL DSP first code step — 2026-11-21
+- Added standalone `ats-mini/src/js8/Js8NormalSync.h/.cpp` on development. `Js8NormalSync::evaluate()` measures the 21 known NORMAL Costas pilot symbols at positions 0–6, 36–42 and 72–78 using per-symbol DC removal and Goertzel tone energy at a caller-supplied frame start and frequency hypothesis.
+- Result reports expected-tone/best-tone and expected-tone/total-tone ratios, minimum pilot ratio, pilot energy and number of strong pilot matches. It is deliberately only a candidate metric; it does not search time/frequency, decode data symbols, LDPC/CRC or emit messages.
+- Numerical sanity check with an ideal synthetic 4 kHz 79-symbol signal (NORMAL pilots, arbitrary data tones, continuous phase) gave 21/21 matches and ratio 1.0. This is not a protocol-valid JS8 message vector, not a noise/sensitivity test and not a firmware build/test.
+- Existing JS8 Makefile wildcard already includes these files. No Makefile changes required.
+- Next: host C++ tests with timing/frequency offsets, gain/noise and negative cases; then design a 50,560-sample (12.64 s / about 101 kB int16) bounded receive window. The existing 4,096-sample diagnostic ring is too short for a complete NORMAL frame.
+- LDPC/CRC/message decode remains blocked until an exact interoperable LDPC construction is lawfully available from an independent source. Preserve MIT; no GPL-derived tables.
+- No build, Actions, flash or hardware test. Code is not yet compiler-verified on ESP32. Commit sequence: `ce29d934a06c25cf7b7a55b89901dc4d3eaa3575` (header), `3fa1917feb7e169d259f202763e26844253ff9f2` (implementation), `963e83b7bc715a6d212547a36686a7c0b69ca205` (decoder-plan update).
+
+
+## JS8 NORMAL host test — 2026-11-21
+- Added `tests/js8_normal_sync_test.cpp` for the independent Costas metric. Host compile/run with g++17, -Wall -Wextra -Werror passed: correct 21-pilot NORMAL sequence with +1.25 Hz carrier hypothesis and 17-sample start offset; rejects deliberately altered Costas pilots; rejects incomplete frame window.
+- Test command and scope are documented in `JS8CALL_RECEIVE_DECODER.md` section 12. The fixture is not an LDPC/CRC-valid JS8 message. No ESP32 build yet.
+- Next: trigger the existing OSPI-DE workflow on a development push after the workflow trigger update. Artifact remains a single raw `Mini_OS_#<run>.bin`, with no partition files and no release on branch pushes. Then user manually flashes and follows the first monitor/firmware validation steps. Decoder remains sync-metric-only; no message decode claim.
+
+
+## JS8 NORMAL hardware-test milestone (2026-11-21)
+- The JS8 monitor retains one complete 79-symbol NORMAL window (50,560 samples / 12.64 s at 4 kHz). The ~101 KB ring is allocated from PSRAM only; if PSRAM is unavailable, startup fails safely instead of consuming scarce internal heap. The existing LILYGO GPIO11/SPI guard remains.
+- Internal test playback contains the NORMAL Costas sequence at symbols 0–6, 36–42 and 72–78, with deterministic non-protocol tones in data positions. The completed local frame is evaluated at its known start and nominal frequency using the existing independent Costas metric.
+- The UI fixture string `CQ ATS MINI - JS8 NORMAL TEST` is explicitly labelled **TEST PAYLOAD (LOCAL ONLY)**. It is a display fixture, not text encoded in or decoded from audio.
+- This milestone does not implement blind live-air acquisition, LDPC/CRC validation, or received-message decoding. GPIO11 audio quality, PSRAM, timing and display behavior still require hardware testing.
+
+
+## JS8 NORMAL hardware-test milestone (2026-11-21)
+- The JS8 monitor retains one complete 79-symbol NORMAL window (50,560 samples / 12.64 s at 4 kHz). The ~101 KB ring is allocated from PSRAM only; if PSRAM is unavailable, startup fails safely instead of consuming scarce internal heap. The existing LILYGO GPIO11/SPI guard remains.
+- Internal test playback contains the NORMAL Costas sequence at symbols 0–6, 36–42 and 72–78, with deterministic non-protocol tones in data positions. The completed local frame is evaluated at its known start and nominal frequency using the existing independent Costas metric.
+- The UI fixture string `CQ ATS MINI - JS8 NORMAL TEST` is explicitly labelled **TEST PAYLOAD (LOCAL ONLY)**. It is a display fixture, not text encoded in or decoded from audio.
+- This milestone does not implement blind live-air acquisition, LDPC/CRC validation, or received-message decoding. GPIO11 audio quality, PSRAM, timing and display behavior still require hardware testing.
+
+## FT8/FT4 display polish (2026-11-21)
+- FT8/FT4 message-row fills changed to black while retaining the blue row outlines and the blue outer display frame.
+- Frequency is now left-aligned first, followed by the kHz label on the same top row.
+- The receive progress indicator is rendered as separated blue equalizer-style blocks instead of a continuous blue bar.
+
+
+## Diamond-style menu redesign (2026-11-21)
+- Main menu, Settings and Decoder now use a consistent compact scrolling list: dark navy/black background, thin blue separators, cyan accents, white selected text, item numbers, position counter and a narrow scroll indicator.
+- Decoder entries have been consolidated into a dedicated scrolling Decoder submenu with a Back item. The existing CW, RTTY, FT8/FT4, JS8 and decoder-frequency actions are routed from there.
+- Settings now has a Back row and retains its existing settings actions; the previously skipped Zoom entry remains skipped.
+- Selecting Volume opens a compact overlay slider immediately. Encoder rotation adjusts volume; encoder click returns to the same main-menu selection.
+- Existing radio layouts and decoder implementations are not intentionally changed by this menu work.
+- JS8 compile cleanup: duplicate Costas include/constant and repeated test-metric declarations/assignments removed after Build #17 exposed these compile errors.
+
+
+## Menu follow-up from hardware photos (2026-11-21)
+- Main/settings/decoder/spectrum menu now shows three larger rows at a time, with scrolling and a clearer footer to prevent the last row from colliding with instructions.
+- Full-screen menu labels and German text use the explicit UTF-8 umlaut renderer (Ä/Ö/Ü/ä/ö/ü and ß rendered as ss).
+- Removed the unexplained "DR /" placeholder from the header; the small product subtitle now reads "ATS MINI".
+- Brightness now opens a dedicated full-screen slider popup. Encoder rotation adjusts the existing brightness value; encoder click returns to Settings.
+
+
+## FT8/FT4 hardware display refinement — 2026-11-21
+- Removed the three inner message boxes; only the outer display frame remains.
+- Expanded the recent-message buffer and display to four newest-first decoded-message rows.
+- Recolored the 37-block receive progress meter: green for blocks 0–24, yellow for 25–31, red for 32–36; inactive blocks remain dim.
+- Preserved the frequency/speaker/counter header and message metadata layout.
+- Build #19 (run 44939322581) completed successfully on development at commit 968585b3b1e241321c9ab463165d8be0d77754aa.
+- This change is committed for OSPI-DE Build #20; hardware validation is pending.
+
+
+## Hardware feedback: complete Settings submenu redesign — 2026-11-21
+- Build #20 (run 44940230714) completed successfully for OSPI-DE on branch development at commit 6b1558539ee1c442e919f8df943e2eb90946cd07.
+- User hardware photos confirmed the Settings landing page and brightness popup were modernized, but selecting entries such as USB PORT still fell through to legacy drawSideBar() widgets.
+- Added a shared full-screen Settings popup renderer for the remaining settings commands; it presents the setting name and current value in the new dark/blue/cyan style while retaining existing encoder handlers and setting logic.
+- Routed Settings subcommands through the shared renderer in Draw.cpp, keeping the dedicated Volume and Brightness popups.
+- Applied the UTF-8 umlaut-aware text renderer to popup headings and labels in both German and English menu sources; German Volume/Brightness labels are localized consistently.
+- This commit is intended for the next OSPI-DE hardware-test build. Build result and remaining menu/umlaut audit findings must be appended after CI.
+
+
+## Recovery: complete development tree restored — 2026-11-21
+- Root cause: commit `b5d1dfd36bb6d8e494b548dc3adc625c95aa800f` was created from an incomplete tree and unintentionally removed 31,894 lines across the project. This was an assistant-side Git tree construction error.
+- Recovery commit `0d3a7c5b0cfc1676e146d94d5b5fdb3d04f272cd` rebuilt the tree from the complete 238-entry tree of the preceding valid development state (`6b1558539ee1c442e919f8df943e2eb90946cd07`) and reapplied the five intended menu/handoff file changes from the faulty commit.
+- Verified after recovery: recursive tree contains 238 entries, not truncated; `ats-mini.ino`, `Station.cpp`, `SI4735-fixed.h`, CW, FT8, JS8, RTTY source files and `.github/workflows/build.yml` are present.
+- The recovery was committed on `development` only. `main` was not modified.
+- Recovery commit triggered OSPI-DE Build #21, run `44941837830`; status was in progress at the time of this entry. Build result/artifact must be appended after completion.
+- Outstanding work: inspect the restored settings-menu implementation against all command handlers, finish the UTF-8 menu audit, and implement RDS-CT automatic RTC/UTC-offset synchronization with minute precision before claiming those tasks complete.
+
+
+## Build #21/#22 compiler correction — 2026-11-21
+- Build #21 (run 44941837830) failed; Build #22 (run 44941872277) also failed during OSPI-DE compilation. Build #22 confirmed the restored 238-entry source tree was present; the compiler stopped at a linkage mismatch in the new Settings popup.
+- Root cause: `drawSettingsPopup(uint16_t)` was declared with external linkage in `Menu.h`, but defined as `static` in the German and English menu source templates. The German build generated `Menu.cpp` from the German template and failed with “declared extern and later static”.
+- Correction: remove `static` from the function definition in both `Menu_german.cpp.src` and `Menu_english.cpp.src`, matching the declaration in `Menu.h`. No settings behavior or radio logic is changed.
+- Correction committed to `development` only. Build #23 is triggered by this push; compilation and artifact availability remain unverified until CI completes.
+- Main remains untouched. The full source tree is preserved; verify recursive tree entry count after the commit.
+
+
+## Settings popup follow-up: UTF-8, centering and date/time selection — 2026-11-21
+- Updated `ats-mini/Menu_german.cpp.src` in commit `d7a7ecbbbd75d7e5bb01e3423a4ed64e1910c9a1`.
+- Updated `ats-mini/Menu_english.cpp.src` in commit `8800f4146202525c6dfba10b4a4d580d21425dd1`.
+- Added a UTF-8-aware text-width measurement helper alongside the existing UTF-8 renderer. Popup labels and values are now centered using measured rendered glyph widths; right-side instructions are aligned by their measured width instead of relying on the raw draw datum.
+- Routed the remaining German and English menu/footer instructions through the UTF-8-aware renderer. Corrected the English Volume popup footer from the stray German text to `CLICK: CONFIRM`.
+- Restored a visible active-field highlight in the new Date/Time popup by reusing the existing `dateTimeField` state and its six-field index mapping (year, month, day, hour, minute, second). The established encoder/click handlers were not changed.
+- Kept the existing dark popup, cyan frame/accent, and white text design. No radio-layout, TEF6686, RDS PS/RT, or decoder behavior was intentionally changed.
+- Both commits were pushed to `development` only. Their commit messages include `[skip ci]` because the Development workflow runs automatically on branch pushes; no firmware build was started. Build #24 remains pending separate user authorization.
+- Build #23 (run `44942466083`) was subsequently verified successful: OSPI-DE compile, single firmware binary preparation, and artifact upload all completed successfully; release job was skipped.
+- Hardware verification of the three popup corrections remains outstanding. Check all six Date/Time fields, German umlauts at the footer, popup title/value centering, and the English template on hardware.
+- `main` remains untouched.
+
+
+## UTF-8 umlaut mark visibility refinement — 2026-11-21
+- German template renderer refinement committed as `1f98aa65645800603ca9c534f41fd68c88ce0097`.
+- English template renderer refinement committed as `1e53847a40e7ceac5f73ce318f2bb2af0ef55818`.
+- Moved the two diacritic dots for Ä/Ö/Ü and lowercase variants above the base glyph instead of drawing them into the upper part of the letter. This makes the umlaut marks visibly distinct on the small menu fonts as well.
+- Both commits were pushed to `development` with `[skip ci]`; no build was started. Hardware verification remains pending.
+
+
+## FT8/FT4 callsign country identification expansion — 2026-11-21
+- Expanded the callsign-prefix-to-country-code mapping in `ats-mini/src/ftx/FtxUi.cpp`. Explicit fixes include `LZ...` → `BG` (Bulgaria) and Russian `R...` calls such as `R4CJA` → `RU`; the existing `SP...` → `PL` mapping remains.
+- Added a broad set of commonly encountered DXCC prefixes across Europe, Asia, Africa, the Americas, and Oceania. Unrecognized or ambiguous callsigns still remain unlabelled rather than being assigned a guessed country.
+- Existing flag drawings are retained for countries with implemented graphics. For every other recognized country, the existing fallback draws the two-letter ISO country code (for example `BG`, `RU`, `PL`) in cyan in the flag position. No blank flag slot is shown when a country code is known.
+- The message parser, decoded text, FT8/FT4 DSP, audio capture, synchronization, slot timing, logging format, and message history are unchanged.
+- Source changes are in commits `d8e211950c5642cfeafa3b0db8a0385d80491726` and `e395890a49d7f7455eeb8e73c4d664bcf33391bc`; both target `development` only. The source commits used `[skip ci]` so the automatic workflow would start exactly once after this handoff update.
+- This handoff update is intentionally pushed without `[skip ci]` to start the OSPI-DE Development workflow. Build and hardware behavior must be confirmed from the resulting run; no compile result is claimed yet.
+- `main` remains untouched.
+
+
+## FT8/FT4 distance fallback without locator — 2026-11-21
+- Extended `ats-mini/src/ftx/FtxUi.cpp` so decoded messages use the existing Maidenhead locator distance whenever a valid locator is present. Locator-based distance has priority and remains unchanged (QTH reference: JO31TV).
+- When no locator is present but the callsign resolves to a country code, calculate a fallback great-circle distance from the approximate geographic center of that country to JO31TV. A country-center table covers the countries and territories represented by the current callsign-prefix mapping where coordinates are available.
+- Estimated distances are explicitly prefixed with `~` on the FT8/FT4 display and in the session log. Exact locator distances remain unprefixed. If neither a locator nor a supported country center is available, the display continues to show `---`.
+- The fallback is a country-level estimate, not a claimed station position: portable/mobile operation, remote operation, and callsign exceptions can make the actual station location differ substantially. No estimate is fabricated for unknown country codes.
+- The common great-circle calculation is shared by locator and country-center paths. No decoder DSP, audio capture, synchronization, slot timing, message parsing, or receiver behavior was changed.
+- Source commits: `8235e369a294b0bc8bb22d25721cd8fc74ecbcbd` (distance fallback) and `32727561cc70a70ed9c632a8b081e26452f67072` (coordinate correction). Both were pushed to `development` with `[skip ci]` so the workflow starts once after this handoff update.
+- Static source checks confirmed the JO31TV reference remains in use, both display and log mark estimated values with `~`, all metadata call sites use the extended signature, braces are balanced, and no temporary coordinate placeholder remains. No local firmware compilation was run.
+- The user confirmed the preceding country-prefix/flag-code build worked successfully. This handoff update is pushed without `[skip ci]` to start the next OSPI-DE Development build for the distance fallback.
+- `main` remains untouched.
+
+
+## Dual-Boot APP1 identity (2026-11-21)
+- User wants the APP1 card in the GNBD ATS Mini Dualboot manager to show **Mini OS** and **Version BETA**, replacing the generic Arduino values (previously `arduino-lib-builder` and a short build hash).
+- User's installed manager reports version 4.2.2 DES; About page confirms APP1, ESP32-S3, ESP-IDF v5.5.5, 16 MB flash.
+- Research in `GNBD/ats-mini-dualboot` v3.2.1 confirmed the manager boots APP0/APP1 by ESP partition subtype. The card identity is carried in the ESP-IDF application descriptor (`esp_app_desc_t`), not our radio firmware's `VER_APP` constant.
+- Reference implementation: Espressif Arduino-ESP32 contains a strong `esp_app_desc` definition that overrides the weak prebuilt-library descriptor named `arduino-lib-builder` (reference file `variants/kodedot/kode_app_desc.cpp`). Applied the same linker-level approach to our sketch.
+- Added `ats-mini/mini_os_app_desc.cpp`: strong descriptor in `.rodata_desc`, `project_name = "Mini OS"`, `version = "BETA"`; preserves ESP-IDF compatibility fields (magic word, IDF version, efuse revision limits, MMU page size, build date/time). Does not change partitions, APP0, recovery, radio/DSP behavior, or internal `VER_APP`.
+- Source commit: `9aa0b87921c5bccdeb7c5a05977efe3b252ed99a` (intermediate commit with `[skip ci]`).
+- Final handoff commit will trigger the OSPI-DE build. Build and hardware verification are pending; confirm the APP1 card shows Mini OS / Version BETA after flashing.
+
+
+## FM-DX adaptive FM filter and dedicated screen — 2026-11-21
+
+- Temporarily changed `.github/workflows/build.yml` on `development` to `workflow_dispatch` only. Push events no longer start the firmware workflow; the OSPI-DE build remains manually startable. Workflow change commit: `e14df4ad19c661cca25eaceb3a1d210cf3ea7751`. `main` was not changed.
+- Added `ats-mini/src/radio/FmDxController.h/.cpp`: FM-only adaptive bandwidth control. It saves the current hardware bandwidth, starts at 60 kHz, and uses consecutive RSSI/SNR samples plus a 6-second dwell interval to select 40 kHz (strong signal), 84 kHz (weak signal), or return to 60 kHz. It restores the saved hardware bandwidth on stop and does not overwrite the band's saved bandwidth preference.
+- Added `ats-mini/src/radio/FmDxUi.h/.cpp`: separate 320×170 FM-DX screen with dark navy panels, cyan framing, neon-green frequency/status, live RSSI/SNR, and current filter width. Short click toggles auto control/pause; long press exits and restores the saved filter. Existing TEF6686 and other radio layouts are untouched.
+- Added the FM DX entry at the end of the German, English, and Italian main menus, preserving all previous menu indices. Added `CMD_FM_DX`, drawing dispatch, encoder/button lifecycle, inactivity exclusion, RSSI/SNR sampling hook, and stop-before-band-switch handling. Makefile source wildcard now includes `src/radio/*.cpp`.
+- Static source checks: balanced braces in the modified main sketch and three menu sources and new radio files; no accidental literal newline escapes remain; FM DX is present in all three main menu arrays. No compiler/build/Actions/flash/hardware test was run. This code is not yet compiler-verified; the user will start the build manually.
+- Known tuning note: the adaptive thresholds are an initial software heuristic based on the existing receiver RSSI/SNR values, not calibrated RF measurements. Validate actual thresholds and audio behavior on hardware before treating them as final.
+- All changes are on `development`; `main` remains untouched.
+
+
+## FM-DX UI verification follow-up (2026-11-21)
+- Reworked `ats-mini/src/radio/FmDxUi.cpp` into the compact 320x170 monochrome DX instrument screen: left-aligned frequency, station/RDS clock, 20-segment red/yellow/green RSSI meter, SNR, PI, PTY, two-line RadioText, filter and AUTO/PAUSE status.
+- Static source audit confirmed the menu entries/actions exist in German, English and Italian; `CMD_FM_DX` dispatches to `drawFmDxPage()`; `fmDxUiTick()` requests 500 ms redraws; RSSI/SNR are sampled through the existing `processRssiSnr()`; the Makefile wildcard includes `src/radio/*.cpp/.h`.
+- Confirmed FM bandwidth table indices: array positions map to device indices Auto=0, 110k=1, 84k=2, 60k=3, 40k=4. The controller's 40/60/84 device indices therefore match the existing table.
+- Hardened lifecycle for external/remote band changes: the FM-DX page exits when the mode is no longer FM, and the controller no longer attempts to restore an FM filter while the receiver is in AM/SSB. Also made new UI variadic format arguments explicitly unsigned.
+- Remaining validation limits: no compilation, GitHub Actions, flash or hardware test was run. Live stereo indication is now implemented using the inherited SI4735 FM_RSQ_STATUS pilot and blend getters (see the later FM-DX live stereo indication entry). RSSI/SNR thresholds and filter decisions still require real receiver testing/calibration; they are not validated performance thresholds.
+- Work remains on `development` only; `main` was not targeted. User starts the build manually.
+
+
+## FM-DX live stereo indication — 2026-11-21
+- Research confirmed that the inherited PU2CLR SI4735 API exposes `getCurrentReceivedSignalQuality()`, `getCurrentPilot()` and `getCurrentStereoBlend()`. The SI4735 FM_RSQ_STATUS response reports the detected 19 kHz stereo pilot and blend percentage; this is a live receiver measurement, not the configured `fmStereoIdx` setting.
+- `ats-mini/src/radio/FmDxUi.cpp` now polls FM_RSQ_STATUS on the existing 500 ms FM-DX refresh and displays `STEREO xx%`, `MONO`, or `MONO LOCK` when forced-mono mode is selected.
+- The forced-mono setting is respected in the display even if a pilot is detected. In automatic mode, pilot presence and the chip's blend percentage are shown.
+- Source change committed on `development`: `7898b6999726e7644c03688f7207c91b87171fcc`.
+- No build, GitHub Actions run, flash or hardware test was performed. User should verify on a known mono station, a strong stereo station, a weak/blended station, and with forced mono enabled. No change to `main`.
+
+
+## Quiet startup volume and silent FT8/FT4 monitoring — 2026-11-21
+- On every boot, the runtime receiver volume is now forced to 10/63 after saved settings are loaded. This deliberately overrides the previous session's saved volume for startup only; the user can raise it manually after boot.
+- FT8/FT4 still raises the SI473x output volume to 50/63 while the decoder is active, then restores the pre-decoder volume on exit. Decoder capture/DSP samples are unchanged.
+- FT8/FT4 now always enters with the external speaker muted (speaker toggle OFF), while the amplifier remains powered for the existing GPIO11 decoder audio tap. The user can turn the speaker ON explicitly in the decoder Actions menu. On exit, the speaker mute/amplifier state from before entering the decoder is restored.
+- Scope: `development` only. No build, GitHub Actions, flash or hardware test was run; user performs the OSPI-DE build and device verification. `main` remains untouched.

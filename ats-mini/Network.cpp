@@ -3,7 +3,6 @@
 #include "Themes.h"
 #include "Utils.h"
 #include "Menu.h"
-#include "DebugLog.h"
 #include "Memories.h"
 #include "Draw.h"
 #include "Splash.h"
@@ -18,8 +17,6 @@
 #include "PageUpdate.h"
 #include "PagePatches.h"
 #include "AllBandWebScanner.h"
-#include "WeatherService.h"
-#include "NewsService.h"
 #include <new>
 
 #include <WiFi.h>
@@ -120,16 +117,19 @@ static const char *WEB_DIAG_PATH = "/web-diagnostics.log";
 void webDiagLog(const char *event)
 {
   if(!event || !webDiagEnabled) return;
-  // The Settings toggle now controls the USB CDC diagnostic stream.
-  // Do not write diagnostic records to LittleFS.
-  atsDebugLogf("[DIAG] %s", event);
+  if(LittleFS.exists(WEB_DIAG_PATH)) { File oldFile = LittleFS.open(WEB_DIAG_PATH, "r"); size_t oldSize = oldFile ? oldFile.size() : 0; if(oldFile) oldFile.close(); if(oldSize > 49152) LittleFS.remove(WEB_DIAG_PATH); }
+  File file = LittleFS.open(WEB_DIAG_PATH, "a");
+  if(!file) return;
+  file.printf("%lu ms | %s | phase=%u freq=%u mode=%u band=%d heap=%u\n", (unsigned long)millis(), event, (unsigned)webTunePhase, (unsigned)currentFrequency, (unsigned)currentMode, bandIdx, (unsigned)ESP.getFreeHeap());
+  file.flush(); file.close();
 }
+
 
 static String webPage(const char *body, const char *title, std::initializer_list<PageValue> values,
                       std::initializer_list<PageFragment> fragments = {});
 static const String webRadioPage();
 static const String webMemoryPage();
-static const String webConfigPage(const char *section);
+static const String webConfigPage();
 
 struct SplashUploadState
 {
@@ -259,7 +259,7 @@ void netInit(uint8_t netMode)
     if(netMode!=NET_SYNC)
       statusShow(
         ("Connected to WiFi network (" + WiFi.SSID() + ")").c_str(),
-        ("IP : " + WiFi.localIP().toString() + " or mini-os.local").c_str()
+        ("IP : " + WiFi.localIP().toString() + " or atsmini.local").c_str()
       );
     else
       statusShow(nullptr);
@@ -269,7 +269,7 @@ void netInit(uint8_t netMode)
     // Show the access point details when it is the available connection.
     statusShow(
       ("Use Access Point " + String(apSSID)).c_str(),
-      ("IP : " + WiFi.softAPIP().toString() + " or mini-os.local").c_str()
+      ("IP : " + WiFi.softAPIP().toString() + " or atsmini.local").c_str()
     );
   }
   else
@@ -288,7 +288,7 @@ void netInit(uint8_t netMode)
     webInit();
 
     // Initialize mDNS
-    MDNS.begin("mini-os"); // Set the hostname to "mini-os.local"
+    MDNS.begin("atsmini"); // Set the hostname to "atsmini.local"
     MDNS.addService("http", "tcp", 80);
   }
 }
@@ -339,8 +339,8 @@ static void wifiPowerLevelOnEvent(WiFiEvent_t event)
 static bool wifiInitAP()
 {
   // These are our own access point (AP) addresses
-  IPAddress ip(192, 168, 4, 1);
-  IPAddress gateway(192, 168, 4, 1);
+  IPAddress ip(10, 1, 1, 1);
+  IPAddress gateway(10, 1, 1, 1);
   IPAddress subnet(255, 255, 255, 0);
 
   // Start as access point (AP)
@@ -403,69 +403,6 @@ static bool wifiConnect()
 
   return(wifiStatus == WL_CONNECTED);
 }
-
- // Temporary WiFi session for the weather screen. Preserve and restore the
- // receiver's original WiFi mode when the weather screen is closed.
- static bool weatherWifiSessionActive = false;
- static wifi_mode_t weatherPreviousWifiMode = WIFI_MODE_NULL;
-
- void netWeatherBegin()
- {
-   if(weatherWifiSessionActive) return;
-   weatherPreviousWifiMode = WiFi.getMode();
-   weatherWifiSessionActive = true;
-
-   if(weatherPreviousWifiMode == WIFI_MODE_NULL)
-     WiFi.mode(WIFI_STA);
-   else if(weatherPreviousWifiMode == WIFI_AP)
-     WiFi.mode(WIFI_AP_STA);
-
-   wifiMulti.APlistClean();
-   prefs.begin("network", true, STORAGE_PARTITION);
-   wifiScanHidden = prefs.getBool("wifiscanhidden", false);
-   for(int j=0; j<3; ++j)
-   {
-     char nameSSID[16], namePASS[16];
-     sprintf(nameSSID, "wifissid%d", j+1);
-     sprintf(namePASS, "wifipass%d", j+1);
-     String ssid = prefs.getString(nameSSID, "");
-     String password = prefs.getString(namePASS, "");
-     if(ssid.length()) wifiMulti.addAP(ssid.c_str(), password.c_str());
-   }
-   prefs.end();
-
-   if(WiFi.status() != WL_CONNECTED)
-     wifiMulti.run(0, wifiScanHidden);
- }
-
- bool netWeatherPoll()
- {
-   if(!weatherWifiSessionActive) return WiFi.status() == WL_CONNECTED;
-   static uint32_t lastWeatherWifiPoll = 0;
-   if(WiFi.status() != WL_CONNECTED &&
-      (!lastWeatherWifiPoll || millis() - lastWeatherWifiPoll >= 1000))
-   {
-     lastWeatherWifiPoll = millis();
-     wifiMulti.run(250, wifiScanHidden);
-   }
-   return WiFi.status() == WL_CONNECTED;
- }
- void netWeatherEnd()
- {
-   if(!weatherWifiSessionActive) return;
-   if(weatherPreviousWifiMode == WIFI_MODE_NULL)
-   {
-     WiFi.disconnect(true);
-     WiFi.mode(WIFI_MODE_NULL);
-   }
-   else if(weatherPreviousWifiMode == WIFI_AP)
-   {
-     WiFi.disconnect(false);
-     WiFi.mode(WIFI_AP);
-   }
-   weatherWifiSessionActive = false;
-   weatherPreviousWifiMode = WIFI_MODE_NULL;
- }
 
 //
 // Initialize internal web server
@@ -852,64 +789,9 @@ static void webInit()
   });
   server.on("/memory", HTTP_POST, webSetMemories);
 
-server.on("/config/wifi", HTTP_GET, [] (AsyncWebServerRequest *request) {
+  server.on("/config", HTTP_ANY, [] (AsyncWebServerRequest *request) {
     if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    request->send(200, "text/html", webConfigPage("wifi"));
-  });
-  server.on("/config/display", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    request->send(200, "text/html", webConfigPage("display"));
-  });
-  server.on("/config/time", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    request->send(200, "text/html", webConfigPage("time"));
-  });
-  server.on("/config/splash", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    request->send(200, "text/html", webConfigPage("splash"));
-  });
-  server.on("/config/weather", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    request->send(200, "text/html", webConfigPage("weather"));
-  });
-  server.on("/config/news", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    request->send(200, "text/html", webConfigPage("news"));
-  });
-
-  server.on("/config", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    request->send(200, "text/html", webConfigPage("overview"));
-  });
-
-  server.on("/news/save", HTTP_POST, [] (AsyncWebServerRequest *request) {
-    if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    NewsService::Configuration config = {};
-    for(uint8_t i=0;i<NewsService::MAX_FEEDS;i++)
-    {
-      String suffix(i), urlName="newsurl"+suffix, enabledName="newsenabled"+suffix;
-      if(request->hasParam(urlName,true))
-      {
-        String url=request->getParam(urlName,true)->value(); url.trim();
-        if(url.length()>=NewsService::MAX_URL_BYTES || !NewsService::validFeedUrl(url.c_str()))
-          return request->send(400,"text/plain; charset=utf-8","RSS URL must use HTTP/HTTPS and be shorter than 192 characters.");
-        url.toCharArray(config.feeds[i].url,NewsService::MAX_URL_BYTES);
-      }
-      config.feeds[i].enabled=request->hasParam(enabledName,true) && config.feeds[i].url[0];
-    }
-    if(!newsService.setConfiguration(config))
-      return request->send(500,"text/plain; charset=utf-8","RSS configuration could not be saved.");
-    request->redirect("/config/news");
-  });
-
-  server.on("/weather/save", HTTP_POST, [] (AsyncWebServerRequest *request) {
-    if(!webIsAuthenticated(request)) return request->requestAuthentication();
-    if(!request->hasParam("postal", true))
-      return request->send(400, "text/plain; charset=utf-8", "Bitte eine fünfstellige deutsche Postleitzahl eingeben.");
-    const String postal = request->getParam("postal", true)->value();
-    if(!weatherService.setPostalCode(postal.c_str()))
-      return request->send(400, "text/plain; charset=utf-8", "Ungültige Postleitzahl. Bitte genau fünf Ziffern eingeben.");
-    request->redirect("/config/weather");
+    request->send(200, "text/html", webConfigPage());
   });
 
   server.on("/splash.png", HTTP_GET, [] (AsyncWebServerRequest *request) {
@@ -1038,123 +920,135 @@ void webSetConfig(AsyncWebServerRequest *request)
 {
   if(!webIsAuthenticated(request)) return request->requestAuthentication();
 
-  String section = request->hasParam("section", true)
-    ? request->getParam("section", true)->value() : "wifi";
   uint32_t prefsSave = 0;
-  uint32_t epoch = 0;
+  uint32_t epoch;
   bool setClock = false;
-  bool haveSSID = false;
 
-  if(section == "time" && request->hasParam("datetime", true))
+  if(request->hasParam("datetime", true))
   {
     String dateTime = request->getParam("datetime", true)->value();
-    if(dateTime.length() && !webParseUTCDateTime(dateTime, &epoch))
-      return request->send(400, "text/plain", "Date/time must use the YYYY-mm-dd HH:MM:SS format and contain a valid UTC date and time.");
-    setClock = dateTime.length() > 0;
+    if(dateTime != "")
+    {
+      if(!webParseUTCDateTime(dateTime, &epoch))
+        return request->send(400, "text/plain", "Date/time must use the YYYY-mm-dd HH:MM:SS format and contain a valid UTC date and time.");
+      setClock = true;
+    }
   }
 
-  if(section == "splash")
+  if(request->hasParam("deletesplash", true))
   {
-    if(request->hasParam("deletesplash", true))
+    LittleFS.remove(SPLASH_TEMP_PATH);
+    LittleFS.remove(SPLASH_PATH);
+  }
+  else if(request->hasParam("splash", true, true))
+  {
+    String filename = request->getParam("splash", true, true)->value();
+
+    if(filename != "")
     {
-      LittleFS.remove(SPLASH_TEMP_PATH);
-      LittleFS.remove(SPLASH_PATH);
-    }
-    else if(request->hasParam("splash", true, true))
-    {
-      String filename = request->getParam("splash", true, true)->value();
-      if(filename.length())
+      SplashUploadState *state = static_cast<SplashUploadState *>(request->_tempObject);
+      if(state && state->tooLarge)
+        return request->send(413, "text/plain", "The splash image must not exceed 512 KB.");
+
+      if(!filename.endsWith(".png"))
       {
-        SplashUploadState *state = static_cast<SplashUploadState *>(request->_tempObject);
-        if(state && state->tooLarge)
-          return request->send(413, "text/plain", "The splash image must not exceed 512 KB.");
-        if(!filename.endsWith(".png"))
-        {
-          LittleFS.remove(SPLASH_TEMP_PATH);
-          return request->send(400, "text/plain", "The splash image filename must end in .png.");
-        }
-        if(!LittleFS.exists(SPLASH_TEMP_PATH))
-          return request->send(500, "text/plain", "The splash image could not be stored.");
-        String error = splashValidate();
-        if(error.length())
-        {
-          LittleFS.remove(SPLASH_TEMP_PATH);
-          return request->send(400, "text/plain", error);
-        }
-        if(!LittleFS.rename(SPLASH_TEMP_PATH, SPLASH_PATH))
-        {
-          LittleFS.remove(SPLASH_TEMP_PATH);
-          return request->send(500, "text/plain", "The splash image could not be installed.");
-        }
+        LittleFS.remove(SPLASH_TEMP_PATH);
+        return request->send(400, "text/plain", "The splash image filename must end in .png.");
+      }
+
+      if(!LittleFS.exists(SPLASH_TEMP_PATH))
+        return request->send(500, "text/plain", "The splash image could not be stored.");
+
+      String error = splashValidate();
+      if(error != "")
+      {
+        LittleFS.remove(SPLASH_TEMP_PATH);
+        return request->send(400, "text/plain", error);
+      }
+
+      if(!LittleFS.rename(SPLASH_TEMP_PATH, SPLASH_PATH))
+      {
+        LittleFS.remove(SPLASH_TEMP_PATH);
+        return request->send(500, "text/plain", "The splash image could not be installed.");
       }
     }
   }
 
-  if(section == "wifi")
+  // Start modifying preferences
+  prefs.begin("network", false, STORAGE_PARTITION);
+
+  // Save user name and password
+  if(request->hasParam("username", true) && request->hasParam("password", true))
   {
-    prefs.begin("network", false, STORAGE_PARTITION);
-    if(request->hasParam("username", true) && request->hasParam("password", true))
-    {
-      loginUsername = request->getParam("username", true)->value();
-      loginPassword = request->getParam("password", true)->value();
-      prefs.putString("loginusername", loginUsername);
-      prefs.putString("loginpassword", loginPassword);
-    }
-    for(int j=0; j<3; ++j)
-    {
-      char nameSSID[16], namePASS[16];
-      sprintf(nameSSID, "wifissid%d", j+1);
-      sprintf(namePASS, "wifipass%d", j+1);
-      if(request->hasParam(nameSSID, true) && request->hasParam(namePASS, true))
-      {
-        String ssid = request->getParam(nameSSID, true)->value();
-        String pass = request->getParam(namePASS, true)->value();
-        prefs.putString(nameSSID, ssid);
-        prefs.putString(namePASS, pass);
-        haveSSID |= ssid.length() && pass.length();
-      }
-    }
-    wifiScanHidden = request->hasParam("wifiscanhidden", true);
-    prefs.putBool("wifiscanhidden", wifiScanHidden);
-    prefs.end();
+    loginUsername = request->getParam("username", true)->value();
+    loginPassword = request->getParam("password", true)->value();
+
+    prefs.putString("loginusername", loginUsername);
+    prefs.putString("loginpassword", loginPassword);
   }
-  else if(section == "display")
+
+  // Save SSIDs and their passwords
+  bool haveSSID = false;
+  for(int j=0 ; j<3 ; j++)
   {
-    if(request->hasParam("theme", true))
+    char nameSSID[16], namePASS[16];
+
+    sprintf(nameSSID, "wifissid%d", j+1);
+    sprintf(namePASS, "wifipass%d", j+1);
+
+    if(request->hasParam(nameSSID, true) && request->hasParam(namePASS, true))
     {
-      const int selectedTheme = request->getParam("theme", true)->value().toInt();
-      if(selectedTheme < 0 || selectedTheme >= getTotalThemes())
-        return request->send(400, "text/plain", "Invalid theme selection.");
-      themeIdx = selectedTheme;
-      prefsSave |= SAVE_SETTINGS;
+      String ssid = request->getParam(nameSSID, true)->value();
+      String pass = request->getParam(namePASS, true)->value();
+      prefs.putString(nameSSID, ssid);
+      prefs.putString(namePASS, pass);
+      haveSSID |= ssid != "" && pass != "";
     }
-    scrollDirection = request->hasParam("scroll", true) ? -1 : 1;
-    zoomMenu = request->hasParam("zoom", true);
-    setEncoderHalfStep(request->hasParam("encoderhalfstep", true));
-    prefsSave |= SAVE_SETTINGS;
   }
-  else if(section == "time")
+
+  // Save hidden SSID scanning preference
+  wifiScanHidden = request->hasParam("wifiscanhidden", true);
+  prefs.putBool("wifiscanhidden", wifiScanHidden);
+
+  // Save time zone
+  if(request->hasParam("utcoffset", true))
   {
-    if(request->hasParam("utcoffset", true))
+    int idx = request->getParam("utcoffset", true)->value().toInt();
+    if(idx >= 0 && idx < getTotalUTCOffsets())
     {
-      int idx = request->getParam("utcoffset", true)->value().toInt();
-      if(idx < 0 || idx >= getTotalUTCOffsets())
-        return request->send(400, "text/plain", "Invalid time zone selection.");
       utcOffsetIdx = idx;
       prefsSave |= SAVE_SETTINGS;
     }
   }
-  else if(section != "splash")
-    return request->send(400, "text/plain", "Unknown configuration section.");
 
-  if(prefsSave) prefsRequestSave(prefsSave, true);
+  // Save theme
+  if(request->hasParam("theme", true))
+  {
+    String theme = request->getParam("theme", true)->value();
+    themeIdx = theme.toInt();
+    prefsSave |= SAVE_SETTINGS;
+  }
+
+  // Save scroll direction and menu zoom
+  scrollDirection = request->hasParam("scroll", true)? -1 : 1;
+  zoomMenu        = request->hasParam("zoom", true);
+  setEncoderHalfStep(request->hasParam("encoderhalfstep", true));
+  prefsSave |= SAVE_SETTINGS;
+
+  // Done with the preferences
+  prefs.end();
+
+  // Save preferences immediately
+  prefsRequestSave(prefsSave, true);
+
   if(setClock) clockSetEpoch(epoch);
 
-  String target = "/config/";
-  target += section;
-  request->redirect(target.c_str());
+  // Show config page again
+  request->redirect("/config");
 
-  if(section == "wifi" && haveSSID && wifiModeIdx > NET_AP_ONLY && WiFi.status() != WL_CONNECTED)
+  // If we are currently in AP mode, and infrastructure mode requested,
+  // and there is at least one SSID / PASS pair, request network connection
+  if(haveSSID && (wifiModeIdx>NET_AP_ONLY) && (WiFi.status()!=WL_CONNECTED))
     netRequestConnect();
 }
 
@@ -1425,7 +1319,7 @@ static const String webMemoryPage()
   });
 }
 
-const String webConfigPage(const char *section)
+const String webConfigPage()
 {
   prefs.begin("network", true, STORAGE_PARTITION);
   String ssid1 = prefs.getString("wifissid1", "");
@@ -1437,46 +1331,29 @@ const String webConfigPage(const char *section)
   bool scanHidden = prefs.getBool("wifiscanhidden", false);
   prefs.end();
 
-  const char *body = pageConfigOverview;
-  if(!strcmp(section, "wifi")) body = pageConfigWifi;
-  else if(!strcmp(section, "display")) body = pageConfigDisplay;
-  else if(!strcmp(section, "time")) body = pageConfigTime;
-  else if(!strcmp(section, "splash")) body = pageConfigSplash;
-  else if(!strcmp(section, "weather")) body = pageConfigWeather;
-  else if(!strcmp(section, "news")) body = pageConfigNews;
-
   String splashResolution = String(spr.width()) + "x" + String(spr.height());
-  return webPage(body, pageConfigTitle, {
+
+  return webPage(pageConfig, pageConfigTitle, {
     {"title", pageConfigTitle},
     {"ssid1", ssid1}, {"pass1", pass1}, {"ssid2", ssid2}, {"pass2", pass2},
     {"ssid3", ssid3}, {"pass3", pass3}, {"username", loginUsername}, {"password", loginPassword},
-    {"scan_hidden", scanHidden ? "CHECKED" : ""},
-    {"scroll", scrollDirection < 0 ? "CHECKED" : ""},
-    {"half_step", encoderHalfStep ? "CHECKED" : ""},
-    {"zoom", zoomMenu ? "CHECKED" : ""},
-    {"resolution", splashResolution}, {"postal", weatherService.postalCode()}
+    {"scan_hidden", scanHidden? "CHECKED" : ""},
+    {"scroll", scrollDirection<0? "CHECKED" : ""},
+    {"half_step", encoderHalfStep? "CHECKED" : ""}, {"zoom", zoomMenu? "CHECKED" : ""},
+    {"resolution", splashResolution}
   }, {
     {"navigation", [](String &out) { webNavigation(out, "/config"); }},
-    {"news_feeds", [](String &out) {
-      const NewsService::Configuration config = newsService.configuration();
-      for(uint8_t i=0; i<NewsService::MAX_FEEDS; ++i)
-        pageAppend(out, pageConfigNewsFeed, {
-          {"index", String(i+1)}, {"slot", String(i)}, {"url", String(config.feeds[i].url)},
-          {"enabled", config.feeds[i].enabled ? "CHECKED" : ""}
-        });
-    }},
     {"utc_options", [](String &out) {
-      for(int i=0; i<getTotalUTCOffsets(); ++i)
+      for(int i=0 ; i<getTotalUTCOffsets(); i++)
         pageAppend(out, pageConfigUtcOption, {
           {"value", String(i)}, {"minutes", String(utcOffsets[i].offset * 15)},
-          {"selected", utcOffsetIdx == i ? "SELECTED" : ""}, {"label", utcOffsets[i].desc}
+          {"selected", utcOffsetIdx==i? "SELECTED" : ""}, {"label", utcOffsets[i].desc}
         });
     }},
     {"theme_options", [](String &out) {
-      for(int i=0; i<getTotalThemes(); ++i)
+      for(int i=0 ; i<getTotalThemes(); i++)
         pageAppend(out, pageConfigThemeOption, {
-          {"value", String(i)}, {"selected", themeIdx == i ? "SELECTED" : ""},
-          {"label", theme[i].name}
+          {"value", String(i)}, {"selected", themeIdx==i? "SELECTED" : ""}, {"label", theme[i].name}
         });
     }},
     {"splash", [](String &out) {

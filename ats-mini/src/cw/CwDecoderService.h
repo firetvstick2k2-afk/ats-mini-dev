@@ -15,14 +15,11 @@ public:
   void clearText();
   void setTone(float toneHz);
   void resetDecoder();
+  float tone() const { return decoder_.getTone(); }
   void update();
   const char* text() const { return shownText_; }
   bool signal() const { return signal_; }
-  bool audioPresent() const { return audioPresent_; }
-  float tone() const { return autoToneHz_; }
   uint16_t audioLevel() const { return audioLevel_; }
-  uint16_t audioPeak() const { return audioPeak_; }
-  bool audioClipped() const { return audioClipped_; }
   int wpm() const { return wpm_; }
 
 private:
@@ -34,19 +31,11 @@ private:
   AudioCaptureService* capture_ = nullptr;
   SemaphoreHandle_t mutex_ = nullptr;
   volatile bool active_ = false;
-  bool initialized_ = false, wifiBlocked_ = false, signal_ = false, audioPresent_ = false;
-  volatile uint16_t audioLevel_ = 0, audioPeak_ = 0;
-  volatile bool audioClipped_ = false;
-  float dcEstimate_ = 2048.0f, devSum_ = 0.0f, devPeak_ = 0.0f;
-  uint32_t devCount_ = 0, clippedCount_ = 0;
-  float toneNoiseFloor_ = 0.0f;
-  float toneCandidateHz_ = 700.0f;
-  uint8_t toneCandidateCount_ = 0;
+  bool initialized_ = false, wifiBlocked_ = false, signal_ = false;
+  volatile uint16_t audioLevel_ = 0;
+  float dcEstimate_ = 2048.0f, devSum_ = 0.0f;
+  uint32_t devCount_ = 0;
   char shownText_[CwDecoder::TEXT_MAX + 1] = {};
   int wpm_ = 0;
-  static constexpr size_t kToneWindowSamples = 256;
-  int16_t toneWindow_[kToneWindowSamples] = {};
-  size_t toneWindowCount_ = 0;
-  float autoToneHz_ = 700.0f;
   uint32_t lastUiMs_ = 0, lastToneMs_ = 0;
 };

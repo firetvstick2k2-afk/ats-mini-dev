@@ -194,7 +194,7 @@ void prefsSave(uint32_t items)
     prefs.putUChar("Volume",   volume);            // Current volume
     prefs.putUChar("Band",     bandIdx);           // Current band
     prefs.putUChar("WiFiMode", wifiModeIdx);       // WiFi connection mode
-    prefs.putBool("WebDiag", webDiagEnabled);      // Persistent USB diagnostic logging (legacy preference key)
+    prefs.putBool("WebDiag", webDiagEnabled);      // Persistent web diagnostic logging
 
     // Save additional global settings
     prefs.putUShort("Brightness", currentBrt);     // Brightness

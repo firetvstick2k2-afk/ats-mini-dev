@@ -1,1 +1,0 @@
-Added a dedicated PROGRAMMES submenu at position 2 in the main menu, grouping the decoder, band monitor, FM-DX, moon calendar, weather report and news. The submenu uses the same full-screen menu presentation and rotary navigation as the main menu.

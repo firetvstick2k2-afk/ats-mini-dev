@@ -273,12 +273,12 @@ void loadDSPPatch(uint8_t bandwidth, bool draw)
 
   if(mode == PATCH_SSB)
   {
-    if(draw) drawCleanLoadingMessage("Loading SSB");
+    if(draw) drawMessage("Loading SSB");
     rx.loadPatch(content? content : ssb_patch_content, content? size : sizeof(ssb_patch_content), bandwidth);
   }
   else if(content)
   {
-    if(draw) drawCleanLoadingMessage("Loading AM");
+    if(draw) drawMessage("Loading AM");
     rx.loadAMPatch(content, size);
   }
   else if(mode == PATCH_AM && loadedMode == PATCH_AM && loadedSlot != 0 && loadedSlot != 255)

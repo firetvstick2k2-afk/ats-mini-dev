@@ -314,7 +314,6 @@ void drawLayoutTEF6686()
 
   // 5. Right-side status boxes: WEB above the untouched MHz/kHz unit box.
   const int statusX = 242;
-  const int unitX = 166;
   const int statusW = 68;
   const int statusH = 20;
   const int webY = 24;
@@ -330,12 +329,11 @@ void drawLayoutTEF6686()
   spr.setTextColor(webEnabled ? COLOR_GREEN : COLOR_RED);
   spr.drawString("WEB", statusX + statusW / 2, webY + statusH / 2);
 
-  // Keep the unit box left of WEB so the SSB .000 suffix sits below WEB.
-  spr.drawRoundRect(unitX, unitY, statusW, statusH, 3, COLOR_BLUE);
+  spr.drawRoundRect(statusX, unitY, statusW, statusH, 3, COLOR_BLUE);
   spr.setTextColor(COLOR_GREEN);
   spr.drawString(
     currentMode == FM ? "MHz" : "kHz",
-    unitX + statusW / 2,
+    statusX + statusW / 2,
     unitY + statusH / 2
   );
 
@@ -357,12 +355,9 @@ void drawLayoutTEF6686()
         ? getFreqInputPos() + (pushAndRotate ? 0x80 : 0)
         : 100;
 
-    // Keep the main frequency readout on its original TEF6686 anchor.
-    const int frequencyX = 230;
-
     drawFrequency(
       currentFrequency,
-      frequencyX,
+      230,
       45,
       400,
       400,

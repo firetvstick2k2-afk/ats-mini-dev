@@ -5,7 +5,6 @@
 #include "Utils.h"
 #include "Menu.h"
 #include "Draw.h"
-#include "DebugLog.h"
 
 #include <sys/time.h>
 #include <time.h>
@@ -176,15 +175,6 @@ bool muteOn(uint8_t mode, int x)
     if(PIN_AMP_EN >= 0) digitalWrite(PIN_AMP_EN, HIGH);
   }
 
-  if(mute || unmute)
-  {
-    atsDebugLogf("[AUDIO][MUTE_CHANGE] action=%s mode=%u request=%d logical_status=%u mute_gpio=%d amp_gpio=%d freq_raw=%u radio_mode=%u",
-                 mute ? "MUTE" : "UNMUTE", (unsigned)mode, x,
-                 status ? 1U : 0U, digitalRead(AUDIO_MUTE),
-                 PIN_AMP_EN >= 0 ? digitalRead(PIN_AMP_EN) : -1,
-                 (unsigned)currentFrequency, (unsigned)currentMode);
-  }
-
   switch(mode) {
   case MUTE_MAIN:
     return muted;
@@ -204,20 +194,11 @@ bool sleepOn(int x)
 {
   if((x==1) && !sleep_on)
   {
-    atsDebugLogf("[DISPLAY][SLEEP_ENTER_REQUEST] cmd=%u mode=%u freq_raw=%u layout=%u sleep_mode=%u sleep_timeout=%u volume=%u mute_gpio=%d heap=%u",
-                 (unsigned)currentCmd, (unsigned)currentMode,
-                 (unsigned)currentFrequency, (unsigned)uiLayoutIdx,
-                 (unsigned)sleepModeIdx, (unsigned)currentSleep,
-                 (unsigned)volume, digitalRead(AUDIO_MUTE),
-                 (unsigned)ESP.getFreeHeap());
-    atsDebugFlushTick();
     sleep_on = true;
     ledcWrite(PIN_LCD_BL, 0);
     spr.fillSprite(TFT_BLACK);
     spr.pushSprite(0, 0);
     tft.sleep();
-    atsDebugLogf("[DISPLAY][SLEEP_PANEL_OFF] backlight_pwm=0 sleep_mode=%u", (unsigned)sleepModeIdx);
-    atsDebugFlushTick();
     delay(120); // Allow sleep entry before a possible immediate wake.
 
     // Wait till the button is released to prevent immediate wakeup
@@ -269,18 +250,11 @@ bool sleepOn(int x)
   }
   else if((x==0) && sleep_on)
   {
-    atsDebugLogf("[DISPLAY][WAKE_REQUEST] cmd=%u freq_raw=%u mute_gpio=%d heap=%u",
-                 (unsigned)currentCmd, (unsigned)currentFrequency,
-                 digitalRead(AUDIO_MUTE), (unsigned)ESP.getFreeHeap());
-    atsDebugFlushTick();
     sleep_on = false;
     tft.wakeup();
     delay(120); // Let the panel stabilize before redrawing and enabling the backlight.
     drawScreen();
     ledcWrite(PIN_LCD_BL, currentBrt);
-    atsDebugLogf("[DISPLAY][WAKE_COMPLETE] brightness=%u mute_gpio=%d heap=%u",
-                 (unsigned)currentBrt, digitalRead(AUDIO_MUTE),
-                 (unsigned)ESP.getFreeHeap());
     // Wait till the button is released to prevent the main loop clicks
     pb1.reset(); // Reset the button state (its timers could be stale due to CPU sleep)
     while(pb1.update(digitalRead(ENCODER_PUSH_BUTTON) == LOW, 0).isPressed)

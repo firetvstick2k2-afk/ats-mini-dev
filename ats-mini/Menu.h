@@ -59,14 +59,9 @@
 #define CMD_FTX_DECODER 0x3F00 // FT8/FT4 decoder screen
 #define CMD_RTTY_DECODER 0x4000 // RTTY decoder screen
 #define CMD_CW_DECODER   0x4100 // CW decoder screen
+#define CMD_JS8_MONITOR  0x4200 // Independent JS8 RX audio monitor
 #define CMD_DECODER_MENU 0x4300 // Scrolling decoder submenu
 #define CMD_FM_DX       0x4400 // FM adaptive DX reception screen
-#define CMD_WEATHER     0x4500 // Two-page weather report
-#define CMD_MOON_CALENDAR 0x4600 // Offline moon phase and next moon events
-#define CMD_NEWS 0x4700 // RSS news reader
-#define CMD_BAND_OPENING 0x4A00 // HF band opening monitor
-#define CMD_PROGRAMMES 0x4B00 // Programme submenu
-#define CMD_WIFI_INFO  0x4C00 // Read-only Wi-Fi connection information
 
 
 
@@ -155,7 +150,6 @@ void drawFullScreenMenu(uint16_t cmd);
 void drawVolumePopup();
 void drawBrightnessPopup();
 void drawSettingsPopup(uint16_t cmd);
-void drawRadioMenuPopup(uint16_t cmd);
 void drawDecoderFrequencyMenu();
 void decoderFrequencyOpen();
 bool decoderFrequencyRotate(int16_t enc);

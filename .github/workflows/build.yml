@@ -37,39 +37,42 @@ jobs:
           fi
           echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
 
-      - name: Install Arduino CLI
-        uses: arduino/setup-arduino-cli@v2
+      - name: Cache Arduino packages and libraries
+        uses: actions/cache@v4
         with:
-          version: 1.4.1
+          path: ~/.arduino15
+          key: arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-${{ hashFiles('ats-mini/sketch.yaml', 'ats-mini/arduino-cli.yaml') }}
+          restore-keys: |
+            arduino-${{ runner.os }}-cli-1.4.1-esp32-3.3.12-
 
       - name: Compile OSPI-DE firmware
-        working-directory: ats-mini
-        env:
-          ARDUINO_LIBRARY_ENABLE_UNSAFE_INSTALL: "true"
-        run: |
-          arduino-cli core update-index --config-file arduino-cli.yaml
-          arduino-cli core install esp32:esp32@3.3.12 --config-file arduino-cli.yaml
-          arduino-cli lib install "PU2CLR SI4735@2.1.8" "LovyanGFX@1.2.32" "Async TCP@3.5.0" "ESP Async WebServer@3.12.1" "NTPClient@3.2.1" "ArduinoJson@7.4.2" --config-file arduino-cli.yaml
-          arduino-cli compile --verbose --export-binaries --config-file arduino-cli.yaml --profile esp32s3-ospi --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=verbose --build-path build/esp32.esp32.esp32s3 --build-property "compiler.cpp.extra_flags=-DCONFIG_ASYNC_TCP_STACK_SIZE=32768 -DUSE_ESP_IDF_LOG" --build-property "compiler.c.extra_flags=-DUSE_ESP_IDF_LOG" .
+        uses: arduino/compile-sketches@v1
+        with:
+          cli-version: 1.4.1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          sketch-paths: |
+            - ats-mini
+          fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=8M,PSRAM=opi,CPUFreq=80,USBMode=hwcdc,FlashMode=qio,PartitionScheme=custom,DebugLevel=none
+          cli-compile-flags: |
+            - --profile
+            - esp32s3-ospi
+            - --export-binaries
+          enable-deltas-report: false
+          enable-warnings-report: true
 
-      - name: Prepare firmware and debug artifacts
+      - name: Prepare single firmware binary
         run: |
           mkdir -p artifact
-          BUILD_DIR="ats-mini/build/esp32.esp32.esp32s3"
-          test -s "$BUILD_DIR/ats-mini.ino.bin"
-          test -s "$BUILD_DIR/ats-mini.ino.elf"
-          test -s "$BUILD_DIR/ats-mini.ino.map"
-          cp "$BUILD_DIR/ats-mini.ino.bin" "artifact/Mini_OS_#${{ github.run_number }}.bin"
-          cp "$BUILD_DIR/ats-mini.ino.elf" "artifact/Mini_OS_#${{ github.run_number }}.elf"
-          cp "$BUILD_DIR/ats-mini.ino.map" "artifact/Mini_OS_#${{ github.run_number }}.map"
+          test -s ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin
+          cp ats-mini/build/esp32.esp32.esp32s3/ats-mini.ino.bin "artifact/Mini_OS_#${{ github.run_number }}.bin"
           ls -lh artifact
 
-      - name: Upload firmware and debug artifacts
+      - name: Upload firmware artifact
         uses: actions/upload-artifact@v7
         with:
           name: Mini_OS-build-${{ github.run_number }}-ospi-de
-          path: artifact/*
-          archive: true
+          path: artifact/Mini_OS_#${{ github.run_number }}.bin
+          archive: false
           if-no-files-found: error
           retention-days: 14
 
@@ -112,8 +115,8 @@ jobs:
           SLUG: ${{ needs.build.outputs.slug }}
         run: gh release create "$SLUG" --repo "${{ github.repository }}" --target "${{ github.sha }}" --notes-file release-notes.md
 
-      - name: Upload firmware and debug symbols
+      - name: Upload raw firmware binary
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SLUG: ${{ needs.build.outputs.slug }}
-        run: gh release upload "$SLUG" artifact/* --repo "${{ github.repository }}" --clobber
+        run: gh release upload "$SLUG" artifact/*.bin --repo "${{ github.repository }}" --clobber

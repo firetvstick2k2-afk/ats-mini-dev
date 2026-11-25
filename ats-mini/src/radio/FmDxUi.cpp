@@ -6,48 +6,11 @@
 #include <stdio.h>
 #include <string.h>
 
-extern bool updateFrequency(int newFreq, bool wrap);
-extern bool consumeAbortPending();
-
 namespace {
   bool pageActive = false;
   uint32_t lastRefresh = 0;
   bool stereoPilot = false;
   uint8_t stereoBlend = 0;
-  bool actionsOpen = false;
-  uint8_t actionSelection = 0;
-  uint8_t manualFilter = 3;
-  // SI4735 frequency units are 1 kHz; currentFrequency is displayed as /100.
-  // One unit therefore produces the requested 0.01 MHz mini-step (100.00 -> 100.01).
-  constexpr uint8_t FM_DX_STEP_COUNT = 6;
-  constexpr uint8_t fmDxSteps[FM_DX_STEP_COUNT] = { 1, 5, 10, 20, 50, 100 };
-  uint8_t fmDxStepSelection = 0;
-  bool shortScanRunning = false;
-
-  void fmDxSeekProgress(uint16_t frequency) {
-    currentFrequency = frequency;
-  }
-
-  bool fmDxSeekAbort() {
-    return consumeAbortPending();
-  }
-
-  void runShortScan() {
-    if(currentMode != FM || shortScanRunning) return;
-    shortScanRunning = true;
-    actionsOpen = false;
-    clearStationInfo();
-    rssi = snr = 0;
-    muteOn(MUTE_TEMP, true);
-    consumeAbortPending();
-    rx.seekStationProgress(fmDxSeekProgress, fmDxSeekAbort, 1);
-    updateFrequency(rx.getFrequency(), true);
-    clearStationInfo();
-    identifyFrequency(currentFrequency);
-    muteOn(MUTE_TEMP, false);
-    shortScanRunning = false;
-    lastRefresh = 0;
-  }
 
   constexpr uint16_t BLACK  = 0x0000;
   constexpr uint16_t WHITE  = 0xFFFF;
@@ -113,9 +76,8 @@ bool fmDxUiOpen() {
 
 void fmDxUiExit() {
   if(!pageActive) return;
-  actionsOpen = false;
   pageActive = false;
-  fmDxEndSession();
+  fmDxStop();
   currentCmd = CMD_NONE;
 }
 
@@ -133,46 +95,12 @@ bool fmDxUiTick(uint32_t now) {
   return true;
 }
 
-void fmDxUiRotate(int16_t delta) {
-  if(!pageActive || !delta) return;
-  if(actionsOpen) {
-    int next = static_cast<int>(actionSelection) + (delta > 0 ? 1 : -1);
-    if(next < 0) next = 4;
-    if(next > 4) next = 0;
-    actionSelection = static_cast<uint8_t>(next);
-    return;
-  }
-  const int stepKHz = fmDxSteps[fmDxStepSelection];
-  updateFrequency(static_cast<int>(currentFrequency) + delta * stepKHz, true);
-}
+void fmDxUiRotate(int16_t delta) { (void)delta; }
 
 void fmDxUiClick() {
   if(!pageActive) return;
-  if(!actionsOpen) {
-    actionsOpen = true;
-    actionSelection = 0;
-    return;
-  }
-  switch(actionSelection) {
-    case 0:
-      runShortScan();
-      break;
-    case 1:
-      if(fmDxActive()) fmDxStop();
-      else fmDxStart();
-      break;
-    case 2:
-      if(fmDxActive()) fmDxStop();
-      manualFilter = manualFilter == 4 ? 2 : manualFilter + 1;
-      fmDxSetManualBandwidth(manualFilter);
-      break;
-    case 3:
-      fmDxStepSelection = static_cast<uint8_t>((fmDxStepSelection + 1) % FM_DX_STEP_COUNT);
-      break;
-    case 4:
-      actionsOpen = false;
-      break;
-  }
+  if(fmDxActive()) fmDxStop();
+  else fmDxStart();
 }
 
 void drawFmDxPage() {
@@ -196,10 +124,10 @@ void drawFmDxPage() {
   spr.setTextColor(WHITE, BLACK);
   spr.drawString(frequency, 7, 17, FONT_LARGE);
   spr.setTextColor(GREY, BLACK);
-  spr.drawString("MHz", 103, 32, FONT_SMALL);
+  spr.drawString("MHz", 103, 25, FONT_SMALL);
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(CYAN, BLACK);
-  spr.drawString(fmDxBandwidthLabel(), 313, 20, FONT_SMALL);
+  spr.drawString(fmDxBandwidthLabel(), 313, 27, FONT_SMALL);
 
   // Live stereo state from the SI4735 pilot detector and blend metric.
   char stereoText[20];
@@ -242,22 +170,36 @@ void drawFmDxPage() {
   char piText[8];
   if(pi) snprintf(piText, sizeof(piText), "%04X", static_cast<unsigned>(pi));
   else piText[0] = '\0';
-  drawValueOrDash(piText, 25, 97);
+  drawValueOrDash(piText, 25, 95);
 
   drawLabel("PTY", 76, 97);
   const char *pty = getProgramInfo();
-  drawValueOrDash(pty, 101, 97);
+  drawValueOrDash(pty, 101, 95);
 
-  // RadioText is left-aligned and vertically centered in its dedicated text field.
+  // RadioText gets a fixed two-line area; blank RDS data remains visibly unavailable.
   spr.drawFastHLine(7, 112, 306, LINE);
   drawLabel("RADIO TEXT", 7, 116);
   const char *radioText = getRadioText();
-  spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(radioText && radioText[0] ? WHITE : GREY, BLACK);
-  // Keep the larger 16 px font inside the 306 px text field without spilling into the footer.
-  spr.setClipRect(7, 126, 306, 22);
-  spr.drawString(radioText && radioText[0] ? radioText : "--", 7, 129, FONT_SMALL);
-  spr.clearClipRect();
+  if(radioText && radioText[0]) {
+    char line1[48];
+    char line2[48];
+    size_t len = strlen(radioText);
+    size_t split = len > 47 ? 47 : len;
+    memcpy(line1, radioText, split);
+    line1[split] = '\0';
+    size_t remaining = len > split ? len - split : 0;
+    if(remaining > 47) remaining = 47;
+    if(remaining) memcpy(line2, radioText + split, remaining);
+    line2[remaining] = '\0';
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(WHITE, BLACK);
+    spr.drawString(line1, 7, 128, FONT_DEFAULT);
+    if(line2[0]) spr.drawString(line2, 7, 137, FONT_DEFAULT);
+  } else {
+    spr.setTextDatum(TL_DATUM);
+    spr.setTextColor(GREY, BLACK);
+    spr.drawString("--", 7, 128, FONT_DEFAULT);
+  }
 
   // Footer: selected filter and operation hint.
   spr.drawFastHLine(7, 150, 306, LINE);
@@ -265,30 +207,8 @@ void drawFmDxPage() {
   spr.setTextColor(CYAN, BLACK);
   spr.drawString("FILTER", 7, 155, FONT_DEFAULT);
   spr.setTextColor(WHITE, BLACK);
-  spr.drawString(fmDxBandwidthLabel(), 52, 155, FONT_DEFAULT);
+  spr.drawString(fmDxBandwidthLabel(), 43, 155, FONT_DEFAULT);
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(GREY, BLACK);
-  spr.drawString("CLICK: ACTIONS  HOLD: EXIT", 313, 155, FONT_DEFAULT);
-
-  if(actionsOpen) {
-    spr.fillRoundRect(65, 17, 190, 136, 5, 0x0841);
-    spr.drawRoundRect(65, 17, 190, 136, 5, CYAN);
-    spr.setTextDatum(TC_DATUM);
-    spr.setTextColor(CYAN, 0x0841);
-    spr.drawString("FM-DX ACTIONS", 160, 21, FONT_DEFAULT);
-    char stepText[32];
-    const uint16_t stepValue = fmDxSteps[fmDxStepSelection];
-    snprintf(stepText, sizeof(stepText), "STEP: %u.%02u MHz",
-             static_cast<unsigned>(stepValue / 100),
-             static_cast<unsigned>(stepValue % 100));
-    const char *items[] = { "SHORT SCAN", fmDxActive() ? "PAUSE AUTO" : "START AUTO", "FILTER: CHANGE", stepText, "BACK" };
-    for(uint8_t n=0;n<5;++n) {
-      int y=41+n*21;
-      if(n==actionSelection) {
-        spr.fillRoundRect(75,y-2,170,18,3,0x2104);
-        spr.setTextColor(GREEN,0x2104);
-      } else spr.setTextColor(WHITE,0x0841);
-      spr.drawString(items[n],160,y,FONT_DEFAULT);
-    }
-  }
+  spr.drawString("CLICK: AUTO / PAUSE   HOLD: EXIT", 313, 155, FONT_DEFAULT);
 }

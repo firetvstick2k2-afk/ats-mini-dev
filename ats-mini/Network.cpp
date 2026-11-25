@@ -244,6 +244,9 @@ void netInit(uint8_t netMode)
       break;
   }
 
+  // Use the same hostname for DHCP and mDNS access.
+  WiFi.setHostname("mini-os");
+
   // Initialize WiFi and try connecting to a network
   if(netMode>NET_AP_ONLY && wifiConnect())
   {
@@ -259,7 +262,7 @@ void netInit(uint8_t netMode)
     if(netMode!=NET_SYNC)
       statusShow(
         ("Connected to WiFi network (" + WiFi.SSID() + ")").c_str(),
-        ("IP : " + WiFi.localIP().toString() + " or atsmini.local").c_str()
+        ("IP : " + WiFi.localIP().toString() + " or mini-os.local").c_str()
       );
     else
       statusShow(nullptr);
@@ -269,7 +272,7 @@ void netInit(uint8_t netMode)
     // Show the access point details when it is the available connection.
     statusShow(
       ("Use Access Point " + String(apSSID)).c_str(),
-      ("IP : " + WiFi.softAPIP().toString() + " or atsmini.local").c_str()
+      ("IP : " + WiFi.softAPIP().toString() + " or mini-os.local").c_str()
     );
   }
   else
@@ -288,7 +291,7 @@ void netInit(uint8_t netMode)
     webInit();
 
     // Initialize mDNS
-    MDNS.begin("atsmini"); // Set the hostname to "atsmini.local"
+    MDNS.begin("mini-os"); // Set the hostname to "mini-os.local"
     MDNS.addService("http", "tcp", 80);
   }
 }

@@ -301,7 +301,7 @@ static uint8_t dateTimeMinute;
 static uint8_t dateTimeSecond;
 
 uint8_t uiLayoutIdx = 5;
-static const char *uiLayoutDesc[] = { "Originale", "S-Meter", "Nuova UI", "Waterfall", "Pulito", "TEF6686", "TinyRadio", "HJB", "DAB Style (solo FM)" };
+static const char *uiLayoutDesc[] = { "Originale", "S-Meter", "Nuova UI", "Waterfall", "Pulito", "TEF6686", "TinyRadio", "HJB", "DAB" };
 
 uint8_t usbModeIdx = USB_OFF;
 static const char *usbModeDesc[] = { "Off", "Ad hoc" };
@@ -1830,8 +1830,8 @@ static int drawXXLText(const char *text, int x, int y, uint16_t color, const lgf
     if (umlaut)
     {
       int center = cursor + width / 2;
-      spr.fillCircle(center - 3, y + 2, 1, color);
-      spr.fillCircle(center + 3, y + 2, 1, color);
+      spr.fillCircle(center - 3, y - 2, 1, color);
+      spr.fillCircle(center + 3, y - 2, 1, color);
     }
     cursor += width;
   }

@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <esp32-hal-cpu.h>
 
 extern int16_t currentBFO;
 extern bool updateBFO(int newBFO, bool wrap);
@@ -16,6 +17,10 @@ extern bool updateBFO(int newBFO, bool wrap);
 namespace {
 RttyService service;
 bool pageActive=false;
+bool spectrumMode=false;
+uint32_t savedCpuMHz=80;
+bool spectrumCpuActive=false;
+void setRttySpectrumMode(bool enabled) { if(enabled==spectrumMode) return; spectrumMode=enabled; if(enabled) { savedCpuMHz=getCpuFrequencyMhz(); if(!setCpuFrequencyMhz(160)) { spectrumMode=false; return; } spectrumCpuActive=true; } else if(spectrumCpuActive) { setCpuFrequencyMhz(savedCpuMHz); spectrumCpuActive=false; } }
 bool menuOpen=false;
 bool menuEditing=false;
 bool presetMenuOpen=false;
@@ -53,7 +58,7 @@ constexpr int kBfoLimit=250;
 constexpr int kManualBfoStep=5;
 constexpr float kTargetToneCenterHz=2210.0f;
 constexpr float kAutoDeadbandHz=18.0f;
-constexpr uint8_t kMenuCount=8;
+constexpr uint8_t kMenuCount=9;
 void applyBfo(int value) {
   int low=bfoAtEntry-kBfoLimit, high=bfoAtEntry+kBfoLimit;
   if(value<low) value=low;
@@ -396,7 +401,7 @@ void drawRttyDecoderPage() {
   char status[32];
   snprintf(status,sizeof(status),"%s  %.2f Bd",active?"RTTY":"SEARCH",service.baud());
   DecoderPageLayout::draw(currentFrequency,status,service.text(),
-                           "WAITING FOR RTTY SIGNAL...",active?500:0,500);
+                           "WAITING FOR RTTY SIGNAL...",active?500:0,500,spectrumMode?service.spectrumBins():nullptr);
 
   char footer[80];
   if(bfoAuto) snprintf(footer,sizeof(footer),"CLICK: ACTIONS  LONG PRESS: EXIT");
@@ -429,7 +434,7 @@ void drawRttyDecoderPage() {
     } else {
       const char* labels[kMenuCount] = {
         "RTTY FREQUENCIES", "BFO MODE", "BAUD RATE", "POLARITY",
-        "CLEAR TEXT", "RESET DECODER", "BACK", "EXIT RTTY"
+        "CLEAR TEXT", "RESET DECODER", "SPECTRUM", "BACK", "EXIT RTTY"
       };
       const char* values[kMenuCount] = {
         nullptr, bfoAuto ? "AUTO" : "MANUAL", nullptr, nullptr,

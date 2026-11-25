@@ -3,6 +3,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/semphr.h>
+#include "../DecoderSpectrum.h"
 
 class RttyService {
 public:
@@ -24,6 +25,8 @@ public:
   float toneCenterHz() const { return (toneLowHz_ + toneHighHz_) * 0.5f; }
   bool signal() const { return signal_; }
   const char* text() const { return shownText_; }
+  void updateSpectrum() { spectrum_.update(); }
+  const uint8_t* spectrumBins() const { return spectrum_.bins(); }
 
 private:
   struct AudioChunk { int16_t samples[64]; };
@@ -34,6 +37,7 @@ private:
   void processSamples(const int16_t* samples,size_t count);
   bool estimateTones(const float* samples,float& low,float& high);
 
+  DecoderSpectrum spectrum_;
   QueueHandle_t queue_=nullptr;
   SemaphoreHandle_t engineMutex_=nullptr;
   TaskHandle_t captureTask_=nullptr,workerTask_=nullptr;

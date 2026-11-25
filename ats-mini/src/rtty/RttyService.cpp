@@ -53,6 +53,8 @@ bool RttyService::enter() {
   pinMode(kAudioPin,INPUT);
   xQueueReset(queue_);
   frameCount_=0; dc_=2048.0f;
+  spectrum_.setSampleRate(kSampleRate);
+  spectrum_.reset();
   markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
   signal_=false; signalHoldFrames_=0; shownText_[0]=0; textLength_=0; baud_=45.45f;
   polarity_=RTTY_POL_AUTO;
@@ -205,7 +207,7 @@ void RttyService::processSamples(const int16_t* samples,size_t count) {
   for(size_t i=0;i<count;++i) {
     const float raw=static_cast<float>(samples[i]);
     dc_+=(raw-dc_)*0.001f;
-    frame_[frameCount_++]=(raw-dc_)/2048.0f;
+    const float normalized=(raw-dc_)/2048.0f;\n    frame_[frameCount_++]=normalized;\n    spectrum_.push(normalized);
     if(frameCount_==kFrameSamples) {
       float low=0,high=0;
       const bool found=estimateTones(frame_,low,high);

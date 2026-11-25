@@ -4,6 +4,7 @@
 #include "CwDecoderService.h"
 #include "../audio/AudioCaptureService.h"
 #include "Common.h"
+#include <esp32-hal-cpu.h>
 #include "Menu.h"
 #include "Utils.h"
 #include "../radio/DecoderFrequencyList.h"
@@ -13,6 +14,10 @@
 namespace {
 CwDecoderService service;
 bool pageActive = false;
+bool spectrumMode = false;
+uint32_t savedCpuMHz = 80;
+bool spectrumCpuActive = false;
+void setCwSpectrumMode(bool enabled) { if(enabled==spectrumMode) return; spectrumMode=enabled; if(enabled) { savedCpuMHz=getCpuFrequencyMhz(); if(!setCpuFrequencyMhz(160)) { spectrumMode=false; return; } spectrumCpuActive=true; } else if(spectrumCpuActive) { setCpuFrequencyMhz(savedCpuMHz); spectrumCpuActive=false; } }
 bool menuOpen = false;
 bool menuEditing = false;
 bool frequencyMenuOpen = false;
@@ -34,7 +39,7 @@ bool previewSpeakerWasEnabled = true, previewSpeakerForced = false;
 bool previewSelectionMuted = false;
 bool previewAmpWasEnabled = true, previewAmpForced = false;
 constexpr uint32_t kCwPresetPreviewDelayMs = 2000;
-constexpr uint8_t kMenuCount = 5;
+constexpr uint8_t kMenuCount = 6;
 uint8_t cwPresetCount() { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) if(kDecoderFrequencyPresets[i].decoder==DecoderKind::CW) ++n; return n; }
 const DecoderFrequencyPreset* cwPresetAt(uint8_t wanted) { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) if(kDecoderFrequencyPresets[i].decoder==DecoderKind::CW && n++==wanted) return &kDecoderFrequencyPresets[i]; return nullptr; }
 float cwToneForCurrentFilter() {
@@ -173,7 +178,7 @@ void cwUiClick() {
     return;
   }
   if(frequencyMenuOpen) { if(frequencySelection==0) { restoreCwPreview(); service.resetDecoder(); } else { const DecoderFrequencyPreset* preset=cwPresetAt(frequencySelection-1); bool applied=previewActive && !previewPending; if(!applied && preset) { if(previewTargetBandSnapshotValid && previewTargetBandIndex>=0 && previewTargetBandIndex<getTotalBands()) { bands[previewTargetBandIndex]=previewTargetBandOriginal; previewTargetBandIndex=-1; previewTargetBandSnapshotValid=false; } applied=applyCwPreset(*preset); previewActive=true; } if(applied) commitCwPreview(); else { restoreCwPreview(); statusShow("CW preset failed","No matching receiver band"); } } frequencyMenuOpen=false; return; }
-  switch (menuIndex) { case 0: frequencyMenuOpen=true; frequencySelection=frequencyScroll=0; break; case 1: service.clearText(); break; case 2: service.resetDecoder(); break; case 3: menuOpen=false; break; case 4: cwUiExit(); break; }
+  switch (menuIndex) { case 0: frequencyMenuOpen=true; frequencySelection=frequencyScroll=0; break; case 1: service.clearText(); break; case 2: service.resetDecoder(); break; case 3: setCwSpectrumMode(!spectrumMode); break; case 4: menuOpen=false; break; case 5: cwUiExit(); break; }
 }
 
 bool cwUiTick(uint32_t now) {
@@ -196,7 +201,7 @@ void drawCwDecoderPage() {
   snprintf(status,sizeof(status),"%s  %d WPM",active?"CW":"SEARCH",service.wpm());
   const uint16_t level=service.audioLevel()>500?500:service.audioLevel();
   DecoderPageLayout::draw(currentFrequency,status,service.text(),
-                           "WAITING FOR CW SIGNAL...",level,500);
+                           "WAITING FOR CW SIGNAL...",level,500,spectrumMode?service.spectrumBins():nullptr);
 
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(0x07FF);
@@ -230,9 +235,9 @@ void drawCwDecoderPage() {
                           frequencySelection == 0 ? "CURRENT" : "PRESET");
     } else {
       const char* labels[kMenuCount] = {
-        "CW FREQUENCIES", "CLEAR TEXT", "RESET DECODER", "BACK", "EXIT CW"
+        "CW FREQUENCIES", "CLEAR TEXT", "RESET DECODER", "SPECTRUM", "BACK", "EXIT CW"
       };
-      DecoderMenuUi::draw("CW ACTIONS", labels, nullptr, kMenuCount, menuIndex,
+      const char* values[kMenuCount] = {nullptr,nullptr,nullptr,spectrumMode?"ON":"OFF",nullptr,nullptr};\n      DecoderMenuUi::draw("CW ACTIONS", labels, values, kMenuCount, menuIndex,
                           "TURN: SELECT", "CLICK: OPEN", nullptr, true);
     }
   }

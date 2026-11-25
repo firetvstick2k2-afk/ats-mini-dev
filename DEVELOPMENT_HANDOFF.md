@@ -1498,3 +1498,11 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - FT8/FT4, CW, AudioCaptureService und dessen Sampling/ADC-Pfad blieben unangetastet. RTTY-Service verwendet weiterhin seine bisherige separate 8-kHz-Capture-Task.
 - Kein Firmware-Build, kein Hosttestlauf, keine GitHub Action, kein Flash und kein Hardwaretest durch den Assistenten. Build #98 bleibt die letzte vom Nutzer bestätigte stabile Referenz; RTTY-Upgrade wartet auf Build-/Gerätetest.
 - Zusätzlicher Empfangs-Fix im Tonfinder: Die Eingangssamples sind in `processSamples()` auf ADC-Full-Scale normiert; die bisherige absolute Paar-Power-Schwelle 500 war damit unangemessen hoch. Schwelle auf 2.0 im normalisierten Power-Bereich angepasst. Commit `4a26403ec5450acbdb334eefef93ed91360577fb`. Diese Schwelle ist eine erste technische Skalierung und muss am Gerät auf Fehltrigger/Empfindlichkeit geprüft werden.
+
+
+## CW/RTTY live spectrum — implementation 2026-11-26
+- CW und RTTY erhalten je einen unabhängigen Actions-Menüpunkt SPECTRUM (ON/OFF); Standard bleibt S-Meter (OFF). Die Darstellung ersetzt ausschließlich den bisherigen S-Meter-Bereich.
+- Die Spektrumanalyse verwendet einen begrenzten Sample-Puffer und wird im UI-Tick berechnet. Bei vollem Puffer werden ausschließlich Spectrum-Samples verworfen; Decoder-Samples und bestehende Audio-/Capture-Pfade bleiben unverändert.
+- CPU-Takt: Nur beim Aktivieren von Spectrum auf CW-/RTTY-Seiten wird der vorherige Takt gespeichert und 160 MHz angefordert. Beim Zurückschalten auf S-Meter und beim Verlassen wird der gespeicherte Takt wiederhergestellt. Kein globaler Taktwechsel.
+- FT8/FT4, AudioCaptureService, Decoderkerne und Decoder-Prioritäten bleiben unangetastet. Keine Waterfall-Darstellung.
+- Noch nicht gebaut oder auf Hardware getestet. Nutzer-Build und Empfangstest erforderlich; insbesondere CPU-Restore, Spectrum-Reaktion und Decoder-Empfang prüfen.

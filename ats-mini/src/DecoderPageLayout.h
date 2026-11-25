@@ -7,7 +7,7 @@
 namespace DecoderPageLayout {
 inline void draw(uint32_t frequencyKHz, const char* status,
                  const char* decoded, const char* waitingText,
-                 uint16_t level, uint16_t levelMax) {
+                 uint16_t level, uint16_t levelMax, const uint8_t* spectrum=nullptr) {
   constexpr uint16_t bg=0x0000, blue=0x001F, cyan=0x07FF;
   constexpr int meterSegments=37, yellowStart=25, redStart=32;
   spr.fillSprite(bg);
@@ -31,15 +31,28 @@ inline void draw(uint32_t frequencyKHz, const char* status,
   spr.setTextDatum(TR_DATUM);
   spr.drawString(counter,311,10,FONT_SMALL);
 
-  const int activeSegments=levelMax
-    ? static_cast<int>((static_cast<uint32_t>(level>levelMax?levelMax:level)*meterSegments)/levelMax)
-    : 0;
   spr.drawRect(8,34,304,12,blue);
-  spr.fillRect(10,36,300,8,bg);
-  for(int segment=0;segment<meterSegments;++segment) {
-    const int x=10+segment*8;
-    const uint16_t zoneColor=segment<yellowStart?0x07E0:(segment<redStart?0xFFE0:0xF800);
-    spr.fillRect(x,36,6,8,segment<activeSegments?zoneColor:0x2104);
+  spr.fillRect(9,35,302,10,bg);
+  if(spectrum) {
+    spr.drawFastHLine(10,43,300,0x2104);
+    for(uint8_t bin=0;bin<32;++bin) {
+      const int x=11+static_cast<int>(bin)*9;
+      const int height=spectrum[bin]>9?9:spectrum[bin];
+      if(height) spr.drawLine(x,43,x,43-height,0x07FF);
+      if(bin>0) {
+        const int previous=spectrum[bin-1]>9?9:spectrum[bin-1];
+        spr.drawLine(x-9,43-previous,x,43-height,0x07FF);
+      }
+    }
+  } else {
+    const int activeSegments=levelMax
+      ? static_cast<int>((static_cast<uint32_t>(level>levelMax?levelMax:level)*meterSegments)/levelMax)
+      : 0;
+    for(int segment=0;segment<meterSegments;++segment) {
+      const int x=10+segment*8;
+      const uint16_t zoneColor=segment<yellowStart?0x07E0:(segment<redStart?0xFFE0:0xF800);
+      spr.fillRect(x,36,6,8,segment<activeSegments?zoneColor:0x2104);
+    }
   }
 
   const size_t length=decoded?strlen(decoded):0;

@@ -3,6 +3,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include "CwDecoder.h"
+#include "../DecoderSpectrum.h"
 #include "../audio/AudioCaptureService.h"
 
 class CwDecoderService {
@@ -21,6 +22,8 @@ public:
   bool signal() const { return signal_; }
   uint16_t audioLevel() const { return audioLevel_; }
   int wpm() const { return wpm_; }
+  void updateSpectrum() { spectrum_.update(); }
+  const uint8_t* spectrumBins() const { return spectrum_.bins(); }
 
 private:
   static void onAudioSamples(void* context, const int16_t* samples, size_t count, int64_t utcStartMicros);
@@ -28,6 +31,7 @@ private:
 
   static constexpr uint32_t kSampleRate = AudioCaptureService::kSampleRate;
   CwDecoder decoder_;
+  DecoderSpectrum spectrum_;
   AudioCaptureService* capture_ = nullptr;
   SemaphoreHandle_t mutex_ = nullptr;
   volatile bool active_ = false;

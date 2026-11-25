@@ -33,6 +33,8 @@ bool CwDecoderService::enter(AudioCaptureService& capture, bool wifiOff) {
   devCount_ = 0;
   xSemaphoreGive(mutex_);
 
+  spectrum_.setSampleRate(kSampleRate);
+  spectrum_.reset();
   audioLevel_ = 0;
   signal_ = false;
   lastToneMs_ = 0;

@@ -663,7 +663,7 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 
 ## CW-Decoder-Upgrade — Stand 26.11.2026
 - Build #98 bleibt stabile Referenz; HF Bandmonitor vom Nutzer erfolgreich getestet.
-- CW-Ton folgt jetzt dem aktiven SI4735-SSB-Filter: Device-Index 4 (0.5k) → 500 Hz; Index 5 (1.0k) → 1000 Hz; sonst 700 Hz. Für USB/LSB; bei Öffnen der CW-Seite und nach CW-Preset-Wechsel gesetzt.
+- CW-Ton folgt jetzt dem aktiven SI4735-SSB-Filter: Device-Index 4 (0.5k) → 500 Hz; Index 5 (1.0k) → 1000 Hz; sonst 700 Hz. Für USB/LSB; bei Öffnen der CW-Seite, nach CW-Preset-Wechsel und beim Zurücksetzen einer abgebrochenen Preset-Vorschau gesetzt.
 - Bei Tonänderung werden Decoderzustand und angezeigte CW-Daten zurückgesetzt. Layout und Bedienung bleiben unverändert.
 - Geändert: `src/cw/CwUi.cpp`, `src/cw/CwDecoderService.cpp`; Commits 646c994a162286fd0dac7335821c3f84cf270ae5 und 6036bf31a94911b97960740e2bf3f35a6e2f1350.
 - Host-Test hinzugefügt: `ats-mini/tests/TestCwDecoder.cpp` (synthetische 4-kHz-Signale mit 500/700/1000 Hz und 30 WPM); MIT-Attribution enthalten. Test wurde nicht ausgeführt.

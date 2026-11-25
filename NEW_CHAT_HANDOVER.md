@@ -640,3 +640,11 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Decoder, Audio-Capture, Decoder-Timer und Interrupts wurden nicht absichtlich geändert.
 - Geänderte Dateien: neue Service-`.cpp/.h`; geändert: `Menu.h`, drei Sprach-Menüdateien, `Draw.cpp`, `ats-mini.ino`, `sketch.yaml`.
 - Änderungen sind direkt auf `development` committed. Statische Quelltextprüfung läuft noch. Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt; Kompilierung und Geräteverhalten sind noch nicht verifiziert.
+
+
+## HF Bandmonitor — static pre-build audit (2026-11-25)
+- The pre-build review found and fixed two concrete integration issues directly on `development`: `fetchConditions()` now declares `using Status = BandOpeningService::Status;`; `ArduinoJson (7.4.2)` is now also listed in the `esp32s3-qspi` profile.
+- Fix commits: `eff1c57276e635ce305b1b0145ca713a46afaafe` (Status type), `28b701ae7f59df138986f1baa00f9a6c58a3643a` (QSPI dependency).
+- Static re-check: the DE/EN/IT menu action calls `bandOpeningUiOpen()`; Draw dispatch exists; encoder page navigation, click refresh, long-press exit, and timeout exemption are present.
+- No `netInit()`/`netStop()` calls in the Bandmonitor service; no logger calls. Existing decoder/audio files were not changed.
+- Still pending: actual compiler and runtime/hardware validation. No build, Actions run, flash, or hardware test was started.

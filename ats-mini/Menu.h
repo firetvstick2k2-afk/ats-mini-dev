@@ -63,6 +63,7 @@
 #define CMD_DECODER_MENU 0x4300 // Scrolling decoder submenu
 #define CMD_FM_DX       0x4400 // FM adaptive DX reception screen
 #define CMD_PROGRAMMES  0x4B00 // Dedicated extra programmes submenu
+#define CMD_WIFI_INFO  0x4C00 // Read-only Wi-Fi connection information
 
 
 

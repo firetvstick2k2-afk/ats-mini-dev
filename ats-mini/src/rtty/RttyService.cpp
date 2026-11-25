@@ -54,7 +54,7 @@ bool RttyService::enter() {
   xQueueReset(queue_);
   frameCount_=0; dc_=2048.0f;
   markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
-  signal_=false; shownText_[0]=0; textLength_=0; baud_=45.45f;
+  signal_=false; signalHoldFrames_=0; shownText_[0]=0; textLength_=0; baud_=45.45f;
   polarity_=RTTY_POL_AUTO;
   xSemaphoreTake(engineMutex_,portMAX_DELAY);
   rtty_init(); rtty_set_baud(baud_); rtty_set_polarity(static_cast<RttyPolarity>(polarity_));
@@ -68,12 +68,12 @@ void RttyService::exit() {
   if(queue_) xQueueReset(queue_);
   if(engineMutex_) {
     xSemaphoreTake(engineMutex_,portMAX_DELAY);
-    frameCount_=0; signal_=false;
+    frameCount_=0; signal_=false; signalHoldFrames_=0;
     markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
     rtty_set_tones(0,0);
     xSemaphoreGive(engineMutex_);
   } else {
-    frameCount_=0; signal_=false;
+    frameCount_=0; signal_=false; signalHoldFrames_=0;
     markHz_=spaceHz_=toneLowHz_=toneHighHz_=0;
   }
 }
@@ -114,7 +114,7 @@ void RttyService::resetDecoder() {
   rtty_set_polarity(static_cast<RttyPolarity>(polarity_));
   if(toneLowHz_>0 && toneHighHz_>0) rtty_set_tones(toneLowHz_,toneHighHz_);
   frameCount_=0;
-  signal_=false;
+  signal_=false; signalHoldFrames_=0;
   markHz_=spaceHz_=0;
   xSemaphoreGive(engineMutex_);
   clearText();
@@ -206,14 +206,18 @@ void RttyService::processSamples(const int16_t* samples,size_t count) {
     frame_[frameCount_++]=(raw-dc_)/2048.0f;
     if(frameCount_==kFrameSamples) {
       float low=0,high=0;
-      if(estimateTones(frame_,low,high)) {
+      const bool found=estimateTones(frame_,low,high);
+      if(found) {
         if(toneLowHz_==0 || fabsf(low-toneLowHz_)>24 || fabsf(high-toneHighHz_)>24) {
           rtty_set_tones(low,high);
           toneLowHz_=low; toneHighHz_=high;
         }
-        signal_=true;
-      } else signal_=false;
-      if(rtty_mark_hz()>0) {
+        signalHoldFrames_=8; // RESONIK keeps decoding through short fades (~1 s)
+      } else if(signalHoldFrames_>0) {
+        --signalHoldFrames_;
+      }
+      signal_=signalHoldFrames_>0;
+      if(signal_ && rtty_mark_hz()>0) {
         rtty_process(frame_,kFrameSamples);
         markHz_=rtty_mark_hz(); spaceHz_=rtty_space_hz();
       }

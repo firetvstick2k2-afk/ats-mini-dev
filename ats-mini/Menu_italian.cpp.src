@@ -1947,7 +1947,8 @@ void drawFullScreenMenu(uint16_t cmd)
     if(item >= count) break;
     const int y = 40 + row * 36;
     const bool active = item == selected;
-    const char *label = settingsPage ? settingsXXL[item] :
+    const int settingsItem = item == 0 ? -1 : (item <= MENU_ZOOM ? item - 1 : item);
+    const char *label = settingsPage ? (item == 0 ? "INDIETRO" : settingsXXL[settingsItem]) :
       (spectrumPage ? spectrumMenuXXL[item] :
        (decoderPage ? decoderMenuXXL[item] :
         (programmesPage ? programmesMenu[item] : menuXXL[item])));

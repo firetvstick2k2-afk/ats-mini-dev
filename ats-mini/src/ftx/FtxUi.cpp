@@ -1059,7 +1059,8 @@ void drawFtxDecoderPage()
   if(ftxActionsOpen) {
     const int menuX=20, menuY=8, menuW=280, menuH=154;
     spr.fillRect(menuX,menuY,menuW,menuH,bg);
-    spr.drawRect(menuX,menuY,menuW,menuH,blue);
+    spr.drawRect(menuX,menuY,menuW,menuH,cyan);
+    spr.drawRect(menuX+1,menuY+1,menuW-2,menuH-2,blue);
     spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
     spr.setTextDatum(TL_DATUM);
     spr.setTextColor(cyan);
@@ -1077,8 +1078,8 @@ void drawFtxDecoderPage()
                  static_cast<unsigned>(preset->frequencyKHz/1000),
                  static_cast<unsigned>(preset->frequencyKHz%1000));
         const int y=menuY+29+row*20;
-        if(index==ftxPresetSelection) spr.fillRect(menuX+7,y-3,menuW-14,19,blue);
-        spr.setTextColor(index==ftxPresetSelection?0xFFFF:0xBDF7);
+        if(index==ftxPresetSelection) spr.drawRoundRect(menuX+7,y-3,menuW-14,19,2,cyan);
+        spr.setTextColor(0xFFFF);
         spr.drawString(label,menuX+13,y);
         if(index==ftxPresetSelection && (ftxPresetPreviewPending || ftxPresetPreviewActive)) {
           spr.setTextDatum(TR_DATUM);
@@ -1108,8 +1109,8 @@ void drawFtxDecoderPage()
       spr.drawString(pageMode==FtxMode::FT4 ? "FT4 ACTIONS" : "FT8 ACTIONS",menuX+12,menuY+7);
       for(uint8_t i=0;i<count;++i) {
         const int y=menuY+27+i*14;
-        if(i==ftxMenuSelection) spr.fillRect(menuX+7,y-2,menuW-14,15,blue);
-        spr.setTextColor(i==ftxMenuSelection?0xFFFF:0xBDF7);
+        if(i==ftxMenuSelection) spr.drawRoundRect(menuX+7,y-2,menuW-14,15,2,cyan);
+        spr.setTextColor(0xFFFF);
         spr.drawString(labels[i+(pageMode==FtxMode::FT4?3:0)],menuX+14,y);
       }
     }

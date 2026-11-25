@@ -1011,3 +1011,13 @@ This is still not a live receiver: no timing/frequency search, slot acquisition,
 - Labels für den Sonderindex: Deutsch `WLAN-INFO`, Englisch `Wi-Fi Info`, Italienisch `Info Wi-Fi`.
 - Keine Änderungen an `Network.cpp`, `Draw.cpp`, WLAN-Verbindungslogik, Flight Radar, JS8 oder FT8/FT4.
 - Noch kein Build, keine GitHub Actions und kein Hardwaretest durch ChatGPT gestartet. Nutzer muss den Firmware-Build und den Encoder-/Popup-Ablauf am Gerät prüfen. JS8 bleibt bis zur Nutzerbestätigung pausiert; FT8/FT4 bleibt unangetastet.
+
+
+## Aktueller Stand 2026-11-25 – Reduzierter Decoder-Teststand
+
+- NAVTEX und PSK31 wurden aus `development` entfernt (Menü, UI-/Event-Integration, Decoder-/Service-/UI-Dateien).
+- JS8 bleibt entfernt; nicht erneut integrieren. Frühere JS8-Abschnitte in diesem Dokument sind nur historische Notizen und nicht der aktuelle Codebestand.
+- Beibehalten: CW, RTTY, FT8/FT4, WLAN, Hauptmenü, Programme, Layouts und übrige Radiofunktionen.
+- `AudioCaptureService` und `FtxDecoderService` wurden nicht geändert. FT8/FT4 bleibt geschützt.
+- Nächster Schritt: Nutzer startet manuell den nächsten OSPI-DE-Build und testet FT8 mit USB-Log sowie passenden ELF-/MAP-Dateien. Vor der Aufforderung zum Build Actions-Historie prüfen und die nächste Build-Nummer nennen.
+- Kein Build, Actions-Lauf oder Gerätetest wurde von ChatGPT gestartet.

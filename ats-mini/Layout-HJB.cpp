@@ -152,7 +152,7 @@ void drawLayoutHJB()
   else if(currentMode == FM)
     spr.drawFloat(currentFrequency / 100.0f, 2, 160, 53);
   else
-    spr.drawNumber(currentFrequency, 160, 53);
+    spr.drawNumber(isSSB() ? (currentFrequency + currentBFO / 1000) : currentFrequency, 160, 53);
 
 
   const char *station = getStationName();

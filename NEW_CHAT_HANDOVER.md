@@ -589,3 +589,11 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Statischer Integrationsaudit abgeschlossen: Funktions-/Service-Aufrufe geprüft, alle verwendeten Service-Methoden sind in den aktuellen Headern vorhanden, Klammern ausgeglichen. Kein Compilerlauf, keine GitHub Action, kein Flash und kein Hardwaretest gestartet.
 - Letzter Quellcommit: 8641dfdb32fdc3f5f6130a02ad86fb04134b96ff. CW und JS8 verlassen ihre Decoder per Langdruck passend zum Footer. DEVELOPMENT_HANDOFF.md: 94709367a36503be3017450fe16b79a4b470903f; NEW_CHAT_HANDOVER.md: aktualisiert in diesem Folgeschritt.
 - Nächster Schritt: manueller OSPI-DE-Build durch den Nutzer, danach Hardware-Härtetest. Erst nach erfolgreichem UI-Test weitere Funktionsänderungen einzeln zurückholen und FT8 nach jedem Schritt auf Resets prüfen.
+
+
+## WLAN- und EiBi-Pop-ups — 2026-11-25
+- WLAN-Info als zentriertes, read-only Fenster über dem aktiven Radiolayout zurückgeholt; Klick schließt es zur WLAN-Auswahl. Menüoption in EN/DE/IT.
+- Statusmeldungen (auch EiBi) erscheinen als kompakte, mittige Overlays statt als bloßer Text auf dem Layout. Radiohintergrund bleibt rundherum sichtbar.
+- WLAN-Info bleibt bis zum Klick geöffnet. Volume/Helligkeit und andere Einstellungs-Pop-ups bleiben unverändert.
+- FT8/FT4, AudioCapture, EIBI.cpp und Layout-Renderer nicht geändert. Nur Quelltextprüfung, kein Build/Flash/Hardwaretest.
+- Änderungen auf development: Draw.cpp, Menu.h, Menu_english.cpp.src, Menu_german.cpp.src, Menu_italian.cpp.src, ats-mini.ino. DEVELOPMENT_HANDOFF.md ergänzt.

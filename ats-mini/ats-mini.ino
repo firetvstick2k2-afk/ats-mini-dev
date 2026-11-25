@@ -28,6 +28,7 @@
 #include "src/cw/CwUi.h"
 #include "src/radio/FmDxController.h"
 #include "src/radio/FmDxUi.h"
+#include "src/radio/BandOpeningService.h"
 #include "StationLogoClient.h"
 
 
@@ -688,6 +689,16 @@ void loop()
   ButtonTracker::State pb1st = pb1.update(digitalRead(ENCODER_PUSH_BUTTON) == LOW);
   if(!pb1st.isPressed) decoderMenuLongPressHandled = false;
 
+  // Handle HF Bandmonitor exit immediately after sampling the physical button.
+  if(currentCmd == CMD_BAND_OPENING && pb1st.isLongPressed && !decoderMenuLongPressHandled)
+  {
+    decoderMenuLongPressHandled = true;
+    pb1st.wasClicked = pb1st.wasShortPressed = false;
+    bandOpeningUiExit();
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime = millis();
+  }
+
   // Handle FM DX screen exit immediately after sampling the physical button.
   if(currentCmd == CMD_FM_DX && pb1st.isLongPressed && !decoderMenuLongPressHandled)
   {
@@ -802,6 +813,17 @@ void loop()
   // block while retuning; avoid starting that work while the physical button is held.
   if(currentCmd == CMD_DUAL_RX && digitalRead(ENCODER_PUSH_BUTTON) != LOW && dualRxTick(currentTime))
     needRedraw = true;
+
+  if(currentCmd == CMD_BAND_OPENING)
+    bandOpeningService.update(getWiFiStatus() == 2);
+
+  if(currentCmd == CMD_BAND_OPENING && encCount)
+  {
+    bandOpeningUiRotate(encCount);
+    needRedraw = true;
+    elapsedSleep = elapsedCommand = currentTime;
+    encCount = encCountAccel = 0;
+  }
 
   if(currentCmd == CMD_FM_DX && encCount)
   {
@@ -975,6 +997,14 @@ void loop()
       clickFreqKeypad(true);
       needRedraw = true;
     }
+    // The HF Bandmonitor uses a click to request a manual refresh.
+    else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_BAND_OPENING)
+    {
+      bandOpeningUiClick();
+      needRedraw = true;
+      elapsedSleep = elapsedCommand = currentTime = millis();
+      pb1st.wasClicked = pb1st.wasShortPressed = false;
+    }
     // The native Spectrum keypad handles its own encoder clicks below.
     // Do not let the generic click handler clear CMD_SPECTRUM_INPUT first.
     else if((pb1st.wasClicked || pb1st.wasShortPressed) && currentCmd == CMD_FM_DX)
@@ -1128,7 +1158,7 @@ void loop()
 
   if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
   {
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_WIFI_INFO && currentCmd != CMD_FM_DX)
+    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_DUAL_RX && currentCmd != CMD_SPECTRUM && currentCmd != CMD_SPECTRUM_MENU && currentCmd != CMD_SPECTRUM_INPUT && currentCmd != CMD_ALL_SPECTRUM && currentCmd != CMD_ALL_SPECTRUM_INPUT && currentCmd != CMD_DECODER_FREQUENCIES && currentCmd != CMD_FTX_DECODER && currentCmd != CMD_RTTY_DECODER && currentCmd != CMD_CW_DECODER && currentCmd != CMD_WIFI_INFO && currentCmd != CMD_FM_DX && currentCmd != CMD_BAND_OPENING)
     {
       currentCmd = CMD_NONE;
       needRedraw = true;

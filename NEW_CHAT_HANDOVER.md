@@ -554,3 +554,14 @@ The owner explicitly chose a fully independent implementation and preservation o
 - Do not restore recent features in bulk. Reintroduce changes one isolated step at a time, with user testing between steps. The first planned addition is the complete current menu/UI design only: main menu, all relevant submenus, decoder category/section and the FT8/FT4 decoder Actions menu, matching the current design one-to-one. This is a future step; it has NOT yet been applied to the Build #27 tree.
 - Keep the Build #27 FT8/FT4 decoder implementation protected. Do not modify `ats-mini/src/ftx/FtxDecoderService.cpp` or decoder DSP/logic as part of menu restoration. Only menu presentation/navigation files may be considered, after inspecting exact Build #27 and pre-rollback source versions.
 - No build or GitHub Actions run was triggered by the assistant. The user will initiate and flash builds manually. Before asking for the next build, inspect Actions history and identify the next run number.
+
+
+## UI- und Layout-Rückholung auf Build-#27-Basis — 2026-11-25
+- Ausgangsbasis bleibt der bekannte stabile Build-#27-Quellstand. Ausschließlich Branch `development`; `main` und `backup/development-2026-11-24` bleiben unangetastet.
+- Erste reine Layout-Portierung abgeschlossen: `ats-mini/Layout-HJB.cpp` und `ats-mini/Layout-TEF6686.cpp` wurden auf den dokumentierten UI-Stand vor dem Build-#27-Rollback zurückgeführt. Referenz-Stand: `e045eff3c77fb6c20274cc833d2921ac8f51da09`.
+- Commits: `a3bdfda3b3b9fa66d92fd92df68ad0c4894f4ebd` (HJB), `9887f8dd2284046bb187f575370c1fb4da65e976` (TEF6686).
+- Die Änderungen betreffen die Layoutdarstellung; sie sind nicht kompiliert oder auf Hardware getestet. Kein Build und keine GitHub-Action wurde gestartet.
+- UI-Portierung ist ausdrücklich noch NICHT vollständig. Als Nächstes Menü-Hauptansicht, Untermenüs, Decoder-Aktionsmenüs und weitere reine Darstellungsänderungen anhand der Commit-Historie prüfen und einzeln portieren. Keine vollständigen Mischdateien übernehmen, wenn sie gleichzeitig Audio-, Decoder- oder sonstige Funktionsänderungen enthalten.
+- Frequenzdarstellung besonders prüfen: Positionierung der Ziffern/führenden Nullen sowie MHz/kHz-Einheiten und layoutbezogene Frequenzanker. Die bereits im Build-#27-Baseline vorhandene Änderung `011ec9d26f0b98fce1016f7e4b86eae5ddc55dc4` ist dort bereits enthalten; nicht doppelt anwenden.
+- FT8/FT4-Decoderlogik und `ats-mini/src/ftx/FtxDecoderService.cpp` bleiben geschützt und unverändert. AudioCapture, ADC-Konfiguration, CPU-Takt und Partitionstabelle nicht ändern.
+- Teststrategie: Nach jeder einzelnen UI-/Funktionsrückholung baut und testet der Nutzer manuell. FT8 nach jeder Änderung laufen lassen. Bei Reset nach zuvor stabilem Stand den zuletzt integrierten Commit direkt mit dem vorherigen stabilen Stand vergleichen; mögliche Wechselwirkungen anschließend gezielt isolieren.

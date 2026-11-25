@@ -627,3 +627,16 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - MIT-Lizenz und Herkunft aller neuen Komponenten prüfen; keine GPL-Komponenten übernehmen.
 - Ausschließlich development; main nur bei ausdrücklicher Anweisung „Bitte Main überschreiben“. Vor jeder Änderung aktuelle Datei und SHA abrufen.
 - Keine Builds/Actions/Flash/Hardwaretests ohne ausdrücklichen Auftrag.
+
+
+## HF Bandmonitor — Integration committed, build pending (25.11.2026)
+- Nutzerbestätigung: Die vorhandenen Datenquellen, Bewertungen und Schätzungen sind genau so gewollt; insbesondere UKW/FM aus dem 2-m-Status. Fachliche Auswertung nicht verändern.
+- Eigenständiges Modul `ats-mini/src/radio/BandOpeningService.cpp/.h` aus dem Backup selektiv in `development` integriert.
+- Menüpunkt `HF BANDMONITOR` unter `PROGRAMME` in Deutsch, Englisch und Italienisch; Reihenfolge: Decoder, HF Bandmonitor, FM-DX, Zurück.
+- Eigene Anzeige und Bedienung: Drehgeber blättert durch 15 Seiten, Klick fordert Aktualisierung an, langer Druck beendet den Monitor.
+- WLAN wird ausschließlich über den vorhandenen Status (`getWiFiStatus() == 2`) gelesen. Keine Änderungen an `netInit()`, `netStop()` oder der bestehenden WLAN-Verwaltung.
+- **Keine Logging-Geschichten:** Sämtliche übernommenen Debug-/Standard-Logger-Aufrufe und die Logger-Abhängigkeit wurden entfernt.
+- ArduinoJson 7.4.2 wurde beiden Build-Profilen in `ats-mini/sketch.yaml` hinzugefügt (MIT-Lizenz).
+- Decoder, Audio-Capture, Decoder-Timer und Interrupts wurden nicht absichtlich geändert.
+- Geänderte Dateien: neue Service-`.cpp/.h`; geändert: `Menu.h`, drei Sprach-Menüdateien, `Draw.cpp`, `ats-mini.ino`, `sketch.yaml`.
+- Änderungen sind direkt auf `development` committed. Statische Quelltextprüfung läuft noch. Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt; Kompilierung und Geräteverhalten sind noch nicht verifiziert.

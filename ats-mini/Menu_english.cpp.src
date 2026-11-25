@@ -2278,7 +2278,7 @@ bool decoderFrequencyBack()
     decoderPresetView = false;
     return true;
   }
-  currentCmd = CMD_MENU;
+  currentCmd = CMD_DECODER_MENU;
   return true;
 }
 

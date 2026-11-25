@@ -37,7 +37,15 @@ constexpr uint32_t kCwPresetPreviewDelayMs = 2000;
 constexpr uint8_t kMenuCount = 5;
 uint8_t cwPresetCount() { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) if(kDecoderFrequencyPresets[i].decoder==DecoderKind::CW) ++n; return n; }
 const DecoderFrequencyPreset* cwPresetAt(uint8_t wanted) { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) if(kDecoderFrequencyPresets[i].decoder==DecoderKind::CW && n++==wanted) return &kDecoderFrequencyPresets[i]; return nullptr; }
-bool applyCwPreset(const DecoderFrequencyPreset& preset) { int best=-1; uint16_t span=UINT16_MAX; for(int i=0;i<getTotalBands();++i) if(bands[i].bandType!=FM_BAND_TYPE && preset.frequencyKHz>=bands[i].minimumFreq && preset.frequencyKHz<=bands[i].maximumFreq) { uint16_t width=bands[i].maximumFreq-bands[i].minimumFreq; if(width<span){span=width;best=i;} } if(best<0)return false; bands[best].currentFreq=static_cast<uint16_t>(preset.frequencyKHz); bands[best].bandMode=preset.modulation; bands[best].bandwidthIdx=preset.bandwidthChoice; selectBand(static_cast<uint8_t>(best),false); currentMode=preset.modulation; currentFrequency=rx.getFrequency(); service.resetDecoder(); return true; }
+float cwToneForCurrentFilter() {
+  if (currentMode == USB || currentMode == LSB) {
+    const uint8_t filter = getCurrentBandwidth()->idx;
+    if (filter == 4) return 500.0f;
+    if (filter == 5) return 1000.0f;
+  }
+  return 700.0f;
+}
+bool applyCwPreset(const DecoderFrequencyPreset& preset) { int best=-1; uint16_t span=UINT16_MAX; for(int i=0;i<getTotalBands();++i) if(bands[i].bandType!=FM_BAND_TYPE && preset.frequencyKHz>=bands[i].minimumFreq && preset.frequencyKHz<=bands[i].maximumFreq) { uint16_t width=bands[i].maximumFreq-bands[i].minimumFreq; if(width<span){span=width;best=i;} } if(best<0)return false; bands[best].currentFreq=static_cast<uint16_t>(preset.frequencyKHz); bands[best].bandMode=preset.modulation; bands[best].bandwidthIdx=preset.bandwidthChoice; selectBand(static_cast<uint8_t>(best),false); currentMode=preset.modulation; currentFrequency=rx.getFrequency(); service.setTone(cwToneForCurrentFilter()); service.resetDecoder(); return true; }
 void restoreCwPreviewAudio() {
   if(previewSpeakerForced || previewSelectionMuted) {
     digitalWrite(AUDIO_MUTE,previewSpeakerWasEnabled?LOW:HIGH);
@@ -122,6 +130,7 @@ bool cwUiOpen() {
     statusShow("CW decoder start failed", "Check Wi-Fi and audio input");
     return false;
   }
+  service.setTone(cwToneForCurrentFilter());
   menuOpen = false;
   menuEditing = false;
   frequencyMenuOpen = false;

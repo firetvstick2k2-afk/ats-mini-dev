@@ -645,3 +645,10 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
 
 Aktueller Stand: Das About-/Über-Menü wurde aus dem Backup wiederhergestellt und der Renderer-Fallstrick in `Draw.cpp` behoben. Nutzer-Build/Hardwaretest steht aus.
+
+
+## 2026-11-25 – Neue Referenz und CW/RTTY-Feinschliff
+- Build #96 ist laut Nutzer erfolgreich abgeschlossen und funktionsfähig; als neue funktionierende Referenz behandeln.
+- Nächste kleine optische Korrektur: gemeinsame CW-/RTTY-Kopfzeile in `ats-mini/src/DecoderPageLayout.h`; Status-/Audio-Information 20 px nach links verschoben (Anker x=205 → x=185).
+- Keine Decoder-, Audio-, FT8/FT4- oder AudioCaptureService-Änderungen. Build und Gerätetest der Layoutkorrektur noch ausstehend.
+- Code-Commit: bc1e7cd7979ff3d0c8eddb0912ad4cb39f8573ff.

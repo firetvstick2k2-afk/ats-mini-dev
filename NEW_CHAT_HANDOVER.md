@@ -624,3 +624,14 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - JS8 wurde auf ausdrücklichen Nutzerwunsch aus dem Firmware-Build und den Menüs entfernt. Historische JS8-Entwicklungsnotizen in diesem Handoff sind Archiv und keine aktive Roadmap.
 - Arbeitsregeln unverändert: ausschließlich `development`; vor Änderungen Dateien und SHAs frisch abrufen; `main` niemals ohne ausdrückliche Freigabe ändern; FT8/FT4 nicht anfassen; nach jeder sinnvollen Änderung beide Handoff-Dateien aktuell halten.
 - Es wurde kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
+
+
+## Decoder-Preset-Vorschau bleibt beim Encoder-Drehen bedienbar — 2026-11-25
+- Einheitliches Verhalten für CW-, FT8-, FT4- und RTTY-Presets sowie für die Preset-Auswahl unter Decoder → Decoder-Frequencies.
+- Beim Weiterdrehen während einer hörbaren Vorschau wird der Lautsprecherpfad sofort stummgeschaltet. Die eigentliche Rückabstimmung wird nicht mehr bei jedem Encoder-Schritt synchron ausgeführt.
+- Die neue Frequenz wird nach zwei Sekunden Encoder-Ruhe abgestimmt und die Vorschau wieder hörbar gemacht. Beim Bestätigen während dieser Wartezeit wird direkt das aktuell markierte Preset übernommen.
+- Bei CW/FT8/FT4/RTTY bleiben ursprünglicher VFO, BFO und die vorherigen Band-Speicherwerte bis zum Bestätigen bzw. Verlassen gesichert. Beim Wechsel zwischen Presets wird nur der vorherige temporäre Band-Speicher zurückgesetzt; die Rückkehr zum ursprünglichen VFO erfolgt erst beim Abbrechen/Verlassen.
+- In der allgemeinen Decoder-Frequency-Auswahl wird die alte Vorschau beim Drehen sofort stummgeschaltet und nach dem zweisekündigen Abstimmen der neuen Auswahl wieder in den vorherigen Lautsprecherzustand zurückgesetzt.
+- Geändert: `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/cw/CwUi.cpp`, `ats-mini/src/rtty/RttyUi.cpp` sowie die Menüquellen EN/DE/IT.
+- Nur UI-/Preset-Vorschau-Steuerung und Lautsprecher-Mute; keine Änderungen an FT8/FT4-DSP, Decoder-Service, Audio-Capture oder FT8/FT4-Decodierlogik.
+- Quelltextänderungen committed auf `development`; statische Quelltextprüfung noch ausstehend. Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.

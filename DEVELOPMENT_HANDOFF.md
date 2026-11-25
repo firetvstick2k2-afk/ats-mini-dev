@@ -1167,3 +1167,19 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - `AudioCaptureService.h`, FT8/FT4-Decoderdateien und sonstige Decoderlogik wurden nicht verändert.
 - Änderungen ausschließlich auf `development`; `main` und Backup bleiben unangetastet.
 - Noch kein Build gestartet und kein Hardwaretest durchgeführt. Vor dem nächsten manuellen Build Actions-Nummer prüfen; BIN, ELF und MAP müssen aus demselben Lauf stammen.
+
+## 2026-11-25 – Build #90: FT8-Reset erneut im System-Timer bestätigt
+
+- Nutzer-Hardwaretest Build #90: FT8 startet um 07:13:12.805; DSP initialisiert um 07:13:12.837. Reboot erfolgt um 07:14:01.057, also ca. 48,2 Sekunden nach FT8-Start.
+- Die frühere Arduino-Warnung `Pin is not configured as analog channel` ist im vorliegenden Mitschnitt nicht mehr vorhanden. Die Entfernung von `analogSetPinAttenuation(kPin, ADC_11db)` hat den Reset nicht beseitigt; ein kausaler Zusammenhang mit der früheren Warnung ist damit nicht belegt.
+- Build-Zuordnung bestätigt: Actions Run-ID `45557561983`, Build #90, Commit `29a525b70719d6dad30c88b8cc116d6be9913c5a`, Artefakt-ID `14996273920`. Das Artefakt enthält BIN, ELF und MAP. ELF-SHA256: `35d1c24d40059d342fca89fe7fbe83558c1071ba3b7ca7cf04d12bb04020598a`; stimmt exakt mit dem Log-Präfix `35d1c24d4` überein.
+- Symbolisierter Build-#90-Backtrace:
+  - `0x40389daf`: `systimer_hal_get_counter_value` / `systimer_ll_is_counter_value_valid`
+  - `0x40377b4e`: `esp_timer_impl_get_time`
+  - `0x420310db`: `AudioCaptureService::sampleTask()`, `AudioCaptureService.cpp:124`
+  - `0x42031281`: `AudioCaptureService::taskEntry()`, Zeile 76
+  - `0x403850bd`: FreeRTOS `vPortTaskWrapper`
+- Zeile 124 ist erneut die enge Warteschleife `while (esp_timer_get_time() < next) taskYIELD();`. Damit ist derselbe Absturzkontext wie bei Build #89 belegt. Der eigentliche Panic-/Exception-Kopf mit Exception-Typ und Registern fehlt auch diesmal; die konkrete Fehlerursache ist noch offen.
+- Im Mitschnitt steht ausdrücklich `Extra USB-LOG is OFF`. Daher sind die neuen `atsDebugLogf()`-Audio-Task-Meldungen (2-Sekunden-Frühdiagnose, kumulative Samples, Heap und Stack) in diesem Test nicht sichtbar. Der Reset-Grund erscheint dank Standard-USB-Pfad dennoch.
+- Nächster Test sollte USB-LOG in den Geräteeinstellungen aktivieren, damit die Audio-Task-Gesundheitsmeldungen vor dem Reset erfasst werden. Zusätzlich vollständige Panic-Ausgabe sichern. Keine weitere Codeänderung vor Auswertung dieser Daten; FT8/FT4-Decoder bleibt unangetastet.
+- Hardwaretest durch Nutzer; Assistent hat nur das vorhandene Build-Artefakt analysiert. Kein neuer Build gestartet.

@@ -1157,3 +1157,13 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - **TinyRadio-Layout:** bereits seit längerer Zeit integriert – ERLEDIGT; kein aktiver TODO-Punkt.
 - **Band Opening Monitor:** im Build-#89-Quellstand enthalten. Quellen und Zuordnungen wurden geprüft; separater Hardwaretest bleibt offen. Insbesondere wird UKW/FM aus dem 2-m-Status abgeleitet und als `2m ~` gekennzeichnet. Details siehe Abschnitt „Band Opening Monitor – aktueller Quellstand Build #89“.
 - **GNBD-Miniradio-Layout:** bleibt als zukünftige Layoutidee vorgemerkt; nicht mit dem bereits integrierten TinyRadio-Layout verwechseln.
+
+## 2026-11-25 – Audio-Resetdiagnose: ADC-Attenuation isoliert und Frühdiagnose erweitert
+
+- Ausgangspunkt ist Build #89: Der symbolisierte Backtrace führt in `AudioCaptureService::sampleTask()` beim System-Timerzugriff. Der konkrete Panic-Typ war im bisherigen Mitschnitt nicht enthalten.
+- Auf `development` wurde ausschließlich die explizite Zeile `analogSetPinAttenuation(kPin, ADC_11db)` aus `AudioCaptureService.cpp` entfernt. `analogReadResolution(12)`, Pin 11, Sample-Rate, Task-Priorität, Sampling-Schleife und Decoder bleiben unverändert. Damit wird zunächst genau die Attenuation-Konfiguration isoliert; es ist kein vollständiger Rollback von Commit `3794ced`.
+- Die Audio-Task-Gesundheitsmeldung wird während der ersten 20 Sekunden alle 2 Sekunden ausgegeben, danach alle 15 Sekunden. Sie enthält zusätzlich Laufzeit, Sample-Index und Blockfüllstand sowie Heap- und Stack-Werte. Das soll insbesondere den bisherigen Reset nach ca. 8,5 Sekunden besser eingrenzen.
+- Die Boot-Resetursache (`esp_reset_reason()`) wird nun über den unabhängigen Standard-USB-Logpfad ausgegeben, damit sie nicht beim Deaktivieren von USB-LOG aus der Diagnose-Warteschlange gelöscht wird. Die ESP-IDF-Panic-Ausgabe mit Exception-Typ, Registern und Backtrace muss weiterhin vollständig im seriellen Mitschnitt enthalten sein.
+- `AudioCaptureService.h`, FT8/FT4-Decoderdateien und sonstige Decoderlogik wurden nicht verändert.
+- Änderungen ausschließlich auf `development`; `main` und Backup bleiben unangetastet.
+- Noch kein Build gestartet und kein Hardwaretest durchgeführt. Vor dem nächsten manuellen Build Actions-Nummer prüfen; BIN, ELF und MAP müssen aus demselben Lauf stammen.

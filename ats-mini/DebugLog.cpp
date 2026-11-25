@@ -151,7 +151,7 @@ void atsDebugBegin() {
 
   const esp_reset_reason_t reason = esp_reset_reason();
   atsDebugLogf("========== ATS MINI USB DIAGNOSTICS ==========");
-  atsDebugLogf("[BOOT] reset_reason=%s (%d) chip=%s rev=%u cpu_mhz=%u",
+  atsStandardLogf("[BOOT] reset_reason=%s (%d) chip=%s rev=%u cpu_mhz=%u",
                resetReasonName(reason), static_cast<int>(reason), ESP.getChipModel(),
                static_cast<unsigned>(ESP.getChipRevision()),
                static_cast<unsigned>(ESP.getCpuFreqMHz()));

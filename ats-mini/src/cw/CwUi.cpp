@@ -3,6 +3,7 @@
 #include "../audio/AudioCaptureService.h"
 #include "Common.h"
 #include "Menu.h"
+#include "../DecoderMenuUi.h"
 #include "Utils.h"
 #include <stdio.h>
 #include <string.h>
@@ -172,30 +173,15 @@ void drawCwDecoderPage() {
   spr.drawString("CLICK: ACTIONS   LONG PRESS: EXIT", 160, 162);
 
   if (menuOpen) {
-    constexpr uint16_t panel = 0x0008, highlight = 0x0359;
-    spr.fillRect(28, 31, 264, 126, panel);
-    spr.drawRect(28, 31, 264, 126, green);
-    spr.drawRect(29, 32, 262, 124, 0x0359);
-    spr.setTextDatum(MC_DATUM);
-    spr.setTextColor(white, panel);
-    spr.setFont(&lgfx::fonts::FreeSansBold9pt7b);
-    spr.drawString("CW DECODER ACTIONS", 160, 41);
-    const char* labels[kMenuCount] = {"TONE FREQUENCY", "CLEAR TEXT", "RESET DECODER", "BACK", "EXIT CW"};
-    for (uint8_t i = 0; i < kMenuCount; ++i) {
-      const int y = 58 + i * 18;
-      spr.fillRect(36, y - 7, 248, 16, panel);
-      if (i == menuIndex) spr.drawRoundRect(36, y - 7, 248, 16, 2, green);
-      spr.setTextDatum(ML_DATUM);
-      spr.setTextColor(white, panel);
-      spr.setFont(FONT_SMALL);
-      spr.drawString(labels[i], 43, y + 1);
-      if (i == 0) {
-        char value[20];
-        snprintf(value, sizeof(value), "%.0f Hz%s", toneChoices[toneIndex],
-                 menuEditing ? " *" : "");
-        spr.setTextDatum(TR_DATUM);
-        spr.drawString(value, 276, y + 1);
-      }
-    }
+    const char* labels[kMenuCount] = {
+      "TONE FREQUENCY", "CLEAR TEXT", "RESET DECODER", "BACK", "EXIT CW"
+    };
+    char toneValue[24];
+    snprintf(toneValue, sizeof(toneValue), "%.0f Hz%s", toneChoices[toneIndex],
+             menuEditing ? " *" : "");
+    const char* values[kMenuCount] = {toneValue, nullptr, nullptr, nullptr, nullptr};
+    DecoderMenuUi::draw("CW ACTIONS", labels, values, kMenuCount, menuIndex,
+                        "TURN: SELECT", menuEditing ? "CLICK: DONE" : "CLICK: OPEN",
+                        nullptr, true);
   }
 }

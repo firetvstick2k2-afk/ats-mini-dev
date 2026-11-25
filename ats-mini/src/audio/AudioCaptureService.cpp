@@ -10,7 +10,7 @@ bool AudioCaptureService::begin() {
 #else
   if (initialized_) return true;
   pinMode(kPin, INPUT);
-  if (xTaskCreatePinnedToCore(taskEntry, "audio-capture", 4096, this, 3, nullptr, 0) != pdPASS) {
+  if (xTaskCreatePinnedToCore(taskEntry, "audio-capture", 4096, this, 2, nullptr, 0) != pdPASS) {
     return false;
   }
   initialized_ = true;

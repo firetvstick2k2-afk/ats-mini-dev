@@ -669,3 +669,13 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Host-Test hinzugefügt: `ats-mini/tests/TestCwDecoder.cpp` (synthetische 4-kHz-Signale mit 500/700/1000 Hz und 30 WPM); MIT-Attribution enthalten. Test wurde nicht ausgeführt.
 - Keine separate RESONIK-ADC-Task übernommen; gemeinsame AudioCaptureService bleibt unverändert. Nonblocking-Mutex-Blockverhalten bleibt unverändert, weil Warten im Audio-Callback die gemeinsame Sampling-Task blockieren könnte.
 - FT8/FT4 einschließlich Decoderkern und AudioCapture-Pfad unangetastet. Keine Firmware-Kompilierung/Action/Flash/Hardwareprüfung durch den Assistenten. Nächster Schritt: Nutzer-Build #99 und CW-Empfangstest mit 0.5k-, 1.0k- und breiterem Filter.
+
+
+## RTTY-Decoder-Upgrade nach RESONIK R5 — 26.11.2026
+- RTTY-DSP-Kern an RESONIK R5 `DigiDecoders.h` / `Digi::Rtty` angelehnt: bitlange kohärente Tonfilter, unabhängige Peak-Normalisierung, parallele Normal-/Reverse-Framer, Framingqualitäts-basierte AUTO-Polarität und ITA2/USOS.
+- ATS Mini behält den bisherigen 8-kHz-Eingang und die vorhandene RTTY-Capture-/Queue-Architektur. Kein Wechsel auf RESONIKs separate 6-kHz-Audioarchitektur.
+- RTTY-Signalhaltezeit: acht 1024-Sample-Fenster (ca. 1 s), um kurze Fades zu überbrücken.
+- Neu: `ats-mini/tests/TestRttyDecoder.cpp` mit synthetischem TEST-Signal für beide Polaritäten bei 45.45 Bd / 170 Hz Shift. Noch nicht kompiliert/ausgeführt.
+- Geänderte RTTY-Dateien: `src/rtty/RttyDecoder.cpp/.h`, `RttyService.cpp/.h`; FT8/FT4, CW und AudioCaptureService unangetastet. Bestehende MIT-Lizenzdatei `src/rtty/LICENSE.md` deckt die RESONIK-Herkunft ab.
+- Commits: `df768e4`, `90019ea`, `01f7564`, `665f731`, `f9502b6`, `2403ee9`, `18576c4`; DEVELOPMENT_HANDOFF ergänzt.
+- Kein Firmware-Build, Testlauf, Actions, Flash oder Hardwaretest durch den Assistenten. Build #98 bleibt letzte bestätigte stabile Referenz. Nutzer soll Build erstellen und RTTY mit 45.45 Bd, normal/invertiert sowie 50 Bd / DWD-Shift testen.

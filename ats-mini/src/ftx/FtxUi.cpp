@@ -1,4 +1,5 @@
 #include "FtxUi.h"
+#include "../DecoderMenuUi.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -12,7 +13,6 @@
 #include "../audio/AudioCaptureService.h"
 #include "Common.h"
 #include "Menu.h"
-#include "../DecoderMenuUi.h"
 #include "../radio/DecoderFrequencyList.h"
 #include "Themes.h"
 #include "Utils.h"
@@ -872,7 +872,7 @@ void ftxUiRotate(int delta)
       restoreFtxPresetOriginal();
     ftxPresetSelection = static_cast<uint8_t>(next);
     if(ftxPresetSelection < ftxPresetScroll) ftxPresetScroll = ftxPresetSelection;
-    if(ftxPresetSelection >= ftxPresetScroll + 6) ftxPresetScroll = ftxPresetSelection - 5;
+    ftxPresetScroll = DecoderMenuUi::firstVisible(ftxPresetSelection, static_cast<uint8_t>(count));
     scheduleFtxPresetPreview(millis());
     return;
   }
@@ -1060,8 +1060,8 @@ void drawFtxDecoderPage()
   if(ftxActionsOpen) {
     if(ftxPresetMenuOpen) {
       const uint8_t count = ftxPresetCount();
-      char storage[kDecoderFrequencyPresetCount + 2][40] = {};
-      const char* labels[kDecoderFrequencyPresetCount + 2] = {};
+      char storage[kDecoderFrequencyPresetCount][40] = {};
+      const char* labels[kDecoderFrequencyPresetCount] = {};
       for(uint8_t i = 0; i < count; ++i) {
         const DecoderFrequencyPreset* preset = ftxPresetAt(i);
         if(!preset) continue;
@@ -1074,23 +1074,22 @@ void drawFtxDecoderPage()
         labels[i] = storage[i];
       }
       const char* title = ftxPresetDecoder == DecoderKind::FT4 ? "FT4 FREQUENCIES" : "FT8 FREQUENCIES";
-      const char* previewStatus = ftxPresetPreviewActive ? "TUNED" :
-                                  ftxPresetPreviewPending ? "TUNING..." : "READY";
+      const char* previewStatus = ftxPresetPreviewActive ? "TUNED" : ftxPresetPreviewPending ? "TUNING..." : "READY";
       DecoderMenuUi::draw(title, labels, nullptr, count, ftxPresetSelection,
                           "TURN: SELECT", "CLICK: APPLY", previewStatus);
     } else {
       const char* ft8Labels[kFtxMenuItems] = {
-        "FT8 FREQUENCIES", "FT4 FREQUENCIES", "TIME SYNC",
-        "SPEAKER", "AUTO SCROLL", "CLEAR STATIONS", "LOGGING",
-        "BACK", "EXIT FT8 + FT4"
+        "FT8 FREQUENCIES", "FT4 FREQUENCIES",
+        ftxOfflineSyncPreference ? "TIME SYNC" : "TIME SYNC",
+        "SPEAKER", "AUTO SCROLL", "CLEAR STATIONS", "LOGGING", "BACK", "EXIT FT8/FT4"
+      };
+      const char* ft4Labels[6] = {
+        "SPEAKER", "AUTO SCROLL", "CLEAR STATIONS", "LOGGING", "BACK", "EXIT FT4"
       };
       const char* ft8Values[kFtxMenuItems] = {
         nullptr, nullptr, ftxOfflineSyncPreference ? "OFFLINE" : "ONLINE",
         ftxSpeakerEnabled ? "ON" : "OFF", ftxAutoScroll ? "ON" : "OFF",
         nullptr, ftxLogEnabled ? "ON" : "OFF", nullptr, nullptr
-      };
-      const char* ft4Labels[6] = {
-        "SPEAKER", "AUTO SCROLL", "CLEAR STATIONS", "LOGGING", "BACK", "EXIT FT4"
       };
       const char* ft4Values[6] = {
         ftxSpeakerEnabled ? "ON" : "OFF", ftxAutoScroll ? "ON" : "OFF",

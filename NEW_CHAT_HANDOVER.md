@@ -1032,3 +1032,12 @@ This is still not a live receiver: no timing/frequency search, slot acquisition,
 - `ats-mini/src/ftx/FtxDecoderService.cpp` wurde nicht verändert (Blob-SHA weiterhin `7ce2c390b6105e449a9842215d7d95d9c61bea0c`). Header, DebugLog-System, Decoderumfang und sonstige Firmware-Funktionen wurden nicht verändert.
 - Ausschließlich Branch `development`; `main` und Backup-Branch bleiben unangetastet. Kein Build und kein Flash gestartet. Nutzer startet Build und Hardwaretest manuell.
 - Testziel: prüfen, ob der bekannte Audio-Capture-Stand den Reset verhindert und FT8 weiterhin dekodiert. Ein erfolgreicher Test würde den Fehler auf Änderungen seit Build #27 im Audio-Capture-Pfad eingrenzen, aber noch nicht die einzelne Ursache beweisen.
+
+
+## 2026-11-25 – AudioCapture-Task-Priorität für FT8-Stabilitätstest angepasst
+
+- Auf `development` wurde ausschließlich in `ats-mini/src/audio/AudioCaptureService.cpp` die Priorität des Tasks `audio-capture` bei `xTaskCreatePinnedToCore(...)` von **3 auf 2** reduziert. Neuer Datei-Blob-SHA: `befed6db831f0931544e6e93d9666bcb6f822ca6`; Code-Commit: `d1520249604c161419befac62d0189e0c2f211a5`.
+- Zweck ist ein kontrollierter Diagnoseversuch: Core 0 soll etwas weniger durch den Audio-Capture-Task bevorzugt werden. Das ist keine bestätigte Fehlerbehebung; insbesondere kann die weiterhin aktive Sampling-Schleife mit `taskYIELD()` den Idle-Task weiterhin beeinträchtigen.
+- FT8/FT4-Decoderdatei `ats-mini/src/ftx/FtxDecoderService.cpp` bleibt vollständig unangetastet. FT8-Task bleibt auf Core 1 und Priorität 2. CPU-Takt bleibt bei 80 MHz. Offline Timesync bleibt für den ersten Test unverändert.
+- Testreihenfolge: Nutzer baut und flasht manuell; zuerst FT8 mit Offline Timesync und USB-LOG testen. Keine weiteren Decoder- oder CPU-Taktänderungen gleichzeitig. Bei weiterhin auftretendem Reset danach gezielt den nächsten Diagnosezweig festlegen.
+- Kein Build/Actions-Lauf, kein Flash und kein Hardwaretest durch ChatGPT gestartet. Vor der Aufforderung zum Build Actions-Historie prüfen und die nächste Build-Nummer nennen. Ausschließlich `development`; `main` und Backup bleiben unangetastet.

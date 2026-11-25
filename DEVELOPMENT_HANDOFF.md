@@ -1,3 +1,21 @@
+## 2026-11-25 – FT8-Hardwaretest Build #89: Reset und Backtrace-Auswertung
+
+- Nutzer hat Build #89 auf dem ATS Mini getestet; beim Start von FT8 tritt reproduzierbar ein Reset auf. FT8-Start und DSP-Initialisierung werden zunächst erfolgreich protokolliert: `mode=FT8`, `sample_rate=4000`, `block_samples=24`, `initialized=1`.
+- Der Reset erfolgt im vorliegenden Mitschnitt etwa 8,5 Sekunden nach `[FTX][START]`. Der Exception-/Guru-Meditation-Kopf fehlt im Log; deshalb ist der konkrete Exception-Typ noch nicht belegt.
+- Build-Zuordnung wurde verifiziert: GitHub Actions Run 45490746057, Build-Artefakt-ID 14965992323, Commit `b1a3303fc9e42c7af615885f54000efc53ab2e3f`. Das Artefakt enthält BIN, ELF und MAP. Die vollständige SHA-256 der ELF lautet `2a249ac82b919a2b3e0915ffcc804d4a20b4f54d6890cabadb9116bf7d56f4a1`; sie stimmt mit dem im Gerätelog ausgegebenen Präfix `2a249ac82` überein. Der Backtrace wurde somit mit der exakt passenden ELF-Datei aufgelöst.
+- Symbolisierte Backtrace-Kette:
+  - `0x40389dbb`: `systimer_ll_get_counter_value_low` (ESP-IDF System-Timer)
+  - `0x40377b4e`: `esp_timer_impl_get_time`
+  - `0x420310c0`: `AudioCaptureService::sampleTask()`, `ats-mini/src/audio/AudioCaptureService.cpp:119`
+  - `0x42031255`: `AudioCaptureService::taskEntry()`, Zeile 77
+  - `0x403850bd`: FreeRTOS `vPortTaskWrapper`
+- Zeile 119 liegt in der Sample-Takt-Schleife `while (esp_timer_get_time() < next) taskYIELD();`. Der nachgewiesene Absturzkontext liegt damit im gemeinsamen Audio-Capture-Task beim Abfragen des System-Timers – nicht im FT8-LDPC-/DSP-Decodepfad. Das beweist noch nicht, warum der Timerzugriff dort abstürzt; dafür fehlt der Exception-Kopf mit Typ und Registern.
+- Zusätzlich erscheint unmittelbar vor dem FT8-Start `ARDUINO: Pin is not configured as analog channel`. Quellprüfung von Arduino-ESP32 3.3.12 zeigt: `analogSetPinAttenuation(kPin, ADC_11db)` meldet genau diesen Fehler, wenn der ADC-OneShot-Bus für den Pin noch nicht eingerichtet ist. Im Build-#89-Code wird diese Funktion vor dem ersten `analogRead(kPin)` aufgerufen; danach folgt außerdem `pinMode(kPin, INPUT)`. Das ist eine fehlerhafte/unnötige ADC-Initialisierungsreihenfolge und sollte isoliert korrigiert werden. Der Warnhinweis ist jedoch nicht als Ursache des Resets bewiesen.
+- Nächster Diagnose-/Fix-Schritt: ausschließlich den gemeinsamen `AudioCaptureService` untersuchen (ADC-Pin initialisieren, Timer-Sampling-Schleife robuster gestalten und Stack-/Task-Watchdog-Diagnose ergänzen). FT8/FT4-DSP, Slot-Synchronisation und Decoderlogik bleiben unangetastet. Vor jeder Quelländerung aktuelle Dateien und SHAs aus GitHub holen; nur `development` ändern.
+- Kein Firmware-Code geändert, kein neuer Build gestartet und kein weiterer Hardwaretest durch den Assistenten durchgeführt.
+
+---
+
 ## 2026-11-24 – Build #89 erfolgreich, Backup gesichert, nächster Hardwaretest
 
 - GitHub Actions Build #89 (Run-ID 45490746057) wurde auf development mit Commit b1a3303fc9e42c7af615885f54000efc53ab2e3f ausgeführt und erfolgreich abgeschlossen.
@@ -107,7 +125,7 @@ Geprüft direkt in `ats-mini/src/radio/BandOpeningService.cpp/.h` aus dem exakt 
 - Die RSS-Nachrichtenansicht wurde am 2026-11-22 als erster konkreter Schritt auf monochrom, tiefschwarz und kräftigere weiße Schrift mit drei Textzeilen pro Seite umgestellt. Diese Änderung ist noch vom Nutzer zu bauen und auf Hardware zu beurteilen.
 
 
-Last updated: 2026-11-24
+Last updated: 2026-11-25
 
 ## Current project status
 

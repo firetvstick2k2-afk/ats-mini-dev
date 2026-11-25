@@ -1784,71 +1784,77 @@ static int drawXXLText(const char *text, int x, int y, uint16_t color, const lgf
 
 void drawFullScreenMenu(uint16_t cmd)
 {
-  const uint16_t bg = 0x0000;
-  const uint16_t blue = 0x001F;
-  const uint16_t cyan = 0x07FF;
+  const uint16_t bg = 0x0000, blue = 0x001F, cyan = 0x07FF, white = 0xFFFF;
   const bool settingsPage = cmd == CMD_SETTINGS;
   const bool spectrumPage = cmd == CMD_SPECTRUM_MENU;
   const int rawIdx = settingsPage ? settingsIdx : (spectrumPage ? spectrumMenuIdx : menuIdx);
-  const int idx = (settingsPage && rawIdx > MENU_ZOOM) ? rawIdx - 1 : rawIdx;
-  const int count = settingsPage ? ITEM_COUNT(settings) - 1 : (spectrumPage ? ITEM_COUNT(spectrumMenu) : ITEM_COUNT(menu));
-  const char *title = settingsPage ? "IMPOSTAZ." : (spectrumPage ? "SPETTRO" : "MENU PRINC.");
-  const char *selected = settingsPage ? ((rawIdx == MENU_WEBLOG && !webDiagEnabled) ? "REGISTRO DIAGNOSTICO: OFF" : (rawIdx == MENU_WEBLOG ? "REGISTRO DIAGNOSTICO: ON" : settingsXXL[rawIdx])) : (spectrumPage ? spectrumMenuXXL[idx] : menuXXL[idx]);
-  const char *displaySelected = selected;
-  // Render menu labels in uppercase without corrupting UTF-8 umlauts.
-  char uppercaseLabel[96];
-  snprintf(uppercaseLabel, sizeof(uppercaseLabel), "%s", displaySelected ? displaySelected : "");
-  for (size_t i = 0; uppercaseLabel[i] != '\0'; ++i) {
-    if (uppercaseLabel[i] >= 'a' && uppercaseLabel[i] <= 'z') {
-      uppercaseLabel[i] = static_cast<char>(uppercaseLabel[i] - ('a' - 'A'));
-    }
-  }
-  displaySelected = uppercaseLabel;
+  const int selected = settingsPage && rawIdx > MENU_ZOOM ? rawIdx - 1 : rawIdx;
+  const int count = settingsPage ? ITEM_COUNT(settings) - 1 :
+    (spectrumPage ? ITEM_COUNT(spectrumMenu) : ITEM_COUNT(menu));
+  const char *title = settingsPage ? "IMPOSTAZIONI" :
+    (spectrumPage ? "SPETTRO" : "MENU PRINCIPALE");
+  constexpr int visibleRows = 3;
+  const int first = max(0, min(count - visibleRows, selected - 1));
 
   spr.fillSprite(bg);
-  spr.fillRoundRect(3, 3, 314, 164, 5, bg);
-  spr.drawRoundRect(3, 3, 314, 164, 5, blue);
+  spr.drawRect(8, 6, 304, 143, cyan);
+  spr.drawRect(9, 7, 302, 141, blue);
+  spr.fillRect(8, 7, 4, 22, cyan);
+  drawXXLText(title, 18, 10, white, FONT_SMALL);
+  drawXXLText("ATS MINI", 164, 14, 0xBDF7, FONT_DEFAULT);
 
-  drawXXLText(title, 12, 7, cyan, &lgfx::fonts::Orbitron_Light_24);
+  char counter[16];
+  snprintf(counter, sizeof(counter), "%02d / %02d", selected + 1, count);
   spr.setTextDatum(TR_DATUM);
   spr.setTextColor(cyan);
   spr.setFont(FONT_SMALL);
-  char counter[12];
-  snprintf(counter, sizeof(counter), "%02d / %02d", idx + 1, count);
-  spr.drawString(counter, 307, 9);
+  spr.drawString(counter, 308, 10);
+  spr.drawFastHLine(10, 34, 300, blue);
 
-
-  // Text-only menu: center the selected label in the screen area.
-  // A fixed anchor avoids item-specific vertical shifts caused by icon alignment.
-  const int maxTextWidth = 286;
-  const lgfx::IFont *menuFont = &lgfx::fonts::Orbitron_Light_24;
-  int textWidth = spr.textWidth(displaySelected, menuFont);
-  if (textWidth > maxTextWidth) {
-    menuFont = FONT_LARGE;
-    textWidth = spr.textWidth(displaySelected, menuFont);
+  for(int row = 0; row < visibleRows; ++row) {
+    const int item = first + row;
+    if(item >= count) break;
+    const int y = 40 + row * 36;
+    const bool active = item == selected;
+    const int settingsItem = settingsPage && item >= MENU_ZOOM ? item + 1 : item;
+    const char *label = settingsPage ? settingsXXL[settingsItem] :
+      (spectrumPage ? spectrumMenuXXL[item] : menuXXL[item]);
+    if(active) {
+      spr.drawRoundRect(9, y, 298, 31, 3, cyan);
+      spr.drawRoundRect(10, y + 1, 296, 29, 2, blue);
+      spr.fillRect(9, y + 3, 3, 25, cyan);
+      spr.fillRect(304, y + 3, 3, 25, cyan);
+    }
+    char number[5];
+    snprintf(number, sizeof(number), "%02d", item + 1);
+    drawXXLText(number, 18, y + 8, active ? white : cyan, FONT_SMALL);
+    drawXXLText(label, 52, y + 8, white, FONT_SMALL);
+    if(!settingsPage && !spectrumPage) {
+      char value[24] = "";
+      switch(item) {
+        case MENU_VOLUME: snprintf(value, sizeof(value), "%u", volume); break;
+        case MENU_BAND: snprintf(value, sizeof(value), "%s", bands[bandIdx].bandName); break;
+        case MENU_MODE: snprintf(value, sizeof(value), "%s", bandModeDesc[currentMode]); break;
+        case MENU_SETTINGS: snprintf(value, sizeof(value), ">"); break;
+        default: break;
+      }
+      if(value[0]) {
+        spr.setTextDatum(TR_DATUM);
+        spr.setTextColor(active ? white : cyan);
+        spr.setFont(FONT_SMALL);
+        spr.drawString(value, 298, y + 8);
+      }
+    }
+    spr.drawFastHLine(52, y + 31, 255, blue);
   }
-  int textX = (320 - textWidth) / 2;
-  // The custom UTF-8 renderer draws Ä as a single glyph; compensate for
-  // native textWidth counting its UTF-8 bytes differently on this label.
-  const int textY = (settingsPage && rawIdx == MENU_WIFIMODE) ? 76 : 73;
-  if (!settingsPage && idx == MENU_AVC) textX -= 7;
-  if (!settingsPage && idx == MENU_SETTINGS) textX = (320 - textWidth) / 2;
-  drawXXLText(displaySelected, textX, textY, cyan, menuFont);
-
-  // Keep the existing footer, without any divider line or inner frame.
-  spr.setTextColor(cyan);
-  spr.setTextDatum(TL_DATUM);
-  drawXXLText("RUOTA: SCEGLI", 12, 151, cyan, FONT_SMALL);
+  spr.drawFastVLine(313, 40, 105, blue);
+  const int thumbY = 40 + (count > visibleRows ? selected * 80 / (count - 1) : 0);
+  spr.fillRoundRect(311, thumbY, 5, 25, 2, cyan);
+  drawXXLText("RUOTA: SCEGLI", 12, 151, cyan, FONT_DEFAULT);
   spr.setTextDatum(TR_DATUM);
-  spr.setFont(FONT_SMALL);
+  spr.setFont(FONT_DEFAULT);
   spr.setTextColor(cyan);
-  spr.drawString("CLIC: OK", 307, 151, FONT_SMALL);
-  if(!settingsPage && !spectrumPage && (idx == MENU_SPECTRUM || idx == MENU_ALL_SPECTRUM)) {
-    spr.setTextDatum(MC_DATUM);
-    spr.setTextColor(0xBDF7);
-    spr.setFont(FONT_SMALL);
-    spr.drawString(idx == MENU_ALL_SPECTRUM ? "AM / USB / LSB - Ampiezza max: 1000 kHz" : "Clic per freq. iniziale", 160, 132);
-  }
+  drawXXLTextRight("CLIC: OK",307,151,cyan,FONT_DEFAULT);
 }
 
 void drawSideBar(uint16_t cmd, int x, int y, int sx)

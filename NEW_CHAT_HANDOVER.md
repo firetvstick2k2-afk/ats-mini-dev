@@ -587,5 +587,5 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Makefile verfolgt jetzt alle Layout-*.cpp-Dateien, src/cw/*.cpp, src/cw/*.h und src/DecoderMenuUi.h als Abhängigkeiten.
 - Schutz: FtxDecoderService.cpp bleibt bytegenau auf Build-#27-Stand. CwDecoderService und RttyService wurden in diesem UI-Pass nicht geändert. Kein Decoder-DSP-/Audio-Capture-Kern wurde im Zuge der UI-Portierung geändert.
 - Statischer Integrationsaudit abgeschlossen: Funktions-/Service-Aufrufe geprüft, alle verwendeten Service-Methoden sind in den aktuellen Headern vorhanden, Klammern ausgeglichen. Kein Compilerlauf, keine GitHub Action, kein Flash und kein Hardwaretest gestartet.
-- Letzter Quellcommit: 88792885d69c64de79b66ff198f218e4531501ed. Letzter Handoff-Commit: cf71b0ea0412835f1d2ce82a710fcbfb5092e77a.
+- Letzter Quellcommit: 88792885d69c64de79b66ff198f218e4531501ed. DEVELOPMENT_HANDOFF.md: cf71b0ea0412835f1d2ce82a710fcbfb5092e77a; NEW_CHAT_HANDOVER.md: 771ea07f64d8b88f57233ef77db070141e1fe25a.
 - Nächster Schritt: manueller OSPI-DE-Build durch den Nutzer, danach Hardware-Härtetest. Erst nach erfolgreichem UI-Test weitere Funktionsänderungen einzeln zurückholen und FT8 nach jedem Schritt auf Resets prüfen.

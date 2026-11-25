@@ -1,6 +1,8 @@
 // Host-side regression tests for the ATS Mini CW decoder.
-// Decoder algorithm and test cases are based on the MIT-licensed RESONIK
-// 2.46-r5 CW decoder test suite. Preserve the upstream license notice.
+// Adapted as an independent test harness with reference to RESONIK 2.46-r5.
+// Copyright (c) 2025 ESP32-SI4732 Radio
+// Copyright (c) 2026 Mohammad Bahrololoum (EP2MHB)
+// MIT License; see the repository LICENSE for the full terms.
 #include "../src/cw/CwDecoder.h"
 #include <assert.h>
 #include <math.h>

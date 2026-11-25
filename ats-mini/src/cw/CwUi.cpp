@@ -70,6 +70,7 @@ void restoreCwPreview(bool clearState=true) {
     saved.bandwidthIdx=previewOriginalVfo.bandwidthIdx;
     selectBand(previewOriginalVfo.band,false);
     if(currentBFO!=previewOriginalBfo) updateBFO(previewOriginalBfo,true);
+    service.setTone(cwToneForCurrentFilter());
   }
   if(clearState) clearCwPreview();
   else { previewPending=false; previewActive=false; previewStartedAt=0; restoreCwPreviewAudio(); }

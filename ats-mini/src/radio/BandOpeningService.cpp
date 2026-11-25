@@ -429,6 +429,7 @@ bool BandOpeningService::fetchWsprConditions(Snapshot& result) {
 }
 
 bool BandOpeningService::fetchConditions(Snapshot& result) {
+  using Status = BandOpeningService::Status;
   const uint32_t startedAt = millis();
   WiFiClientSecure client;
   client.setTimeout(8000);

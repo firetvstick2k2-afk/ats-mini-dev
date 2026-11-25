@@ -1,6 +1,6 @@
 # ATS Mini Dev — Übergabe für neuen Chat
 
-Stand: 25.11.2026 — Build #97 stabil; CB-/RTTY-UI abgeschlossen; HF-Bandmonitor als nächster Schritt.
+Stand: 25.11.2026 — Build #98 stabil; HF Bandmonitor erfolgreich getestet; CW-Verbesserungen als nächster Schritt.
 Repository: `firetvstick2k2-afk/ats-mini-dev`
 Arbeitsbranch: `development`
 Stabile Referenz: **Build #97** (vom Nutzer als neuester stabiler, vollständig funktionierender Stand bestätigt).
@@ -648,3 +648,14 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Static re-check: the DE/EN/IT menu action calls `bandOpeningUiOpen()`; Draw dispatch exists; encoder page navigation, click refresh, long-press exit, and timeout exemption are present.
 - No `netInit()`/`netStop()` calls in the Bandmonitor service; no logger calls. Existing decoder/audio files were not changed.
 - Still pending: actual compiler and runtime/hardware validation. No build, Actions run, flash, or hardware test was started.
+
+
+## Maßgeblicher aktueller Stand — Build 98 (25.11.2026)
+- **Build #98 ist die neue stabile Referenz.** Nutzerbestätigung nach eigenem Build und Hardwaretest: „Alles läuft mega, Bandmonitor auch“. HF Bandmonitor ist damit erfolgreich auf dem Gerät bestätigt.
+- Build #97 ist abgelöst und nur noch Historie.
+- Nächster vereinbarter Schritt: CW-Decoder gezielt anhand des RESONIK-Quellcodes verbessern. Noch keine CW-Datei geändert.
+- Bekannte Ansatzpunkte aus dem bisherigen Vergleich: dynamische CW-Tonfrequenz anhand des tatsächlich gewählten SI4735-Filters statt fest 700 Hz; Sampling/ADC-Timing untersuchen, aber gemeinsame AudioCaptureService-Architektur erhalten; möglichen Verlust ganzer 24-Sample-Blöcke durch nicht blockierende Mutex-Abfrage prüfen; synthetische CW-Hosttests in unser Projekt übernehmen.
+- Bestehendes CW-Layout und Bedienung beibehalten. FT8/FT4 und andere funktionierende Decoder schützen. Keine separate zweite ADC-Sampler-Task neben AudioCaptureService einführen.
+- Spätere RESONIK-Ideen (noch nicht beauftragt): Band View/Auto-Store, Beacon Tracker/Propagation, Signal Logger, Backup/Restore, CAT-Steuerung.
+- Weiterhin ausschließlich development; main nur nach ausdrücklicher Anweisung „Bitte Main überschreiben“. Vor jeder Änderung bestehender Dateien Inhalt und SHA aus GitHub abrufen. MIT-Lizenz und Copyright-Hinweise erhalten. Beide Handoff-Dateien nach sinnvollen Änderungen aktuell halten.
+- Builds/Actions/Flash/Hardwaretests führt der Nutzer selbst aus, sofern nicht ausdrücklich anders beauftragt.

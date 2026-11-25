@@ -599,3 +599,12 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Änderungen auf development: Draw.cpp, Menu.h, Menu_english.cpp.src, Menu_german.cpp.src, Menu_italian.cpp.src, ats-mini.ino. DEVELOPMENT_HANDOFF.md ergänzt.
 
 - Commitfolge der Rückholung: Draw.cpp f81a0fa6bfe20a874e47cf64bd039db4b89e5f5a; Menu.h a1faf412edc5d952c5ebe265701dbdaf0b57262b; EN 71e80086ab2760c8ae25097ae8a4d301f1c537ab; DE 1803624d9637e979d8111cd191ac64c9d8246d6e; IT c008db4bb75384868406dfbfe338a7ee0b5bc2f1; timeout a1417207dd4c651a30ec1f8de4deab528732a755; changelog 5abb99fbbed4ac1b2fd8287fb4a08c557ff9b54e.
+
+
+## Volume- und Helligkeits-Rückkehr zum Radiolayout — 2026-11-25
+- clickVolume() setzt nach Bestätigung jetzt currentCmd = CMD_NONE statt zurück ins Menü zu springen.
+- Der Klick auf CMD_BRT bestätigt die Helligkeit und setzt ebenfalls currentCmd = CMD_NONE statt in die Einstellungen zurückzukehren.
+- Die vorhandenen Volume- und Helligkeits-Dialoge sowie ihre Encoder-Bedienung bleiben unverändert. Nur das Ziel nach Bestätigung wurde geändert.
+- In EN/DE/IT-Menüquellen identisch umgesetzt. WLAN-/EiBi-Overlays bleiben unverändert.
+- FT8/FT4, AudioCapture, Decoder und Layout-Renderer nicht geändert.
+- Quelltextänderung und statische Prüfung; kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.

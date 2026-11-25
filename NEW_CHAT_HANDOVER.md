@@ -1,45 +1,48 @@
 # ATS Mini Dev — Übergabe für neuen Chat
 
-Stand: 25.11.2026  
-Repository: `firetvstick2k2-afk/ats-mini-dev` (privat)  
-Arbeitsbranch: `development`  
-Letzter Code-Commit: c36ed291c9ea451af74a679edddbe4d68c5aed5c (CW/RTTY layout alignment; JS8 removal).
+Stand: 25.11.2026 — Build #97 stabil; CB-/RTTY-UI abgeschlossen; HF-Bandmonitor als nächster Schritt.
+Repository: `firetvstick2k2-afk/ats-mini-dev`
+Arbeitsbranch: `development`
+Stabile Referenz: **Build #97** (vom Nutzer als neuester stabiler, vollständig funktionierender Stand bestätigt).
 
-## 1. Wichtige Arbeitsregeln
-- **Bugfixes haben Vorrang:** Meldet der Nutzer während geplanter Feature-Arbeit einen Fehler, zuerst diesen Bug beheben und danach mit der zuletzt priorisierten Roadmap-Aufgabe fortfahren.
+## 1. Verbindliche aktuelle Absprachen
 
-- Ausschließlich im privaten Repo `firetvstick2k2-afk/ats-mini-dev` auf Branch `development` arbeiten.
-- `main` und das öffentliche Repo `13HN2709/ats-mini` niemals ändern, außer der Nutzer fordert es ausdrücklich.
-- Vor Codeänderungen die aktuellen Dateien auf `development` lesen. Keine Änderungen aus alten Chat-Snippets blind übernehmen.
-- Möglichst kleine, isolierte Änderungen. Bestehende funktionierende Features nicht unnötig refaktorisieren.
-- **TEF6686-Layout ist das Lieblingslayout und bleibt unangetastet**, außer bei ausdrücklichem Auftrag.
-- LittleFS-Mount-/Formatierungslogik ist funktionierend und geschützt. Keine Formatierung, kein Löschen und keine Änderung an der Mount-Strategie ohne ausdrücklichen Auftrag.
-- Der Nutzer startet GitHub Actions manuell und flasht/testet das ATS Mini V4 selbst. Niemals Build- oder Hardware-Erfolg behaupten, bevor der Nutzer bzw. ein verlässlicher Lauf dies bestätigt.
-- Nach jeder sinnvollen Änderung `DEVELOPMENT_HANDOFF.md` aktualisieren. Dieses Dokument ist die ausführliche technische Langzeitdokumentation.
+- Ausschließlich im privaten Repository `firetvstick2k2-afk/ats-mini-dev` auf Branch `development` arbeiten.
+- **`main` niemals ändern**, außer der Nutzer schreibt ausdrücklich: **„Bitte Main überschreiben“**. Keine automatische Promotion.
+- Vor jeder Änderung einer bestehenden Datei zuerst den aktuellen Inhalt und SHA direkt aus GitHub auf `development` abrufen.
+- Änderungen klein, isoliert und sauber direkt auf `development` committen. Keine neuen Feature-/Testbranches.
+- Beide Handoff-Dateien nach jeder sinnvollen Änderung aktuell halten.
+- Der Nutzer startet Builds/GitHub Actions und führt Flash-/Hardwaretests selbst aus, sofern er nicht ausdrücklich etwas anderes beauftragt. Keine Tests als erfolgreich darstellen, wenn sie nicht bestätigt/verifiziert sind.
+- **MIT-Lizenz erhalten:** Herkunft und Lizenz jeder neuen Bibliothek, Abhängigkeit, Codekopie und jedes Assets prüfen. Keine GPL-Komponenten integrieren, keine unklaren Lizenzen übernehmen. Bei Unklarheit vor Integration stoppen.
+- **Decoder strikt schützen:** FT8/FT4 ist stabil und bleibt unangetastet. Keine Änderungen an Decoder-DSP, Decoder-Services, AudioCapture, Decoderzuständen, Timern, Interrupts oder gemeinsam genutzter Decoderlogik.
+- Wenn eine neue Funktion Hilfslogik benötigt, die Decoder beeinflussen könnte, diese für die neue Funktion privat kopieren oder unabhängig neu implementieren. Lieber mehr isolierter Code als ein Risiko für funktionierende Decoder.
+- Bugfixes haben Vorrang, wenn der Nutzer einen Fehler meldet; danach zur aktuell vereinbarten Aufgabe zurückkehren.
 
-## 2. Aktueller Stand / letzter Auftrag
+## 2. Aktueller Projektstand und nächster Auftrag
 
-### DAB Layout (21.11.2026)
-- Layout-Menüeintrag heißt in Deutsch und Englisch nur noch **DAB**.
-- Das bestehende Verhalten bleibt erhalten: FM zeigt DAB Style, Nicht-FM verwendet weiterhin den TinyRadio-Fallback.
-- Es wurde ausschließlich die Menübezeichnung angepasst; die Fallback-Logik bleibt unverändert.
+- **Build #97 ist die neue stabile Referenz.** Build #96 ist abgelöst und nur noch Historie.
+- **CB- und RTTY-Decoder-Oberflächen sind fertig und vom Nutzer als perfekt bestätigt.** Aktuell keine offenen UI-Korrekturen.
+- **Nächste Aufgabe: HF Bandmonitor.**
+  1. Zuerst den entsprechenden Stand auf `backup/development-2026-11-24` untersuchen und die tatsächliche Implementierung/Abhängigkeiten verstehen.
+  2. Verhalten gezielt mit dem aktuellen Build-#97-Stand vergleichen.
+  3. Bandmonitor in eigenen `.cpp`- und `.h`-Dateien kapseln.
+  4. Decoder und gemeinsam genutzte Decoderpfade nicht verändern. Erforderliche Helfer notfalls separat kopieren/implementieren.
+  5. Schrittweise integrieren; keine komplette Backup-Rückholung.
+- **JS8 ist entfernt und aktuell kein Entwicklungsauftrag.** Eine spätere Rückkehr kommt nur infrage, wenn eine unabhängige Implementierung samt Abhängigkeiten MIT-kompatibel bleibt. Keinen GPL-Code aus JS8Call/WSJT-X kopieren.
+- Newsticker bleibt entfernt und wird nicht wieder eingeführt, sofern der Nutzer dies nicht ausdrücklich neu beauftragt.
+- `backup/development-2026-11-24` ist eine Referenzquelle zum gezielten Prüfen/Portieren, nicht die neue Basis und kein Anlass für einen vollständigen Restore.
 
+## 3. Aktuelle Schutz- und Qualitätsregeln
 
+- FT8/FT4 nicht anfassen („Finger weg“); der funktionierende Decoder hat Vorrang vor Featureumfang.
+- CB-/RTTY-UI als abgeschlossen betrachten.
+- Keine Änderungen an AudioCapture, ADC-Konfiguration, CPU-Takt, Partitionstabelle oder bestehenden Decodern, sofern nicht ausdrücklich beauftragt und technisch zwingend.
+- Gemeinsame Funktionen nur verwenden, wenn ihre Unabhängigkeit und Nebenwirkungsfreiheit nachweisbar sind.
+- Keine Lizenzannahmen: MIT-Kompatibilität jeder neuen Komponente prüfen und dokumentieren.
 
-Der Nutzer bat um zwei Anpassungen, die bereits auf `development` committed sind:
+## 4. Technische Langzeitdokumentation
 
-1. **DAB Style als FM-only Layout:** Bei Auswahl von DAB Style (Index 8) wird auf UKW/FM DAB Style angezeigt; auf allen Nicht-FM-Bändern wird jetzt **TinyRadio** als alternatives Layout verwendet. Beim Zurückwechseln auf FM erscheint wieder DAB Style. Andere ausgewählte Layouts folgen weiterhin der normalen Layout-Auswahl.
-2. **DAB Style Farben:** Alle vorher grünen Akzente wurden auf RGB565 `0x07FF` (knalliges Cyanblau) geändert. Dieser Farbwert entspricht dem kräftigen Blau des Außenrahmens im Hauptmenü. Die große Frequenzanzeige ist jetzt weiß (`0xFFFF)), passend zur Menüschrift.
-
-Code-Commits:
-- `63354f1c598fc6ad35e14a6676e6e2095011a455` — TinyRadio statt Clean als DAB-Fallback.
-- `87a9c04ad1ff0710e68712f659c3e28a0ac5ac68` — DAB Style Farbanpassung.
-
-Dokumentations-Commits:
-- `5d6aa64953f890707a9f3090b46e3d353a42c606` — DAB-Änderungen im Handover ergänzt.
-- `2daa5a1a6df3b34e76d9466f03df21c51bfde989` — aktueller Status und Chat-Übergabe ergänzt.
-
-**Build-Status:** Der Nutzer hat angekündigt, den OSPI-DE-Build zu starten. Das Ergebnis liegt zum Zeitpunkt dieser Übergabe noch nicht vor. Im neuen Chat zuerst nach dem Build-Ergebnis fragen, nicht von einem erfolgreichen Build ausgehen.
+`DEVELOPMENT_HANDOFF.md` ist die ausführliche technische Historie und enthält frühere Implementierungsdetails. Die nachfolgenden älteren Abschnitte bleiben als Archiv erhalten. **Ihre damaligen Baselines, offenen Aufgaben und Prioritäten sind nicht automatisch aktuell.** Maßgeblich für die nächste Arbeit sind Build #97, abgeschlossene CB-/RTTY-UI und HF Bandmonitor als nächster Schritt.
 
 ## 3. Layouts in ATS Mini Dev
 
@@ -72,13 +75,11 @@ Layout-Indizes (bestehende Indizes erhalten):
 - Der aktuelle DAB-Code verwendet `0x07FF` für blaue Akzente und `0xFFFF` für die Frequenz.
 - Hardwareprüfung nach dem Build: FM-Logo/PTY/RadioText, Wechsel FM → All Band/Nicht-FM → FM, TinyRadio-Fallback und Farbwirkung prüfen.
 
-## 5. Build- und Release-Regeln
-
-- GitHub Actions Workflow: `.github/workflows/build.yml`, manuell per `workflow_dispatch`.
-- Für die laufende Entwicklung ist die Matrix bewusst auf **OSPI-DE** reduziert: Sprache `de`, Board `esp32s3-ospi`.
-- Routine-Builds nicht auf QSPI/EN/IT ausweiten. Die frühere Sechsfach-Matrix ist in `DEVELOPMENT_HANDOFF.md` dokumentiert und kann bei einer ausdrücklich gewünschten Release-Vorbereitung wiederhergestellt werden.
+## 5. Build-Regeln (aktualisiert)
+- Builds/GitHub Actions nur starten, wenn der Nutzer es ausdrücklich beauftragt.
 - Nutzer startet den Build und meldet Ergebnis/Compilerfehler. Bei Fehlern nur anhand des konkreten Logs gezielt korrigieren.
-- Ein früherer vollständiger Matrixlauf `44690333439` war erfolgreich, aber das ist kein Nachweis für die aktuellen DAB-/Decoder-Änderungen.
+- Build #97 ist die stabile Referenz; frühere Build-Nummern sind Historie.
+- `main` wird niemals automatisch aktualisiert. Nur die ausdrückliche Formulierung **„Bitte Main überschreiben“** erlaubt Änderungen an `main`.
 
 ## 6. Weitere wichtige integrierte Funktionen
 
@@ -618,37 +619,11 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Statische Quelltextprüfung durchgeführt; kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
 
 
-## Aktueller Stand — 25.11.2026
-- FT8-Test #95: Nutzer meldete bisher störungsfreien Betrieb ohne Abstürze; Testergebnis bleibt vom Nutzer zu bestätigen.
-- Aktuelle Aufgabe: CW- und RTTY-Seiten erhalten die FT8/FT4-Aufteilung (Frequenzkopf, Status/Textzähler, segmentierter Pegelbalken, vier Textzeilen). Decoder-DSP und Audio-Capture bleiben unverändert.
-- JS8 wurde auf ausdrücklichen Nutzerwunsch aus dem Firmware-Build und den Menüs entfernt. Historische JS8-Entwicklungsnotizen in diesem Handoff sind Archiv und keine aktive Roadmap.
-- Arbeitsregeln unverändert: ausschließlich `development`; vor Änderungen Dateien und SHAs frisch abrufen; `main` niemals ohne ausdrückliche Freigabe ändern; FT8/FT4 nicht anfassen; nach jeder sinnvollen Änderung beide Handoff-Dateien aktuell halten.
-- Es wurde kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
-
-
-## Decoder-Preset-Vorschau bleibt beim Encoder-Drehen bedienbar — 2026-11-25
-- Einheitliches Verhalten für CW-, FT8-, FT4- und RTTY-Presets sowie für die Preset-Auswahl unter Decoder → Decoder-Frequencies.
-- Beim Weiterdrehen während einer hörbaren Vorschau wird der Lautsprecherpfad sofort stummgeschaltet. Die eigentliche Rückabstimmung wird nicht mehr bei jedem Encoder-Schritt synchron ausgeführt.
-- Die neue Frequenz wird nach zwei Sekunden Encoder-Ruhe abgestimmt und die Vorschau wieder hörbar gemacht. Beim Bestätigen während dieser Wartezeit wird direkt das aktuell markierte Preset übernommen.
-- Bei CW/FT8/FT4/RTTY bleiben ursprünglicher VFO, BFO und die vorherigen Band-Speicherwerte bis zum Bestätigen bzw. Verlassen gesichert. Beim Wechsel zwischen Presets wird nur der vorherige temporäre Band-Speicher zurückgesetzt; die Rückkehr zum ursprünglichen VFO erfolgt erst beim Abbrechen/Verlassen.
-- In der allgemeinen Decoder-Frequency-Auswahl wird die alte Vorschau beim Drehen sofort stummgeschaltet und nach dem zweisekündigen Abstimmen der neuen Auswahl wieder in den vorherigen Lautsprecherzustand zurückgesetzt.
-- Geändert: `ats-mini/src/ftx/FtxUi.cpp`, `ats-mini/src/cw/CwUi.cpp`, `ats-mini/src/rtty/RttyUi.cpp` sowie die Menüquellen EN/DE/IT.
-- Nur UI-/Preset-Vorschau-Steuerung und Lautsprecher-Mute; keine Änderungen an FT8/FT4-DSP, Decoder-Service, Audio-Capture oder FT8/FT4-Decodierlogik.
-- Quelltextänderungen committed auf `development`; statische Quelltextprüfung noch ausstehend. Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
-
-
-## About-/Über-Menü aus Backup wiederhergestellt — 2026-11-25
-- Die zweitseitige About-Ansicht aus `backup/development-2026-11-24` wurde in `ats-mini/About.cpp` wieder eingesetzt (ATS Mini Receiver, Firmware-/Build-/Geräteangaben, Projektadresse `github.com/firetvstick2k2-afk`, Credits).
-- Ursache, warum die Ansicht nicht sichtbar war: `Draw.cpp` leitete `CMD_ABOUT` fälschlich bereits an `drawSettingsPopup()` weiter (`<= CMD_ABOUT`), sodass der spätere Aufruf von `drawAbout()` nie erreicht wurde.
-- Korrektur: Settings-Popup-Bereich endet jetzt exklusiv vor `CMD_ABOUT` (`< CMD_ABOUT`); dadurch wird die dedizierte About-Ansicht gerendert.
-- Geändert: `ats-mini/About.cpp`, `ats-mini/Draw.cpp`. Nur `development`.
-- Kein Build, keine GitHub Action, kein Flash und kein Hardwaretest durchgeführt.
-
-Aktueller Stand: Das About-/Über-Menü wurde aus dem Backup wiederhergestellt und der Renderer-Fallstrick in `Draw.cpp` behoben. Nutzer-Build/Hardwaretest steht aus.
-
-
-## 2026-11-25 – Neue Referenz und CW/RTTY-Feinschliff
-- Build #96 ist laut Nutzer erfolgreich abgeschlossen und funktionsfähig; als neue funktionierende Referenz behandeln.
-- Nächste kleine optische Korrektur: gemeinsame CW-/RTTY-Kopfzeile in `ats-mini/src/DecoderPageLayout.h`; Status-/Audio-Information 20 px nach links verschoben (Anker x=205 → x=185).
-- Keine Decoder-, Audio-, FT8/FT4- oder AudioCaptureService-Änderungen. Build und Gerätetest der Layoutkorrektur noch ausstehend.
-- Code-Commit: bc1e7cd7979ff3d0c8eddb0912ad4cb39f8573ff.
+## Aktueller Stand — 25.11.2026 (maßgeblich)
+- Build #97 ist die vom Nutzer bestätigte neue stabile Referenz; Build #96 ist abgelöst.
+- CB- und RTTY-Decoder-UI sind fertig und bestätigt; keine offenen UI-Korrekturen.
+- Nächste Aufgabe: HF Bandmonitor. Zuerst Backup-Implementierung untersuchen, dann isoliert in eigenen .cpp/.h-Dateien integrieren.
+- FT8/FT4-Decoder und gemeinsam genutzte Decoderpfade bleiben unangetastet. Hilfslogik bei Risiko privat kopieren/implementieren.
+- MIT-Lizenz und Herkunft aller neuen Komponenten prüfen; keine GPL-Komponenten übernehmen.
+- Ausschließlich development; main nur bei ausdrücklicher Anweisung „Bitte Main überschreiben“. Vor jeder Änderung aktuelle Datei und SHA abrufen.
+- Keine Builds/Actions/Flash/Hardwaretests ohne ausdrücklichen Auftrag.

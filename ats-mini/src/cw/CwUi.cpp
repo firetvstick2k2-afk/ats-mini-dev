@@ -26,7 +26,7 @@ uint8_t frequencyScroll = 0;
 uint8_t menuIndex = 0;
 uint8_t restoreNetworkMode = NET_OFF;
 uint8_t volumeBeforeCw = 0;
-bool volumeBoostActive = false;
+bool volumeSessionActive = false;
 uint32_t lastRefresh = 0;
 bool previewPending = false, previewActive = false, previewOriginalValid = false;
 uint32_t previewStartedAt = 0;
@@ -39,7 +39,7 @@ bool previewSpeakerWasEnabled = true, previewSpeakerForced = false;
 bool previewSelectionMuted = false;
 bool previewAmpWasEnabled = true, previewAmpForced = false;
 constexpr uint32_t kCwPresetPreviewDelayMs = 2000;
-constexpr uint8_t kMenuCount = 6;
+constexpr uint8_t kMenuCount = 7;
 uint8_t cwPresetCount() { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) if(kDecoderFrequencyPresets[i].decoder==DecoderKind::CW) ++n; return n; }
 const DecoderFrequencyPreset* cwPresetAt(uint8_t wanted) { uint8_t n=0; for(uint8_t i=0;i<kDecoderFrequencyPresetCount;++i) if(kDecoderFrequencyPresets[i].decoder==DecoderKind::CW && n++==wanted) return &kDecoderFrequencyPresets[i]; return nullptr; }
 float cwToneForCurrentFilter() {
@@ -125,13 +125,13 @@ bool cwUiOpen() {
   restoreNetworkMode = wifiModeIdx;
   netStop();
   volumeBeforeCw = volume;
-  volumeBoostActive = volume < 50;
-  if(volumeBoostActive) { volume = 50; rx.setVolume(volume); }
+  volumeSessionActive = true;
+  if(volume < 50) { volume = 50; rx.setVolume(volume); }
   currentFrequency = rx.getFrequency();
   bands[bandIdx].currentFreq = currentFrequency;
   if (getWiFiStatus() != 0 || !service.enter(sharedAudioCapture(), true)) {
     service.exit();
-    if(volumeBoostActive) { volume = volumeBeforeCw; rx.setVolume(volume); volumeBoostActive = false; }
+    if(volumeSessionActive) { volume = volumeBeforeCw; rx.setVolume(volume); volumeSessionActive = false; }
     netInit(restoreNetworkMode);
     statusShow("CW decoder start failed", "Check Wi-Fi and audio input");
     return false;
@@ -156,7 +156,7 @@ void cwUiExit() {
   restoreCwPreview();
   frequencyMenuOpen = false;
   service.exit();
-  if(volumeBoostActive) { volume = volumeBeforeCw; rx.setVolume(volume); volumeBoostActive = false; }
+  if(volumeSessionActive) { volume = volumeBeforeCw; rx.setVolume(volume); volumeSessionActive = false; }
   // Publish the final receiver frequency after a preset preview was committed or restored.
   currentFrequency = rx.getFrequency();
   bands[bandIdx].currentFreq = currentFrequency;
@@ -176,6 +176,14 @@ void cwUiRotate(int16_t delta) {
     return;
   }
   if(frequencyMenuOpen) { if(previewActive) { digitalWrite(AUDIO_MUTE,HIGH); previewSelectionMuted=true; } int count=cwPresetCount()+1; int next=static_cast<int>(frequencySelection)+(delta>0?1:-1); if(next<0)next=count-1; if(next>=count)next=0; frequencySelection=static_cast<uint8_t>(next); if(frequencySelection<frequencyScroll)frequencyScroll=frequencySelection; frequencyScroll=DecoderMenuUi::firstVisible(frequencySelection,static_cast<uint8_t>(count)); if(frequencySelection) scheduleCwPreview(millis()); return; }
+  if(menuEditing) {
+    int next=static_cast<int>(volume)+delta;
+    if(next<0) next=0;
+    if(next>63) next=63;
+    volume=static_cast<uint8_t>(next);
+    rx.setVolume(volume);
+    return;
+  }
   int next = static_cast<int>(menuIndex) + delta;
   while (next < 0) next += kMenuCount;
   menuIndex = static_cast<uint8_t>(next % kMenuCount);
@@ -190,7 +198,8 @@ void cwUiClick() {
     return;
   }
   if(frequencyMenuOpen) { if(frequencySelection==0) { restoreCwPreview(); service.resetDecoder(); } else { const DecoderFrequencyPreset* preset=cwPresetAt(frequencySelection-1); bool applied=previewActive && !previewPending; if(!applied && preset) { if(previewTargetBandSnapshotValid && previewTargetBandIndex>=0 && previewTargetBandIndex<getTotalBands()) { bands[previewTargetBandIndex]=previewTargetBandOriginal; previewTargetBandIndex=-1; previewTargetBandSnapshotValid=false; } applied=applyCwPreset(*preset); previewActive=true; } if(applied) commitCwPreview(); else { restoreCwPreview(); statusShow("CW preset failed","No matching receiver band"); } } frequencyMenuOpen=false; return; }
-  switch (menuIndex) { case 0: frequencyMenuOpen=true; frequencySelection=frequencyScroll=0; break; case 1: service.clearText(); break; case 2: service.resetDecoder(); break; case 3: setCwSpectrumMode(!spectrumMode); break; case 4: menuOpen=false; break; case 5: cwUiExit(); break; }
+  if(menuEditing) { menuEditing=false; return; }
+  switch (menuIndex) { case 0: frequencyMenuOpen=true; frequencySelection=frequencyScroll=0; break; case 1: menuEditing=true; break; case 2: service.clearText(); break; case 3: service.resetDecoder(); break; case 4: setCwSpectrumMode(!spectrumMode); break; case 5: menuOpen=false; break; case 6: cwUiExit(); break; }
 }
 
 bool cwUiTick(uint32_t now) {
@@ -252,11 +261,14 @@ void drawCwDecoderPage() {
                           frequencySelection == 0 ? "CURRENT" : "PRESET");
     } else {
       const char* labels[kMenuCount] = {
-        "CW FREQUENCIES", "CLEAR TEXT", "RESET DECODER", "SPECTRUM", "BACK", "EXIT CW"
+        "CW FREQUENCIES", "VOLUME", "CLEAR TEXT", "RESET DECODER", "SPECTRUM", "BACK", "EXIT CW"
       };
-      const char* values[kMenuCount] = {nullptr,nullptr,nullptr,spectrumMode?"ON":"OFF",nullptr,nullptr};
+      char volumeValue[12];
+      snprintf(volumeValue,sizeof(volumeValue),"%u / 63",static_cast<unsigned>(volume));
+      const char* values[kMenuCount] = {nullptr,volumeValue,nullptr,nullptr,spectrumMode?"ON":"OFF",nullptr,nullptr};
       DecoderMenuUi::draw("CW ACTIONS", labels, values, kMenuCount, menuIndex,
-                          "TURN: SELECT", "CLICK: OPEN", nullptr, true);
+                          menuEditing ? "TURN: VOLUME" : "TURN: SELECT",
+                          menuEditing ? "CLICK: DONE" : "CLICK: OPEN", nullptr, true);
     }
   }
 }

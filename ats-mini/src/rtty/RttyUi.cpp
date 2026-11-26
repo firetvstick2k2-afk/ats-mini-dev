@@ -381,6 +381,9 @@ void rttyUiClick() {
       menuOpen=false;
       break;
     case 8:
+      menuOpen=false;
+      break;
+    case 9:
       rttyUiExit();
       break;
   }

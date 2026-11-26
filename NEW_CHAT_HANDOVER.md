@@ -722,3 +722,12 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - GitHub Actions Run 45732694210 (Build Firmware, branch development) failed in Compile OSPI-DE. Fehler: ats-mini/src/ftx/FtxUi.cpp:1130 — too many initializers for const char* [10]. Ursache: ft8Values hatte 11 Initialisierer bei kFtxMenuItems == 10.
 - Korrektur: überzähligen nullptr-Initialisierer entfernt; die 10 Einträge entsprechen den 10 FT8-Actions-Slots. FT8-Decoder/DSP/AudioCaptureService nicht verändert.
 - Fix-Commit: 4498ab45f141e9a7ed3e008e342535928dcabf6a. Noch nicht erneut gebaut oder auf Hardware getestet.
+
+
+## Boot-Lautstärke und CW/RTTY-Volume (2026-11-26)
+- Boot-Lautstärke von 10 auf 30/63 gesetzt. Der Startwert wird weiterhin unabhängig von der vorherigen Sitzung gesetzt.
+- CW Actions: neuer VOLUME-Eintrag (0–63), Drehgeber stellt ein, Klick beendet die Einstellung. Die beim Öffnen aktive Lautstärke wird beim Verlassen des CW-Decoders wiederhergestellt; der bisherige Mindeststartwert 50 bleibt erhalten.
+- RTTY Actions: entsprechender VOLUME-Eintrag (0–63), Drehgeber stellt ein, Klick beendet die Einstellung. Die ursprüngliche Lautstärke wird beim Verlassen wiederhergestellt; der bisherige Mindeststartwert 50 bleibt erhalten.
+- Änderungen betreffen ausschließlich die SI4735-Wiedergabelautstärke; CW-/RTTY-Decoderkern, FT8/FT4, AudioCaptureService und Decoder-Audioverarbeitung wurden nicht geändert.
+- Commits: Boot-Lautstärke c263c822e30964f4f581b7591e7ffcbef6131186; CW-Volume 572a708aa3933d87d65882a75855ffd262259878; RTTY-Volume 019d321bb9876cafadefba2996a1531a58b8aca9.
+- Noch nicht gebaut oder auf Hardware getestet. Beim nächsten Build bitte Boot-Lautstärke sowie CW/RTTY VOLUME-Einstellung, Grenzwerte 0/63 und Wiederherstellung beim Verlassen prüfen.

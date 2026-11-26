@@ -246,6 +246,9 @@ bool rttyUiOpen(float initialBaud) {
     statusShow("RTTY decoder start failed","Check Wi-Fi and audio input");
     return false;
   }
+  // Synchronize the decoder page with the receiver/layout VFO on entry.
+  currentFrequency=rx.getFrequency();
+  bands[bandIdx].currentFreq=currentFrequency;
   volumeBefore=volume;
   if(volume<kPlaybackVolume) { volume=kPlaybackVolume; rx.setVolume(volume); }
   volumeBoost=true;
@@ -282,6 +285,9 @@ void rttyUiExit() {
   service.exit();
   if(currentBFO!=bfoAtEntry) updateBFO(bfoAtEntry,true);
   if(volumeBoost) { volume=volumeBefore; rx.setVolume(volume); volumeBoost=false; }
+  // Keep the radio layout and stored band VFO on the final receiver frequency.
+  currentFrequency=rx.getFrequency();
+  bands[bandIdx].currentFreq=currentFrequency;
   netInit(restoreNetworkMode);
   currentCmd=CMD_NONE;
 }

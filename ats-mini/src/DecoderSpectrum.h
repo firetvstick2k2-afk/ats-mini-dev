@@ -46,6 +46,7 @@ public:
   const uint8_t* bins() const { return bins_; }
 private:
   static constexpr uint16_t kCapacity=512;
+  float window_[kWindow]{};
   float sampleRate_=4000.0f;
   float samples_[kCapacity]{};
   volatile uint16_t head_=0,tail_=0;

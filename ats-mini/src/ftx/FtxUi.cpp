@@ -39,6 +39,7 @@ bool ftxSpeakerAmpBefore = true;
 bool ftxAudioMuteBefore = true;
 bool ftxSpeakerEnabled = true;
 bool ftxActionsOpen = false;
+bool ftxVolumeAdjusting = false;
 bool ftxPresetMenuOpen = false;
 uint8_t ftxPresetSelection = 0;
 uint8_t ftxPresetScroll = 0;
@@ -58,7 +59,7 @@ bool ftxPresetPreviewSpeakerForced = false;
 bool ftxPresetPreviewSelectionMuted = false;
 bool ftxAutoScroll = true;
 uint8_t ftxMenuSelection = 0;
-constexpr uint8_t kFtxMenuItems = 9;
+constexpr uint8_t kFtxMenuItems = 10;
 bool ftxOfflineSyncPreference = false;
 bool ftxOfflineSyncActive = false;
 bool ftxLogEnabled = false;
@@ -668,7 +669,7 @@ bool saveFtxOfflineSyncPreference(bool offline)
 
 uint8_t ftxActionCount()
 {
-  return pageMode == FtxMode::FT8 ? kFtxMenuItems : kFtxMenuItems - 3;
+  return pageMode == FtxMode::FT8 ? kFtxMenuItems : kFtxMenuItems - 4;
 }
 
 bool ftxLogStart()
@@ -797,6 +798,7 @@ bool ftxUiOpen(FtxMode mode)
   }
 
   ftxActionsOpen = false;
+  ftxVolumeAdjusting = false;
   ftxPresetMenuOpen = false;
   ftxPresetSelection = ftxPresetScroll = 0;
   ftxPresetDecoder = DecoderKind::FT8;
@@ -852,6 +854,7 @@ void ftxUiExit()
   restoreFtxPresetOriginal();
   pageActive = false;
   ftxActionsOpen = false;
+  ftxVolumeAdjusting = false;
   ftxPresetMenuOpen = false;
   ftxLogStop();
   decoderService.exit();
@@ -871,6 +874,16 @@ void ftxUiExit()
 void ftxUiRotate(int delta)
 {
   if(!pageActive || !ftxActionsOpen || !delta) return;
+  if(ftxVolumeAdjusting) {
+    int nextVolume = static_cast<int>(volume) + (delta > 0 ? 1 : -1);
+    if(nextVolume < 0) nextVolume = 0;
+    if(nextVolume > 63) nextVolume = 63;
+    if(nextVolume != volume) {
+      volume = static_cast<uint8_t>(nextVolume);
+      rx.setVolume(volume);
+    }
+    return;
+  }
   if(ftxPresetMenuOpen) {
     const int count = ftxPresetCount();
     int next = static_cast<int>(ftxPresetSelection) + (delta > 0 ? 1 : -1);
@@ -898,6 +911,7 @@ void ftxUiClick()
   if(!pageActive) return;
   if(!ftxActionsOpen) {
     ftxActionsOpen = true;
+    ftxVolumeAdjusting = false;
     ftxPresetMenuOpen = false;
     ftxMenuSelection = 0;
     return;
@@ -921,6 +935,11 @@ void ftxUiClick()
       restoreFtxPresetOriginal();
     ftxPresetMenuOpen = false;
     ftxActionsOpen = false;
+    return;
+  }
+
+  if(ftxVolumeAdjusting) {
+    ftxVolumeAdjusting = false;
     return;
   }
 
@@ -968,21 +987,24 @@ void ftxUiClick()
         // Mute only the L/R speaker output; leave AMP_EN and GPIO11 capture live.
         digitalWrite(AUDIO_MUTE, ftxSpeakerEnabled ? LOW : HIGH);
         break;
-      case 4: // Auto-scroll
+      case 4: // Adjust receiver volume for this decoder session
+        ftxVolumeAdjusting = true;
+        break;
+      case 5: // Auto-scroll
         ftxAutoScroll = !ftxAutoScroll;
         break;
-      case 5: // Clear displayed station history/counters
+      case 6: // Clear displayed station history/counters
         memset(recentMessages, 0, sizeof(recentMessages));
         decodedMessageCount = 0;
         break;
-      case 6: // Toggle per-session log
+      case 7: // Toggle per-session log
         if(ftxLogEnabled) ftxLogStop();
         else if(!ftxLogStart()) statusShow("Logging unavailable", "Could not create log file");
         break;
-      case 7: // Back
+      case 8: // Back
         ftxActionsOpen = false;
         break;
-      case 8: // Exit decoder
+      case 9: // Exit decoder
         ftxUiExit();
         break;
     }
@@ -1096,26 +1118,31 @@ void drawFtxDecoderPage()
       const char* ft8Labels[kFtxMenuItems] = {
         "FT8 FREQUENCIES", "FT4 FREQUENCIES",
         ftxOfflineSyncPreference ? "TIME SYNC" : "TIME SYNC",
-        "SPEAKER", "AUTO SCROLL", "CLEAR STATIONS", "LOGGING", "BACK", "EXIT FT8/FT4"
+        "SPEAKER", "VOLUME", "AUTO SCROLL", "CLEAR STATIONS", "LOGGING", "BACK", "EXIT FT8/FT4"
       };
       const char* ft4Labels[6] = {
         "SPEAKER", "AUTO SCROLL", "CLEAR STATIONS", "LOGGING", "BACK", "EXIT FT4"
       };
       const char* ft8Values[kFtxMenuItems] = {
         nullptr, nullptr, ftxOfflineSyncPreference ? "OFFLINE" : "ONLINE",
-        ftxSpeakerEnabled ? "ON" : "OFF", ftxAutoScroll ? "ON" : "OFF",
-        nullptr, ftxLogEnabled ? "ON" : "OFF", nullptr, nullptr
+        ftxSpeakerEnabled ? "ON" : "OFF", nullptr, ftxAutoScroll ? "ON" : "OFF",
+        nullptr, ftxLogEnabled ? "ON" : "OFF", nullptr, nullptr, nullptr
       };
       const char* ft4Values[6] = {
         ftxSpeakerEnabled ? "ON" : "OFF", ftxAutoScroll ? "ON" : "OFF",
         nullptr, ftxLogEnabled ? "ON" : "OFF", nullptr, nullptr
       };
+      char volumeText[8];
+      snprintf(volumeText, sizeof(volumeText), "%u", static_cast<unsigned>(volume));
+      ft8Values[4] = volumeText;
       if(pageMode == FtxMode::FT4)
         DecoderMenuUi::draw("FT4 ACTIONS", ft4Labels, ft4Values, 6, ftxMenuSelection,
                             "TURN: SELECT", "CLICK: OPEN", nullptr, true);
       else
         DecoderMenuUi::draw("FT8 ACTIONS", ft8Labels, ft8Values, ftxActionCount(), ftxMenuSelection,
-                            "TURN: SELECT", "CLICK: OPEN", nullptr, true);
+                            ftxVolumeAdjusting ? "TURN: VOLUME" : "TURN: SELECT",
+                            ftxVolumeAdjusting ? "CLICK: DONE" : "CLICK: OPEN",
+                            ftxVolumeAdjusting ? "Receiver volume 0-63" : nullptr, true);
     }
   }
 }

@@ -697,3 +697,13 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Nächster vereinbarter CW-Punkt: CW TUNE über den Drehgeber im CW-Decoder ermöglichen. Aktuelle Empfangsfrequenz beim Öffnen korrekt übernehmen/anzeigen; Drehgeber soll im normalen Decoderbild die Feinabstimmung verändern und die Frequenzanzeige aktualisieren. Actions-Menü weiterhin per Knopfdruck erreichbar.
 - Die besprochenen CW-Level-/Pegeloptionen sind davon getrennt und noch nicht beauftragt.
 - Vor Codeänderungen aktuelle Dateien samt SHA aus development abrufen. FT8/FT4 und AudioCaptureService bleiben geschützt. Kein Build/Flash durch den Assistenten; nächste Build-Prüfung führt der Nutzer aus.
+
+
+## FT8 Actions — Lautstärke-Bedienung (2026-11-26)
+- Ergänzt wurde ausschließlich die FT8-Bedienoberfläche in ats-mini/src/ftx/FtxUi.cpp: Actions enthält nun VOLUME. Auswahl mit Klick aktivieren, Drehgeber verändert den SI473x-Empfänger-Ausgangspegel in Einerschritten (0–63), erneuter Klick beendet die Einstellung.
+- Speaker ON/OFF bleibt separat. Startverhalten bleibt unverändert: Speaker OFF und mindestens Volume 50. Die während der FT8-Sitzung gewählte Lautstärke wird beim Verlassen wie bisher auf den vorherigen Benutzerwert zurückgesetzt.
+- Keine Änderungen an FtxDecoder, FtxDecoderService, FT8/FT4-DSP/Decoderkern oder AudioCaptureService. FT4-Actions-Menü bleibt unverändert.
+- Commit: 592f4925f00352e0c401fd44cf429e34d656eeba. Noch nicht gebaut oder auf Hardware getestet; Nutzer-Build und Lautstärketest erforderlich.
+
+## Klarstellung Build #100 / Spectrum-Teststatus
+- Build #100 wurde vom Nutzer als funktionierender Build bestätigt. Das bedeutet nicht, dass die CW/RTTY-Spectrum-Funktion auf Hardware erfolgreich validiert wurde. Der Spectrum-Empfangstest steht weiterhin aus; frühere Formulierungen, die eine Hardware-Prüfung des Spectrums behaupten, sind hiermit korrigiert.

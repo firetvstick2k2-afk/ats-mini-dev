@@ -716,3 +716,9 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - FT8/FT4-Decoderkern und AudioCaptureService wurden nicht geändert.
 - CW-TUNE-Commit: 15586f193bcdb02387c3e4c8a9b891d558f9953a. RTTY-Frequenzübergabe-Code war bereits im aktuellen development-Stand vorhanden und wurde in diesem Schritt nicht verändert.
 - Nicht gebaut und nicht auf Hardware getestet. Bitte beim nächsten Build CW-TUNE, Frequenzanzeige beim Wechsel in/aus CW und RTTY sowie Preset-Vorschau/Abbruch prüfen.
+
+
+## Build 101 — Compile-Fix (2026-11-26)
+- GitHub Actions Run 45732694210 (Build Firmware, branch development) failed in Compile OSPI-DE. Fehler: ats-mini/src/ftx/FtxUi.cpp:1130 — too many initializers for const char* [10]. Ursache: ft8Values hatte 11 Initialisierer bei kFtxMenuItems == 10.
+- Korrektur: überzähligen nullptr-Initialisierer entfernt; die 10 Einträge entsprechen den 10 FT8-Actions-Slots. FT8-Decoder/DSP/AudioCaptureService nicht verändert.
+- Fix-Commit: 4498ab45f141e9a7ed3e008e342535928dcabf6a. Noch nicht erneut gebaut oder auf Hardware getestet.

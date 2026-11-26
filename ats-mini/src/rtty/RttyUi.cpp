@@ -58,7 +58,7 @@ constexpr int kBfoLimit=250;
 constexpr int kManualBfoStep=5;
 constexpr float kTargetToneCenterHz=2210.0f;
 constexpr float kAutoDeadbandHz=18.0f;
-constexpr uint8_t kMenuCount=9;
+constexpr uint8_t kMenuCount=10;
 void applyBfo(int value) {
   int low=bfoAtEntry-kBfoLimit, high=bfoAtEntry+kBfoLimit;
   if(value<low) value=low;
@@ -318,6 +318,12 @@ void rttyUiRotate(int16_t delta) {
         while(next<0) next+=3;
         polarityIndex=static_cast<uint8_t>(next%3);
         service.setPolarity(polarityIndex);
+      } else if(menuIndex==4) {
+        int next=static_cast<int>(volume)+delta;
+        if(next<0) next=0;
+        if(next>63) next=63;
+        volume=static_cast<uint8_t>(next);
+        rx.setVolume(volume);
       }
       return;
     }
@@ -362,16 +368,19 @@ void rttyUiClick() {
       menuEditing=true;
       break;
     case 4:
-      service.clearText();
+      menuEditing=true;
       break;
     case 5:
+      service.clearText();
+      break;
+    case 6:
       service.resetDecoder();
       lastAutoBfoAdjust=0;
       break;
-    case 6:
+    case 7:
       menuOpen=false;
       break;
-    case 7:
+    case 8:
       rttyUiExit();
       break;
   }
@@ -441,18 +450,20 @@ void drawRttyDecoderPage() {
                           "TURN: SELECT", "CLICK: APPLY", previewStatus);
     } else {
       const char* labels[kMenuCount] = {
-        "RTTY FREQUENCIES", "BFO MODE", "BAUD RATE", "POLARITY",
+        "RTTY FREQUENCIES", "BFO MODE", "BAUD RATE", "POLARITY", "VOLUME",
         "CLEAR TEXT", "RESET DECODER", "SPECTRUM", "BACK", "EXIT RTTY"
       };
       const char* values[kMenuCount] = {
-        nullptr, bfoAuto ? "AUTO" : "MANUAL", nullptr, nullptr,
-        nullptr, nullptr, spectrumMode?"ON":"OFF", nullptr
+        nullptr, bfoAuto ? "AUTO" : "MANUAL", nullptr, nullptr, nullptr,
+        nullptr, nullptr, spectrumMode?"ON":"OFF", nullptr, nullptr
       };
-      char baudValue[16], polarityValue[16];
+      char baudValue[16], polarityValue[16], volumeValue[16];
       snprintf(baudValue, sizeof(baudValue), "%.2f Bd", baudChoices[baudIndex]);
       snprintf(polarityValue, sizeof(polarityValue), "%s", polarityNames[polarityIndex]);
+      snprintf(volumeValue, sizeof(volumeValue), "%u / 63", static_cast<unsigned>(volume));
       values[2] = baudValue;
       values[3] = polarityValue;
+      values[4] = volumeValue;
       char toneStatus[32];
       if(service.markHz() > 0 && service.spaceHz() > 0)
         snprintf(toneStatus, sizeof(toneStatus), "M %.0f S %.0f Hz", service.markHz(), service.spaceHz());

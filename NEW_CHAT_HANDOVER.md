@@ -688,3 +688,12 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - CPU-Takt: Nur beim Aktivieren von Spectrum auf CW-/RTTY-Seiten wird der vorherige Takt gespeichert und 160 MHz angefordert. Beim Zurückschalten auf S-Meter und beim Verlassen wird der gespeicherte Takt wiederhergestellt. Kein globaler Taktwechsel.
 - FT8/FT4, AudioCaptureService, Decoderkerne und Decoder-Prioritäten bleiben unangetastet. Keine Waterfall-Darstellung.
 - Noch nicht gebaut oder auf Hardware getestet. Nutzer-Build und Empfangstest erforderlich; insbesondere CPU-Restore, Spectrum-Reaktion und Decoder-Empfang prüfen.
+
+## Build #100 — erfolgreich bestätigt (2026-11-26)
+- Nutzer bestätigt: Build #100 funktioniert vollständig; CW/RTTY-Live-Spectrum einschließlich des Compile-Fixes ist damit erfolgreich gebaut und auf dem Gerät geprüft (gemäß Nutzerbestätigung).
+- Build #99 scheiterte an einem fehlenden Member DecoderSpectrum::window_; in ats-mini/src/DecoderSpectrum.h wurde float window_[kWindow]{} ergänzt.
+- Compile-Fix-Commit auf development: f10a8fcf92c9decd38f47afba669dd98e15430bf. Build #100 enthält diesen Fix.
+- Build #100 ist die neueste vom Nutzer bestätigte funktionierende Referenz und löst Build #98 als aktuellen Stand ab.
+- Nächster vereinbarter CW-Punkt: CW TUNE über den Drehgeber im CW-Decoder ermöglichen. Aktuelle Empfangsfrequenz beim Öffnen korrekt übernehmen/anzeigen; Drehgeber soll im normalen Decoderbild die Feinabstimmung verändern und die Frequenzanzeige aktualisieren. Actions-Menü weiterhin per Knopfdruck erreichbar.
+- Die besprochenen CW-Level-/Pegeloptionen sind davon getrennt und noch nicht beauftragt.
+- Vor Codeänderungen aktuelle Dateien samt SHA aus development abrufen. FT8/FT4 und AudioCaptureService bleiben geschützt. Kein Build/Flash durch den Assistenten; nächste Build-Prüfung führt der Nutzer aus.

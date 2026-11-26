@@ -157,12 +157,24 @@ void cwUiExit() {
   frequencyMenuOpen = false;
   service.exit();
   if(volumeBoostActive) { volume = volumeBeforeCw; rx.setVolume(volume); volumeBoostActive = false; }
+  // Publish the final receiver frequency after a preset preview was committed or restored.
+  currentFrequency = rx.getFrequency();
+  bands[bandIdx].currentFreq = currentFrequency;
   netInit(restoreNetworkMode);
   currentCmd = CMD_NONE;
 }
 
 void cwUiRotate(int16_t delta) {
-  if (!pageActive || !delta || !menuOpen) return;
+  if (!pageActive || !delta) return;
+  if (!menuOpen) {
+    // In the normal CW decoder view, the encoder performs RF fine tuning.
+    const int step = static_cast<int>(getCurrentStep()->step);
+    if (step > 0 && updateFrequency(static_cast<int>(currentFrequency) + delta * step, false)) {
+      clearStationInfo();
+      identifyFrequency(currentFrequency + currentBFO / 1000);
+    }
+    return;
+  }
   if(frequencyMenuOpen) { if(previewActive) { digitalWrite(AUDIO_MUTE,HIGH); previewSelectionMuted=true; } int count=cwPresetCount()+1; int next=static_cast<int>(frequencySelection)+(delta>0?1:-1); if(next<0)next=count-1; if(next>=count)next=0; frequencySelection=static_cast<uint8_t>(next); if(frequencySelection<frequencyScroll)frequencyScroll=frequencySelection; frequencyScroll=DecoderMenuUi::firstVisible(frequencySelection,static_cast<uint8_t>(count)); if(frequencySelection) scheduleCwPreview(millis()); return; }
   int next = static_cast<int>(menuIndex) + delta;
   while (next < 0) next += kMenuCount;

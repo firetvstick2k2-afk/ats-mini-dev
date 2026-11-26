@@ -1525,3 +1525,12 @@ These are inspiration/research candidates, not confirmed source matches for the 
 
 ## Klarstellung Build #100 / Spectrum-Teststatus
 - Build #100 wurde vom Nutzer als funktionierender Build bestätigt. Das bedeutet nicht, dass die CW/RTTY-Spectrum-Funktion auf Hardware erfolgreich validiert wurde. Der Spectrum-Empfangstest steht weiterhin aus; frühere Formulierungen, die eine Hardware-Prüfung des Spectrums behaupten, sind hiermit korrigiert.
+
+
+## CW / RTTY Frequenzübergabe und CW TUNE — 2026-11-26
+- CW-Drehgeber im normalen Decoderbild stimmt jetzt den SSB-BFO in 10-Hz-Schritten ab (statt grober Band-/RF-Schritte). Dadurch bleibt der SI4735-RF-Kanal stehen und die CW-Empfangstonhöhe wird fein abgestimmt. Die Anzeige unten zeigt den aktuellen BFO-Offset in Hz.
+- CW übernimmt beim Öffnen die tatsächliche SI4735-Empfangsfrequenz in currentFrequency und den Band-VFO. Beim Verlassen wird die endgültige Empfangsfrequenz nach eventueller Preset-Vorschau-Wiederherstellung zurückgeschrieben.
+- RTTY synchronisiert beim Öffnen currentFrequency mit rx.getFrequency() und aktualisiert den Band-VFO. Beim Verlassen wird zuerst der beim Einstieg gültige BFO wiederhergestellt und danach die tatsächliche Empfangsfrequenz in currentFrequency/Band-VFO übernommen. Preset-Commit aktualisiert den RTTY-BFO-Einstiegswert.
+- FT8/FT4-Decoderkern und AudioCaptureService wurden nicht geändert.
+- CW-TUNE-Commit: 15586f193bcdb02387c3e4c8a9b891d558f9953a. RTTY-Frequenzübergabe-Code war bereits im aktuellen development-Stand vorhanden und wurde in diesem Schritt nicht verändert.
+- Nicht gebaut und nicht auf Hardware getestet. Bitte beim nächsten Build CW-TUNE, Frequenzanzeige beim Wechsel in/aus CW und RTTY sowie Preset-Vorschau/Abbruch prüfen.

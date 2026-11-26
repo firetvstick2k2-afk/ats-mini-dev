@@ -1126,7 +1126,7 @@ void drawFtxDecoderPage()
       const char* ft8Values[kFtxMenuItems] = {
         nullptr, nullptr, ftxOfflineSyncPreference ? "OFFLINE" : "ONLINE",
         ftxSpeakerEnabled ? "ON" : "OFF", nullptr, ftxAutoScroll ? "ON" : "OFF",
-        nullptr, ftxLogEnabled ? "ON" : "OFF", nullptr, nullptr, nullptr
+        nullptr, ftxLogEnabled ? "ON" : "OFF", nullptr, nullptr
       };
       const char* ft4Values[6] = {
         ftxSpeakerEnabled ? "ON" : "OFF", ftxAutoScroll ? "ON" : "OFF",

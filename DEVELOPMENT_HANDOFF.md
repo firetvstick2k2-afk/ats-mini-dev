@@ -1549,3 +1549,5 @@ These are inspiration/research candidates, not confirmed source matches for the 
 - Änderungen betreffen ausschließlich die SI4735-Wiedergabelautstärke; CW-/RTTY-Decoderkern, FT8/FT4, AudioCaptureService und Decoder-Audioverarbeitung wurden nicht geändert.
 - Commits: Boot-Lautstärke c263c822e30964f4f581b7591e7ffcbef6131186; CW-Volume 572a708aa3933d87d65882a75855ffd262259878; RTTY-Volume 019d321bb9876cafadefba2996a1531a58b8aca9.
 - Noch nicht gebaut oder auf Hardware getestet. Beim nächsten Build bitte Boot-Lautstärke sowie CW/RTTY VOLUME-Einstellung, Grenzwerte 0/63 und Wiederherstellung beim Verlassen prüfen.
+
+- RTTY-Menü nach Einfügen von VOLUME nachgeprüft und ursprüngliche Funktionen korrekt auf die neuen Indizes verschoben: SPECTRUM bleibt umschaltbar, BACK schließt das Menü, EXIT RTTY beendet den Decoder. Korrektur-Commit: 547689a99cb5cc9bff8b5bdcbcfd45f4d84962bc.

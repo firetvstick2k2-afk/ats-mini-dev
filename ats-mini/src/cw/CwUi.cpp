@@ -167,11 +167,11 @@ void cwUiExit() {
 void cwUiRotate(int16_t delta) {
   if (!pageActive || !delta) return;
   if (!menuOpen) {
-    // In the normal CW decoder view, the encoder performs RF fine tuning.
-    const int step = static_cast<int>(getCurrentStep()->step);
-    if (step > 0 && updateFrequency(static_cast<int>(currentFrequency) + delta * step, false)) {
+    // CW pitch is fine-tuned through the SSB BFO in 10 Hz increments.
+    // The SI4735 RF channel remains fixed; only the receive beat frequency changes.
+    if ((currentMode == USB || currentMode == LSB) &&
+        updateBFO(static_cast<int>(currentBFO) + static_cast<int>(delta) * 10, false)) {
       clearStationInfo();
-      identifyFrequency(currentFrequency + currentBFO / 1000);
     }
     return;
   }
@@ -220,7 +220,10 @@ void drawCwDecoderPage() {
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(0x07FF);
   spr.setFont(FONT_SMALL);
-  spr.drawString("CLICK: ACTIONS   LONG PRESS: EXIT",160,162);
+  char tuneStatus[48];
+  snprintf(tuneStatus, sizeof(tuneStatus), "TUNE %+d Hz   CLICK: ACTIONS   LONG: EXIT",
+           static_cast<int>(currentBFO));
+  spr.drawString(tuneStatus,160,162);
 
   if(menuOpen) {
     if(frequencyMenuOpen) {

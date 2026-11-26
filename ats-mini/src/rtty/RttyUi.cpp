@@ -378,7 +378,7 @@ void rttyUiClick() {
       lastAutoBfoAdjust=0;
       break;
     case 7:
-      menuOpen=false;
+      setRttySpectrumMode(!spectrumMode);
       break;
     case 8:
       menuOpen=false;

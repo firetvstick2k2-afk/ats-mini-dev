@@ -733,3 +733,41 @@ Dieser Abschnitt ersetzt die älteren Planungsnotizen oben, die die Menü-Rückh
 - Noch nicht gebaut oder auf Hardware getestet. Beim nächsten Build bitte Boot-Lautstärke sowie CW/RTTY VOLUME-Einstellung, Grenzwerte 0/63 und Wiederherstellung beim Verlassen prüfen.
 
 - RTTY-Menü nach Einfügen von VOLUME nachgeprüft und ursprüngliche Funktionen korrekt auf die neuen Indizes verschoben: SPECTRUM bleibt umschaltbar, BACK schließt das Menü, EXIT RTTY beendet den Decoder. Korrektur-Commit: 547689a99cb5cc9bff8b5bdcbcfd45f4d84962bc.
+
+
+## Neues Feature-Konzept: ATS Audio Display 3-Mode — 2026-11-28 (geplant, noch nicht implementiert)
+
+### Ziel und Layout
+- Eigenständiges, optionales Audio-Display als zusätzliches Fenster/Overlay innerhalb des bestehenden Radiolayouts. Das normale Radio-Layout bleibt erhalten.
+- Bei aktivem Audio Display belegt die Visualisierung ungefähr die unteren zwei Drittel des Displays.
+- Das obere Drittel bleibt dauerhaft sichtbar und enthält Radio-Status sowie Bedienleiste: Frequenz, Band, Modulation/Betriebsart (ggf. weitere Statuswerte wie S-Meter/Batterie) und die vier Buttons.
+- Die obere Leiste und alle vier Bedienelemente bleiben in sämtlichen Spectrum-Ansichten erreichbar.
+- Bei Spectrum OFF wird das ursprüngliche Radio-Layout mit der großen Frequenzanzeige und den bisherigen Radio-Bedienelementen wiederhergestellt.
+
+### Vierstufiger SPECTRUM-Zyklus
+Ein Druck auf den SPECTRUM-Button schaltet zyklisch durch:
+1. NEON BARS
+2. RIDGE 3D
+3. CLASSIC SPECTRUM
+4. SPECTRUM OFF — zurück zum originalen Radio-Layout.
+Der nächste Druck beginnt wieder bei NEON BARS.
+
+### Bedienleiste und Drehgeber-Navigation
+- Vier Buttons in fester Reihenfolge: HOME → VOLUME → SPECTRUM → X.
+- Einmaliger Druck auf den vorhandenen Dreh-/Drückgeber aktiviert den Fokus in der oberen Bedienleiste.
+- Drehen bewegt die Auswahl zwischen den vier Buttons; erneuter Druck aktiviert den markierten Button.
+- HOME: öffnet das normale ATS-Hauptmenü. Dort können wie gewohnt Band, Modulation, WLAN und weitere Radioeinstellungen geändert werden.
+- Nach Verlassen des Hauptmenüs oder automatischem Schließen durch Inaktivität kehrt die Anzeige zum Audio Display zurück; der Fokus steht automatisch wieder auf HOME.
+- VOLUME: Lautstärke direkt einstellen.
+- SPECTRUM: durch die drei Visualisierungen und anschließend OFF schalten.
+- X: Audio-Display/Overlay verlassen und zum normalen Radio-Layout zurückkehren, um Frequenz und weitere Radiofunktionen direkt zu bedienen. X ist ausdrücklich nicht dasselbe wie HOME.
+
+### Schutz- und Architekturvorgaben
+- Reine Konzept-/Designanforderung; am 2026-11-28 wurde dafür noch kein Code geändert.
+- Vor Umsetzung zuerst aktuelle development-Quellen, Layout-/Encoder-Architektur und verfügbare Audio-Daten-Schnittstellen prüfen.
+- Visualisierung möglichst als eigenständiges Modul mit eigener Datenaufbereitung implementieren; vorhandene Audio-Daten nur über eine sichere bestehende Schnittstelle beziehen.
+- AudioCaptureService, FT8/FT4, CW-/RTTY-DSP-Kerne, Decoderzustände, Timer und Interrupts nicht verändern. Keine zusätzliche ADC-Sampling-Task einführen.
+- Keine Frequenz-/Band-/Modulationsänderung durch bloßes Öffnen oder Umschalten der Visualisierung.
+- Bestehende Radio-Layouts und Decoder-UIs nicht unbeabsichtigt verändern. MIT-Lizenz und Herkunft neuer Komponenten/Assets prüfen.
+- Vor jeder Codeänderung aktuelle Datei und SHA aus development abrufen. Ausschließlich development; main nur nach ausdrücklicher Anweisung Bitte Main überschreiben.
+- Kein Build, GitHub Actions Run, Flash oder Hardwaretest ohne ausdrücklichen Auftrag. Feature ist geplant und weder implementiert noch gebaut/getestet.
